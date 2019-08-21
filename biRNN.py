@@ -154,7 +154,7 @@ wanted_se3 = [etc] + ketoGroup
 wanted_se4 = salineGroup
 
 # startsetup
-wanted = ketoGroup #highGroup + midleGroup + [etc] # 작동할것을 여기에 넣어 
+wanted = mouselist #highGroup + midleGroup + [etc] # 작동할것을 여기에 넣어 
 
 ###############
 
@@ -162,7 +162,7 @@ loadonly = False # training 하지 않고 test만 진행하고 싶을때 사용
 msskip = True # model 학습 도중에 끊겨서, 몇번 model을 학습해야 되는지 모를때 사용, 이미 학습되어 있으면 training 및 test를 skip함
 overwrite = False # 기존 model이 있어도 상관하지 않고 덮어쓰기함
 testsw = True  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
-trainingsw = False
+trainingsw = True
 
 ###############
 
@@ -178,7 +178,7 @@ controlsw = False
 print('loadonly', loadonly, 'msskip', msskip, 'controlsw', controlsw, 'overwrite', overwrite, 'testsw', testsw)
 
 #project name
-settingID =  '0819_test_3/'
+settingID =  '0819_test_1/'
 print('settingID', settingID)
 
 
@@ -494,340 +494,376 @@ print('maxepoch', maxepoch)
 
 state = 'exp'
 sett = 0; ix = 0 # for test
-for ix, sett in enumerate(mannual):
-    # training 구문입니다.
-    exist_model = False; recent_model = False
-    
-    # training된 model이 있는지 검사
-    if state == 'exp':
-        final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
-#        print('exp')
-    elif state == 'con':
-        final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final_control.h5'
-#        print('con')
-      
-    print('final_weightsave', final_weightsave)
-        
-    try:
-        model.load_weights(final_weightsave) 
-        exist_model = True
-        print('exist_model', exist_model)
-    except:
-        exist_model = False
-        print('exist_model', exist_model, 'load 안됨')
-        
-    # 없다면, 2시간 이내에 training이 시작되었는지 검사
-    if not(exist_model) and trainingsw:
-        if state == 'exp':
-            loadname = RESULT_SAVE_PATH + 'tmp/' + str([mouselist[sett]]) + '_log.csv'
-        elif state == 'con':
-            loadname = RESULT_SAVE_PATH + 'tmp/' + str([mouselist[sett]]) + '_log_control.csv'
-        
-        try:
-            mscsv = []       
-            f = open(loadname, 'r', encoding='utf-8')
-            rdr = csv.reader(f)
-            for line in rdr:
-                mscsv.append(line)
-            f.close()    
-            mscsv = np.array(mscsv)
-            
-            dt = datetime.now()
-            idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
-    
-            sameday = int(idcode) == int(float(mscsv[0][0]))
-            hour_diff = ((idcode - int(idcode)) - (float(mscsv[0][0]) - int(float(mscsv[0][0])))) * 100
-            if sameday:
-                print('mouse #', [mouselist[sett]], '은', hour_diff, '시간전에 학습을 시작했습니다.')
-                if hour_diff < 2.0:
-                    recent_model = True
-                elif hour_diff >= 2.0:
-                    recent_model = False        
-        except:
-            recent_model = False
-            
-        # control은 추가로, exp plot이 되어있는지 확인
-        if state == 'con':
-            loadname = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_trainingSet_result.csv'
-            f = open(loadname, 'r', encoding='utf-8')
-            print('exp pair 없음')
-            recent_model = 0
-            
-        # 학습된 모델도 없고, 최근에 진행중인것도 없으니 학습 시작합니다.    
-        if not(recent_model):
-            print('mouse #', [mouselist[sett]], '학습된 exp model 없음. 새로시작합니다.')
-            model, idcode = keras_setup() # 시작과 함께 weight reset 됩니다.
-            
-            df2 = [idcode]
-            csvfile = open(loadname, 'w', newline='')
-            csvwriter = csv.writer(csvfile)
-            csvwriter.writerow(df2)         
-            csvfile.close()
-            print('학습시작시간을 기록합니다.', df2)        
-            print('mouse #', [mouselist[sett]])
-            print('sample distributions.. ', np.round(np.mean(Y_training_list[sett], axis = 0), 4))
-            
-            # validation set을 사용할경우 준비합니다.
-            if validation_sw and state == 'exp': # control은 validation을 볼 필요가없다.
-                totalROI = signalss[mouselist[sett]][0].shape[1]#; painIndex = 1
-                X_all = []; [X_all.append([]) for i in range(msunit)]
-                for se in range(3):
-                    label = 0
-                    if mouselist[sett] in painGroup and se == 1:
-                        label = 1
-                    
-                    for ROI in range(totalROI):
-                        unknown_data, Y, Z = dataGeneration(mouselist[sett], se, label=label, roiNum = ROI)
-                        Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
-                        Z = np.concatenate((Z, tmpROI), axis = 1)    
-    
-                        unknown_data_toarray = array_recover(unknown_data)
-                           
-                        if se == 0 and ROI == 0:
-                            for k in range(msunit):
-                                X_all[k] = np.array(unknown_data_toarray[k])    
-                            Z_all = np.array(Z); Y_all = np.array(Y)
-                        
-                        elif not(se == 0 and ROI == 0):
-                            for k in range(msunit):
-                                X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-                            Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y)), axis=0)
-                        
-                    valid = tuple([X_all, Y_all])
-                    
-            # training set을 준비합니다.    
-            shuffleix = list(range(X_training[0][sett].shape[0]))
-            np.random.shuffle(shuffleix) 
-            
-            tr_y_shuffle = Y_training_list[sett][shuffleix]
-            tr_y_shuffle_control = Y_training_control_list[sett][shuffleix]
-            
-            tr_x = []
-            for unit in range(msunit):
-                tr_x.append(X_training[unit][sett][shuffleix])
-            
-            
-            # 특정 training acc를 만족할때까지 epoch를 100단위로 지속합니다.
-            current_acc = -np.inf; cnt = -1
-            while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-                print('stop 조건을 표시합니다')
-                print('current_acc', current_acc, current_acc < acc_thr)
-                
-                if cnt > maxepoch/epochs:
-                    model, idcode = keras_setup()
-                    current_acc = -np.inf; cnt = -1
-                    print('model reset 후 처음부터 다시 학습합니다.')
-                
-                cnt += 1; print('cnt', cnt, 'current_acc', current_acc)
-                
-                if state == 'exp':
-                    current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
-                elif state == 'con':
-                    current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights_control.h5'
-    
-                try:
-                    model.load_weights(current_weightsave)
-                    print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
-                          
-                except:
-                    print('학습 진행중인 model 없음. 새로 시작합니다')
-                
-                # control 전용, control_epochs 구하기
-                if state == 'con':
-                    mscsv = []
-                    loadname = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_trainingSet_result.csv'
-                    f = open(loadname, 'r', encoding='utf-8')
-                    rdr = csv.reader(f)
-                    for line in rdr:
-                        mscsv.append(line)
-                    f.close()    
-                    mscsv = np.array(mscsv)
-                    control_epochs = mscsv.shape[1]
-                     
-                if validation_sw and state == 'exp':
-                    hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
-                elif not(validation_sw) and state == 'exp': 
-                    hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs) #, validation_data = valid)
-                elif state == 'con':
-                    hist = model.fit(tr_x, tr_y_shuffle_control, batch_size = batch_size, epochs = control_epochs)
-                    
-                model.save_weights(current_weightsave)
-                
-                if cnt == 0:
-                    hist_save_loss = np.array(hist.history['loss'])
-                    hist_save_acc = np.array(hist.history['acc'])
-                    
-                    if validation_sw:
-                        hist_save_val_loss = np.array(hist.history['val_loss'])
-                        hist_save_val_acc = np.array(hist.history['val_acc'])
-                        
-                elif cnt > 0:
-                    hist_save_loss = np.concatenate((hist_save_loss, np.array(hist.history['loss'])), axis = 0)
-                    hist_save_acc = np.concatenate((hist_save_acc, np.array(hist.history['acc'])), axis = 0)
-    
-                    if validation_sw:
-                        hist_save_val_loss = np.concatenate((hist_save_val_loss, np.array(hist.history['val_loss'])), axis = 0)
-                        hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_acc'])), axis = 0)
-            
-                current_acc = np.min(hist_save_acc[-30:]) # 최근 30개 epochs 최소값
-                if state == 'con':
-                    current_acc = np.inf
-                
-                if cnt > 7 and current_acc < 0.6:
-                    # 700 epochs 후에도 학습이 안되고 있다면 초기화
-                    print('고장남.. 초기화')
-                    cnt = np.inf
-                
-            # 학습 model 최종 저장
-            model.save_weights(final_weightsave)   
-            print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
-                  
-            # hist 저장      
-            plt.figure();
-            mouseNum = mouselist[sett]
-            plt.plot(hist_save_loss, label= '# ' + str(mouseNum) + ' loss')
-            plt.plot(hist_save_acc, label= '# ' + str(mouseNum) + ' acc')
-            plt.legend()
-            plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.png')
-            
-            savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.csv'
-            csvfile = open(savename, 'w', newline='')
-            csvwriter = csv.writer(csvfile)
-            csvwriter.writerow(hist_save_acc)
-            csvwriter.writerow(hist_save_loss)
-            csvfile.close()
-            
-            if validation_sw:
-                plt.figure();
-                mouseNum = mouselist[sett]
-                plt.plot(hist_save_val_loss, label= '# ' + str(mouseNum) + ' loss')
-                plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
-                plt.legend()
-                plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.png')
-                
-                savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.csv'
-                csvfile = open(savename, 'w', newline='')
-                csvwriter = csv.writer(csvfile)
-                csvwriter.writerow(hist_save_val_acc)
-                csvwriter.writerow(hist_save_val_loss)
-                csvfile.close()
-                
-    ####### test 구문 입니다. ##########            
-    if testsw:
-        testlist = []
-        if not(etc == mouselist[sett]):
-            testlist = [mouselist[sett]]
-            print('mouse #', [mouselist[sett]], 'set 유무를 판단합니다.')
-        elif etc == mouselist[sett]:
-            print('etc group set 유무를 판단합니다.')
+statelist = ['exp', 'con']
+for state in statelist:
+    for ix, sett in enumerate(mannual):
+        # training 구문입니다.
+        exist_model = False; recent_model = False
 
-            # training set에 속하지 않은 모든쥐 찾기
-            grouped_total_list = []
-            keylist = list(msGroup.keys())
-            for k in range(len(keylist)):
-                grouped_total_list += msGroup[keylist[k]]
-            for k in range(N):
-                if not (k in mouselist) and k in grouped_total_list:
-                    testlist.append(k)
-                    
+        # training된 model이 있는지 검사
         if state == 'exp':
             final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
+    #        print('exp')
         elif state == 'con':
             final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final_control.h5'
-            
-        trained_fortest = False
-        print(final_weightsave)
+    #        print('con')
+
+        print('final_weightsave', final_weightsave)
+
         try:
-            model.load_weights(final_weightsave)
-            trained_fortest =  True
-            print('trained_fortest', trained_fortest)
+            model.load_weights(final_weightsave) 
+            exist_model = True
+            print('exist_model', exist_model)
         except:
-            trained_fortest = False
-            print('trained_fortest', trained_fortest)
+            exist_model = False
+            print('exist_model', exist_model, 'load 안됨')
 
-        for test_mouseNum in testlist:
-            print('mouse #', test_mouseNum, '에 대한 기존 test 유무를 확인합니다.')
-            #    test 되어있는지 확인.
-
+        # 없다면, 2시간 이내에 training이 시작되었는지 검사
+        if not(exist_model) and trainingsw:
             if state == 'exp':
-                savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+                loadname = RESULT_SAVE_PATH + 'tmp/' + str([mouselist[sett]]) + '_log.csv'
             elif state == 'con':
-                savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+                loadname = RESULT_SAVE_PATH + 'tmp/' + str([mouselist[sett]]) + '_log_control.csv'
 
-            tested = False
-            print(savename)
             try:
-                csvfile = open(savename, 'r', newline='')
-                tested = True
-                print('tested', tested)
+                mscsv = []       
+                f = open(loadname, 'r', encoding='utf-8')
+                rdr = csv.reader(f)
+                for line in rdr:
+                    mscsv.append(line)
+                f.close()    
+                mscsv = np.array(mscsv)
+
+                dt = datetime.now()
+                idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
+
+                sameday = int(idcode) == int(float(mscsv[0][0]))
+                hour_diff = ((idcode - int(idcode)) - (float(mscsv[0][0]) - int(float(mscsv[0][0])))) * 100
+                if sameday:
+                    print('mouse #', [mouselist[sett]], '은', hour_diff, '시간전에 학습을 시작했습니다.')
+                    if hour_diff < 2.0:
+                        recent_model = True
+                    elif hour_diff >= 2.0:
+                        recent_model = False        
             except:
-                tested = False
-                print('tested', tested)
-             
-            if not(tested) and trained_fortest: 
-                print('mouse #', test_mouseNum, 'test 진행')
-                totalROI = signalss[test_mouseNum][0].shape[1]; painIndex = 1
-                X_all = []; [X_all.append([]) for i in range(msunit)]
+                recent_model = False
 
-                for se in range(5):
-                    for ROI in range(totalROI):
-                        unknown_data, Y, Z = dataGeneration(test_mouseNum, se, label=1, roiNum = ROI)
-                        Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
-                        Z = np.concatenate((Z, tmpROI), axis = 1)    
+            # control은 추가로, exp plot이 되어있는지 확인
+            if state == 'con':
+                loadname = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_trainingSet_result.csv'
+                f = open(loadname, 'r', encoding='utf-8')
+                print('exp pair 없음')
+                recent_model = 0
 
-                        unknown_data_toarray = array_recover(unknown_data)
+            # 학습된 모델도 없고, 최근에 진행중인것도 없으니 학습 시작합니다.    
+            if not(recent_model):
+                print('mouse #', [mouselist[sett]], '학습된 exp model 없음. 새로시작합니다.')
+                model, idcode = keras_setup() # 시작과 함께 weight reset 됩니다.
 
-                        if se == 0 and ROI == 0:
-                            for k in range(msunit):
-                                X_all[k] = np.array(unknown_data_toarray[k])    
-                            Z_all = np.array(Z); Y_all = np.array(Y)
+                df2 = [idcode]
+                csvfile = open(loadname, 'w', newline='')
+                csvwriter = csv.writer(csvfile)
+                csvwriter.writerow(df2)         
+                csvfile.close()
+                print('학습시작시간을 기록합니다.', df2)        
+                print('mouse #', [mouselist[sett]])
+                print('sample distributions.. ', np.round(np.mean(Y_training_list[sett], axis = 0), 4))
 
-                        elif not(se == 0 and ROI == 0):
-                            for k in range(msunit):
-                                X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-                            Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y)), axis=0)
+                # validation set을 사용할경우 준비합니다.
+                if validation_sw and state == 'exp': # control은 validation을 볼 필요가없다.
+                    totalROI = signalss[mouselist[sett]][0].shape[1]#; painIndex = 1
+                    X_all = []; [X_all.append([]) for i in range(msunit)]
+                    for se in range(3):
+                        label = 0
+                        if mouselist[sett] in painGroup and se == 1:
+                            label = 1
 
-                prediction = model.predict(X_all)
+                        for ROI in range(totalROI):
+                            unknown_data, Y, Z = dataGeneration(mouselist[sett], se, label=label, roiNum = ROI)
+                            Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
+                            Z = np.concatenate((Z, tmpROI), axis = 1)    
 
-                df1 = np.concatenate((Z_all,prediction), axis=1)
-                df2 = [['SE', 'se', 'nonpain', 'pain']]; se = 0 # 최종결과 (acc) 저장용
+                            unknown_data_toarray = array_recover(unknown_data)
 
-                # [SE, se, ROI, nonpain, pain]
-                for se in range(5):
-                    predicted_pain = np.mean(df1[:,painIndex+3][np.where(df1[:,1]==se)[0]] > 0.5)
-                    mspredict = [1-predicted_pain, predicted_pain] # 전통을 중시...
+                            if se == 0 and ROI == 0:
+                                for k in range(msunit):
+                                    X_all[k] = np.array(unknown_data_toarray[k])    
+                                Z_all = np.array(Z); Y_all = np.array(Y)
 
-                    df2.append([[test_mouseNum], se] + mspredict)
+                            elif not(se == 0 and ROI == 0):
+                                for k in range(msunit):
+                                    X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
+                                Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y)), axis=0)
 
-                for d in range(len(df2)):
-                    print(df2[d])
+                        valid = tuple([X_all, Y_all])
 
-                # 최종평가를 위한 저장 
-                # acc_experiment 저장
-                if state == 'exp':
-                    savename = RESULT_SAVE_PATH + 'exp/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
-                elif state == 'con':
-                    savename = RESULT_SAVE_PATH + 'control/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
+                # training set을 준비합니다.    
+                shuffleix = list(range(X_training[0][sett].shape[0]))
+                np.random.shuffle(shuffleix) 
 
+                tr_y_shuffle = Y_training_list[sett][shuffleix]
+                tr_y_shuffle_control = Y_training_control_list[sett][shuffleix]
+
+                tr_x = []
+                for unit in range(msunit):
+                    tr_x.append(X_training[unit][sett][shuffleix])
+
+
+                # 특정 training acc를 만족할때까지 epoch를 100단위로 지속합니다.
+                current_acc = -np.inf; cnt = -1
+                while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
+                    print('stop 조건을 표시합니다')
+                    print('current_acc', current_acc, current_acc < acc_thr)
+
+                    if cnt > maxepoch/epochs:
+                        model, idcode = keras_setup()
+                        current_acc = -np.inf; cnt = -1
+                        print('model reset 후 처음부터 다시 학습합니다.')
+
+                    cnt += 1; print('cnt', cnt, 'current_acc', current_acc)
+
+                    if state == 'exp':
+                        current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
+                    elif state == 'con':
+                        current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights_control.h5'
+
+                    try:
+                        model.load_weights(current_weightsave)
+                        print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
+
+                    except:
+                        print('학습 진행중인 model 없음. 새로 시작합니다')
+
+                    # control 전용, control_epochs 구하기
+                    if state == 'con':
+                        mscsv = []
+                        loadname = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_trainingSet_result.csv'
+                        f = open(loadname, 'r', encoding='utf-8')
+                        rdr = csv.reader(f)
+                        for line in rdr:
+                            mscsv.append(line)
+                        f.close()    
+                        mscsv = np.array(mscsv)
+                        control_epochs = mscsv.shape[1]
+
+                    if validation_sw and state == 'exp':
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
+                    elif not(validation_sw) and state == 'exp': 
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs) #, validation_data = valid)
+                    elif state == 'con':
+                        hist = model.fit(tr_x, tr_y_shuffle_control, batch_size = batch_size, epochs = control_epochs)
+
+                    model.save_weights(current_weightsave)
+
+                    if cnt == 0:
+                        hist_save_loss = np.array(hist.history['loss'])
+                        hist_save_acc = np.array(hist.history['acc'])
+
+                        if validation_sw:
+                            hist_save_val_loss = np.array(hist.history['val_loss'])
+                            hist_save_val_acc = np.array(hist.history['val_acc'])
+
+                    elif cnt > 0:
+                        hist_save_loss = np.concatenate((hist_save_loss, np.array(hist.history['loss'])), axis = 0)
+                        hist_save_acc = np.concatenate((hist_save_acc, np.array(hist.history['acc'])), axis = 0)
+
+                        if validation_sw:
+                            hist_save_val_loss = np.concatenate((hist_save_val_loss, np.array(hist.history['val_loss'])), axis = 0)
+                            hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_acc'])), axis = 0)
+
+                    current_acc = np.min(hist_save_acc[-30:]) # 최근 30개 epochs 최소값
+                    if state == 'con':
+                        current_acc = np.inf
+
+                    if cnt > 7 and current_acc < 0.6:
+                        # 700 epochs 후에도 학습이 안되고 있다면 초기화
+                        print('고장남.. 초기화')
+                        cnt = np.inf
+
+                # 학습 model 최종 저장
+                model.save_weights(final_weightsave)   
+                print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
+
+                # hist 저장      
+                plt.figure();
+                mouseNum = mouselist[sett]
+                plt.plot(hist_save_loss, label= '# ' + str(mouseNum) + ' loss')
+                plt.plot(hist_save_acc, label= '# ' + str(mouseNum) + ' acc')
+                plt.legend()
+                plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.png')
+
+                savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.csv'
                 csvfile = open(savename, 'w', newline='')
                 csvwriter = csv.writer(csvfile)
-                for row in range(len(df2)):
-                    csvwriter.writerow(df2[row])
+                csvwriter.writerow(hist_save_acc)
+                csvwriter.writerow(hist_save_loss)
                 csvfile.close()
 
-                # raw 저장
+                if validation_sw:
+                    plt.figure();
+                    mouseNum = mouselist[sett]
+                    plt.plot(hist_save_val_loss, label= '# ' + str(mouseNum) + ' loss')
+                    plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
+                    plt.legend()
+                    plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.png')
+
+                    savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.csv'
+                    csvfile = open(savename, 'w', newline='')
+                    csvwriter = csv.writer(csvfile)
+                    csvwriter.writerow(hist_save_val_acc)
+                    csvwriter.writerow(hist_save_val_loss)
+                    csvfile.close()
+
+        ####### test 구문 입니다. ##########            
+        if testsw:
+            testlist = []
+            if not(etc == mouselist[sett]):
+                testlist = [mouselist[sett]]
+                print('mouse #', [mouselist[sett]], 'set 유무를 판단합니다.')
+            elif etc == mouselist[sett]:
+                print('etc group set 유무를 판단합니다.')
+
+                # training set에 속하지 않은 모든쥐 찾기
+                grouped_total_list = []
+                keylist = list(msGroup.keys())
+                for k in range(len(keylist)):
+                    grouped_total_list += msGroup[keylist[k]]
+                for k in range(N):
+                    if not (k in mouselist) and k in grouped_total_list:
+                        testlist.append(k)
+
+            if state == 'exp':
+                final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
+            elif state == 'con':
+                final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final_control.h5'
+
+            trained_fortest = False
+            print(final_weightsave)
+            try:
+                model.load_weights(final_weightsave)
+                trained_fortest =  True
+                print('trained_fortest', trained_fortest)
+            except:
+                trained_fortest = False
+                print('trained_fortest', trained_fortest)
+
+            for test_mouseNum in testlist:
+                print('mouse #', test_mouseNum, '에 대한 기존 test 유무를 확인합니다.')
+                #    test 되어있는지 확인.
+
                 if state == 'exp':
                     savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
                 elif state == 'con':
                     savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
 
-                csvfile = open(savename, 'w', newline='')
-                csvwriter = csv.writer(csvfile)
-                for row in range(len(df1)):
-                    csvwriter.writerow(df1[row])
-                csvfile.close()
-    
+                tested = False
+                print(savename)
+                try:
+                    csvfile = open(savename, 'r', newline='')
+                    tested = True
+                    print('tested', tested)
+                except:
+                    tested = False
+                    print('tested', tested)
+
+                if not(tested) and trained_fortest: 
+                    print('mouse #', test_mouseNum, 'test 진행')
+                    totalROI = signalss[test_mouseNum][0].shape[1]; painIndex = 1
+                    X_all = []; [X_all.append([]) for i in range(msunit)]
+
+                    for se in range(5):
+                        for ROI in range(totalROI):
+                            unknown_data, Y, Z = dataGeneration(test_mouseNum, se, label=1, roiNum = ROI)
+                            Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
+                            Z = np.concatenate((Z, tmpROI), axis = 1)    
+
+                            unknown_data_toarray = array_recover(unknown_data)
+
+                            if se == 0 and ROI == 0:
+                                for k in range(msunit):
+                                    X_all[k] = np.array(unknown_data_toarray[k])    
+                                Z_all = np.array(Z); Y_all = np.array(Y)
+
+                            elif not(se == 0 and ROI == 0):
+                                for k in range(msunit):
+                                    X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
+                                Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y)), axis=0)
+
+                    prediction = model.predict(X_all)
+
+                    df1 = np.concatenate((Z_all,prediction), axis=1)
+                    df2 = [['SE', 'se', 'nonpain', 'pain']]; se = 0 # 최종결과 (acc) 저장용
+
+                    # [SE, se, ROI, nonpain, pain]
+                    for se in range(5):
+                        predicted_pain = np.mean(df1[:,painIndex+3][np.where(df1[:,1]==se)[0]] > 0.5)
+                        mspredict = [1-predicted_pain, predicted_pain] # 전통을 중시...
+
+                        df2.append([[test_mouseNum], se] + mspredict)
+
+                    for d in range(len(df2)):
+                        print(df2[d])
+
+                    # 최종평가를 위한 저장 
+                    # acc_experiment 저장
+                    if state == 'exp':
+                        savename = RESULT_SAVE_PATH + 'exp/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
+                    elif state == 'con':
+                        savename = RESULT_SAVE_PATH + 'control/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
+
+                    csvfile = open(savename, 'w', newline='')
+                    csvwriter = csv.writer(csvfile)
+                    for row in range(len(df2)):
+                        csvwriter.writerow(df2[row])
+                    csvfile.close()
+
+                    # raw 저장
+                    if state == 'exp':
+                        savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+                    elif state == 'con':
+                        savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+
+                    csvfile = open(savename, 'w', newline='')
+                    csvwriter = csv.writer(csvfile)
+                    for row in range(len(df1)):
+                        csvwriter.writerow(df1[row])
+                    csvfile.close()
+
                 
+ 
+# In[] 작업용, loss_val 시각화 
+
+#""" 
+#
+## tar -cvf (압축 파일명).tar (압축할 폴더 또는 파일)
+#
+## 1
+## test acc 이외의 raw data 수준에서 저장
+## acc, loss value save
+## fig, model 폴더 분리
+## tr acc save 변수 및 폴더 지정,
+## control 측정
+## validation은 일단 보류
+#
+## 20190805
+## control도 model 저장하도록,
+#            
+## 20190809
+#
+#raw, se1 부터 ROI 0 짤리는 문제 수정
+#
+#if se == 0 and ROI == 0:
+#    X_all = np.array(unknown_data); Z_all = np.array(Z); Y_all = np.array(Y)
+#elif not(se == 0 and ROI == 0):            
+#   
+## 20190811         
+## control 시작에 초기화 -> 수정
+## control 중복체크 독립적으로 -> 수정
+#
+## wnated list = cloud용, 취약점 체크용 
+#       
+#"""
+
 
 
 
