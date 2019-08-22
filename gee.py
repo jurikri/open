@@ -63,7 +63,19 @@ ketoGroup = msGroup['ketoGroup']
 lidocainGroup = msGroup['lidocaineGroup']
 capsaicinGroup = msGroup['capsaicinGroup']
 yohimbineGroup = msGroup['yohimbineGroup']
-#
+
+# mouselist는 training에 사용됩니다.
+mouselist = []
+mouselist += msGroup['highGroup']
+mouselist += msGroup['ketoGroup']
+mouselist += msGroup['midleGroup']
+mouselist += msGroup['salineGroup']
+mouselist += msGroup['yohimbineGroup']
+mouselist += [msGroup['lidocaineGroup'][0]]
+etc = msGroup['lidocaineGroup'][0]
+
+mouselist.sort()
+
 # 최종 평가 함수 
 def accuracy_cal(pain, non_pain, fsw):
     pos_label = 1; roc_auc = -np.inf
@@ -134,34 +146,23 @@ def pain_nonpain_sepreate(target, painGroup, nonpainGroup):
 # In data load하여 pain nonpain grouping
 savepath = 'C:\\Users\\user\\Google 드라이브\\BMS Google drive\\희라쌤\\save\\tensorData\\'; os.chdir(savepath)
 model_name = '0819_test' # <<<<<<<<<<<<<<<<<<<
-# 0725_12_simpleRNN
-# 0731_semisupervised_v4
-#def model_data_import():
-
 
 mouseGroup = []
 for i in list(msGroup.keys()):
     mouseGroup += msGroup[i]
 print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
       
-#mouseGroup.remove(63)      
-    # In[] gee
-       
-rawsave = []
-for i in range(N):
-    rawsave.append([])
-
+rawsave = []; [rawsave.append([]) for i in range(N)]
 for repeat in range(1,20):
-    msloadpath = savepath + 'result\\' + model_name + '_' + str(repeat) + '\\'; printsw=True
-    
+    msloadpath = savepath + 'result\\' + model_name + '_' + str(repeat) + '\\exp_raw'; 
+
     try:
-        os.chdir(msloadpath + 'exp_raw')
-        if printsw:
-            print('repeat', repeat, 'is loaded'); printsw=False
+        os.chdir(msloadpath)
+        print('repeat', repeat, 'is loaded'); printsw=False
     except:
         continue
         
-    for SE in mouseGroup:
+    for SE in range(N):
         try:
             df1 = pd.read_csv('biRNN_raw_' + str(SE) + '.csv', header = None)
         except:
@@ -169,33 +170,107 @@ for repeat in range(1,20):
             continue
             
         df2 = np.array(df1)
+        df2[:,4] = df2[:,4] > 0.5
         rawsave[SE].append(df2)
         
 for SE in range(N):
-    rawsave[SE] = np.mean(np.array(rawsave[SE]), axis=0)
+    rawsave[SE] = np.nanmean(np.array(rawsave[SE]), axis=0)      
+         
+
+        
+# In[] Pain cell?
     
+painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
+nonpainGroup = salineGroup + lidocainGroup
+    
+hist_density_save = []; [hist_density_save.append([]) for i in range(5)]
+painROIsave = []; [painROIsave.append([]) for i in range(N)]
+
+SE = 0; se = 1; ROI = 0
+for SE in range(N):
+    ROInum = signalss[SE][0].shape[1]
+    painROIsave[SE] = np.zeros(ROInum)
+    for se in range(5):
+        valuesave = []; pain_ROI = np.zeros(ROInum); pain_time = []
+        for ROI in range(ROInum):       
+            if not rawsave[SE].shape:
+                predict_series = [0]
+                
+            elif rawsave[SE].shape:
+                rowindex = np.where((np.array(rawsave[SE][:,1]==se) * np.array( rawsave[SE][:,2]==ROI)) == True)[0]
+                predict_series = np.array(rawsave[SE][rowindex,4])
+            
+            pain_ROI[ROI] = np.mean(predict_series) # ROI vector
+            pain_time.append(predict_series)
+            
+            if se == 1:
+                painROIsave[SE][ROI] = pain_ROI[ROI]
+            
+        pain_time = np.array(pain_time) # ROI x bins
+        
+        # 위까지 pain_ROI, pain_time 입력
+      
+        hist_density = np.histogram(pain_ROI, bins = np.arange(0,1.01,0.02), density=True)[0]
+        hist_density_save[se].append(hist_density) # [se][ROI][histbins]
+        
+# 시각화
+se = 1
+hist_density_save[se] = np.array(hist_density_save[se]) # list[se]_array[ROI, histbins]
+plt.plot(np.mean(hist_density_save[se][capsaicinGroup,:], axis=0), label = se)
+plt.legend()
+    
+# In[]
+            
+from scipy.stats.stats import pearsonr 
+axiss = []; [axiss.append([]) for i in range(5)]
+
+SE = 0; se = 1; ROI = 0
+for SE in highGroup:
+    ROInum = signalss[SE][0].shape[1]
+    pix = painROIsave[SE] > 0.9
+    
+    for se in range(1):
+        meansignal = np.mean(np.array(signalss[SE][se])[:497,:], axis=1)
+        for ROI in range(ROInum):
+            signalROI = np.array(signalss[SE][se])[:497,ROI]
+            axiss[0].append(np.mean(signalROI))
+            axiss[1].append(painROIsave[SE][ROI])   
+            axiss[2].append(pearsonr(signalROI,behavss2[SE][se][:497])[0])
+            axiss[3].append(pearsonr(signalROI,meansignal)[0])
+            
+            plt.figure(ROI)
+            plt.plot(signalROI, label=painROIsave[SE][ROI])
+            plt.legend()
+            
+    # pain cell이면, 다른 session에서는 조용할까?
+    
+    # pain cell classification이 되었으니, 임의로 pain cell의 acitivity로 평가해보면 어떨까?
+    
+    
+
+print(pearsonr(axiss[3],axiss[1])[0])
+plt.scatter(axiss[3],axiss[1])
+
+
+# In[]
 def ms_thresholding(optimalThr = 0):
     target = np.zeros((N,5)); target[:] = np.nan
-    for SE in mouseGroup:
-        ROInum = signalss[SE][0].shape[1]
-        for se in range(5):
-#            print('SE', se)
-    
-            # 현재: ROI를 frame 상관없이 모두 모아서 '확률을' 평균낸뒤, thr 이하면 0으로 처리한 다음 ROI들을 모두 평균낸다. 
-            valuesave = np.zeros(ROInum); valuesave[:] = np.nan 
-            for ROI in range(ROInum):
-                
-                rowindex = np.where((np.array(rawsave[SE][:,1]==se) * np.array( rawsave[SE][:,2]==ROI)) == True)[0]
-                valuesave[ROI] = np.mean(rawsave[SE][rowindex,4]>0.5) # 4 for pain probability 
-                # >0.5 를 사용하면 loss -> acc로 변환
-                
-#            valuesave = valuesave > optimalThr # binary
-            valuesave[valuesave < optimalThr] = 0 # thr 이하의 값은 noise로 취급, 0으로 처리
-                
-            target[SE,se] = np.mean(valuesave) # 데이터들 수정후, mean으로 교체
+    for SE in range(N):
+        if rawsave[SE].shape: # 예외 data는 실행하지 않음
+            ROInum = signalss[SE][0].shape[1]
+            for se in range(5):
+                valuesave = np.zeros(ROInum); valuesave[:] = np.nan 
+                for ROI in range(ROInum):
+                    rowindex = np.where((np.array(rawsave[SE][:,1]==se) * np.array( rawsave[SE][:,2]==ROI)) == True)[0]
+                    valuesave[ROI] = np.mean(rawsave[SE][rowindex,4]) # 4 for pain probability 
+                    # >0.5 를 사용하면 loss -> acc로 변환
+                    
+    #            valuesave = valuesave > optimalThr # binary
+                valuesave[valuesave < optimalThr] = 0 # thr 이하의 값은 noise로 취급, 0으로 처리
+                    
+                target[SE,se] = np.mean(valuesave) # 데이터들 수정후, mean으로 교체
     return target
-
-    
+            
 # In[]
 
 optimized_thr = 0
