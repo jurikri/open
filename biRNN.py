@@ -5,6 +5,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import csv
+import random
 
 try:
     savepath = 'C:\\Users\\user\\Google 드라이브\\BMS Google drive\\희라쌤\\save\\tensorData\\'; os.chdir(savepath)
@@ -14,9 +16,6 @@ except:
     except:
         savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
-
-import csv
-import random
 
 try:
     df2 = [['SE', 'se', '%']]
@@ -53,9 +52,9 @@ lidocaineGroup = msGroup['lidocaineGroup']
 capsaicinGroup = msGroup['capsaicinGroup'] 
 yohimbineGroup = msGroup['yohimbineGroup']
 
-with open('mspickle_msdict.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
-    msdict = pickle.load(f)
-    msdict = msdict['msdict']
+#with open('mspickle_msdict.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+#    msdict = pickle.load(f)
+#    msdict = msdict['msdict']
 
 # In[] sequencing 축소 및 mannual 관리용
 
@@ -97,21 +96,21 @@ print('full_sequence', full_sequence, 'frames')
 
 signalss_497 = preprocessing(endpoint=int(full_sequence))
 
-msunit = 6
-sequenceSize = np.zeros(msunit)
+msunit = 6 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
+sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
     sequenceSize[i] = int(full_sequence/6*(i+1))
 sequenceSize = sequenceSize.astype(np.int)
 
 # learning intensity
-epochs = 100
-lr = 0.0001
+epochs = 100 # epoch 종료를 결정할 최소 단위.
+lr = 0.0001 # learning rate
 
 # model complexity
-reducesize = 0
+#reducesize = 0
 #bins = 20
-batch_size = 10000
+batch_size = 10000 # model 성능과 관련없음. ram과 model 구조가 허용하는 한도에서 높을수록 학습속도가 빠름
 #n_time = min_sequence - reducesize # min_sequence... 전체길이를 다쓰겟다는것 
 
 #allocated_sampleNum = len(list(range(0, min_sequence-n_time+1, bins)))
@@ -120,65 +119,56 @@ print('sequenceSize', sequenceSize)
 
 
 
-n_hidden = 64
-layer_1 = 64
+n_hidden = 64 # LSTM node 갯수, 왠지 모르지만 2배수로 들어감.
+layer_1 = 64 # fully conneted laye node 갯수
 
 # regularization
-l2_rate = 0.2
-dropout_rate = 0.10
+l2_rate = 0.2 # regularization 상수
+dropout_rate = 0.10 # dropout late
 
 
 
 # traininset에 사용 될 group을 설정합니다.
-
 mouselist = []
 mouselist += msGroup['highGroup']
 mouselist += msGroup['ketoGroup']
 mouselist += msGroup['midleGroup']
 mouselist += msGroup['salineGroup']
-
-mouselist += msGroup['yohimbineGroup']
-
-#mouselist += msGroup['capsaicinGroup']
-
-mouselist += [msGroup['lidocaineGroup'][0]]
+#mouselist += msGroup['yohimbineGroup']
+mouselist += [msGroup['lidocaineGroup'][0]] # etc set은 모든 training data를 전부 사용함.
 etc = msGroup['lidocaineGroup'][0]
 
 mouselist.sort()
 
-
-
-wanted_se1 = highGroup
-wanted_se2 = midleGroup + yohimbineGroup
-wanted_se3 = [etc] + ketoGroup
-wanted_se4 = salineGroup
+#wanted_se1 = highGroup
+#wanted_se2 = midleGroup + yohimbineGroup
+#wanted_se3 = [etc] + ketoGroup
+#wanted_se4 = salineGroup
 
 # startsetup
 wanted = mouselist #highGroup + midleGroup + [etc] # 작동할것을 여기에 넣어 
 
+mannual = [] # 절대 아무것도 넣지마 
+print('wanted', wanted)
+for i in wanted:
+    try:
+        mannual.append(np.where(np.array(mouselist)==i)[0][0])
+    except:
+        print(i, 'is excluded')
+        
+print('etc ix', np.where(np.array(mouselist)== etc)[0])
+
 ###############
 
-loadonly = False # training 하지 않고 test만 진행하고 싶을때 사용
-msskip = True # model 학습 도중에 끊겨서, 몇번 model을 학습해야 되는지 모를때 사용, 이미 학습되어 있으면 training 및 test를 skip함
-overwrite = False # 기존 model이 있어도 상관하지 않고 덮어쓰기함
 testsw = True  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
-trainingsw = True
+trainingsw = True # training 하려면 True 
+statelist = ['exp', 'con'] # ['exp', 'con']  # random shuffled control 사용 유무
+validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 
 ###############
-
-validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함, 이경우 validation의 hist가 나옴.
-
-#if not(testsw):
-#    validation_sw = False
-
-#if not(loadonly+msskip+overwrite == 1):
-#    print('state 확인요망, 에러날수 있음!!')
-
-controlsw = False
-print('loadonly', loadonly, 'msskip', msskip, 'controlsw', controlsw, 'overwrite', overwrite, 'testsw', testsw)
 
 #project name
-settingID =  '0819_test_1/'
+settingID =  '0819_test_1/' # 이 폴더에 저장됨
 print('settingID', settingID)
 
 
@@ -200,8 +190,6 @@ def array_recover(X_like):
     
     return X_like_toarray
 
-
-#sequence_length = n_time 
 n_in =  1 # number of features
 n_out = 2 # number of class
 
@@ -257,7 +245,6 @@ for classnum in range(n_out):
 
 
 # 각 class의 data 입력조건설정
-
 painGroup = highGroup + midleGroup + ketoGroup # + capsaicinGroup 
 
 for SE in range(N):
@@ -289,6 +276,9 @@ sampleNum = np.min(mslenlist)
 print('sampleNum', sampleNum)
 
 # class간에 data 갯수의 비율을 맞추기 위한 함수.
+# class 0인 nonpain이 갯수가 더 많으므로, 필수 요소 추가후 남은 숫자 만큼 랜덤하게 뽑음
+# 이 함수에서 두 class 모두 shuffled됨. 하지만 X, Y, Z가 동일 index로 shuffle 되기 때문에 구조는 유지됨
+
 def ms_sampling(sampleNum, datasetX, datasetY, datasetZ, msclass):
     if msclass == 0:
         essentialIndex = []
@@ -355,19 +345,23 @@ for SE in range(N):
         if identical_ix.shape[0] != 0:
             dice = random.choice([[0,1],[1,0]])
             Y_control[identical_ix] = dice
+            
+# cross validation을 위해, training / test set split            
 
-X_training = []; [X_training.append([]) for i in range(msunit)]
+X_training = []; [X_training.append([]) for i in range(msunit)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
 Y_training_list = []
 Y_training_control_list = []
    
 
 Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
-#X_human_training = np.array(X_human)
+
+# mouselist는 training set에 사용된 list임.
+# training set에 사용된 mouse의 마릿수 만큼 test set을 따로 만듦
+
 for test_i in range(len(mouselist)):
-    # training set을 위하여, test set을 기본에서 제거한다. 
-    # training set을 list에 추가하여 저장한다. 
-    delist = np.where(indexer[:,0]==mouselist[test_i])[0]
-    for unit in range(msunit):
+    
+    delist = np.where(indexer[:,0]==mouselist[test_i])[0] # index는 각 data의 [SE, se]를 저장하고 있음
+    for unit in range(msunit): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
         X_training[unit].append(np.delete(X[unit], delist, 0))
    
     Y_training_list.append(np.delete(Y_training, delist, 0))
@@ -380,6 +374,44 @@ print(msc1, msc2, msc3, 'data, lable, label_suffled set 개수 입니다. 셋은
 if not(msc1 == msc2 and msc2 == msc3):
     print('set 개수 불일치, 확인요망')
     
+# 정보유출 유무 test
+if False:    
+    unitNum = 1; mouseNum = 0
+    delist = np.where(indexer[:,0]==mouseNum)[0]
+    
+    testdata = np.array(X_training[unitNum][mouseNum]) # unit 번째 병렬구조 input에서 mouseNum의 training set
+    for row in range(testdata.shape[0]):
+        for dataNum in range(X[unitNum][delist].shape[0]):
+            indentical_score = np.sum(testdata[row,:,:] == X[unitNum][delist][dataNum]) # mouseNum번 쥐의 raw data중 dataNum번째 시계열 data
+            if not indentical_score == 0:
+                print(row, indentical_score)
+    
+            
+    # 위와 동일한 구조에서 검사대상인 set을 현재 쥐가 속하지 않은 set으로 바꾸면
+    # 중복 data가 검출됨. 즉 positive control.
+    unitNum = 1; mouseNum = 0
+    delist = np.where(indexer[:,0]==mouseNum)[0]
+    
+    testdata = np.array(X_training[unitNum][mouseNum+1]) # unit 번째 병렬구조 input에서 mouseNum의 training set
+    for row in range(testdata.shape[0]):
+        for dataNum in range(X[unitNum][delist].shape[0]):
+            indentical_score = np.sum(testdata[row,:,:] == X[unitNum][delist][dataNum]) # mouseNum번 쥐의 raw data중 dataNum번째 시계열 data
+            if not indentical_score == 0:
+                print(row, indentical_score)
+                
+# 정보유출을 사전차단하기 위해 set이 아닌 raw data 변수 자체를 삭제한다.
+
+inputsize = np.zeros(msunit) 
+for unit in range(msunit):
+    inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
+                             
+del(X); del(Y); del(Z)
+del(Y_training); del(Y_training_control); del(Y_control)
+for j in range(n_out):
+    i = 0
+    del(X_save[i]); del(Y_save[i]); del(Z_save[i])
+    del(X_save2[i]); del(Y_save2[i]); del(Z_save2[i])
+
 # In[]    
 # In keras  
 from keras import regularizers
@@ -419,7 +451,7 @@ def keras_setup():
     input2 = []; [input2.append([]) for i in range(msunit)]
     
     for unit in range(msunit):
-        input1[unit] = keras.layers.Input(shape=(X[unit].shape[1], n_in))
+        input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in))
         input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit])
         input2[unit] = Dense(layer_1, kernel_initializer = init, activation='relu')(input2[unit])
         input2[unit] = Dropout(dropout_rate)(input2[unit])
@@ -439,7 +471,11 @@ def keras_setup():
 
 model, idcode = keras_setup()
 
-print(model.summary())
+if True: # 시각화
+    print(model.summary())
+    from keras.utils import plot_model
+    plot_model(model, to_file='./model.png')
+
 
 
 # 경로 설정
@@ -474,15 +510,7 @@ if not os.path.exists(RESULT_SAVE_PATH + 'tmp/'):
   os.mkdir(RESULT_SAVE_PATH + 'tmp/')
   
 
-mannual = [] # 절대 아무것도 넣지마 
-print('wanted', wanted)
-for i in wanted:
-    try:
-        mannual.append(np.where(np.array(mouselist)==i)[0][0])
-    except:
-        print(i, 'is excluded')
-        
-print('etc ix', np.where(np.array(mouselist)== etc)[0])
+
 
 # In[]
 
@@ -492,9 +520,8 @@ maxepoch = 5000
 print('acc_thr', acc_thr, '여기까지 학습합니다.')
 print('maxepoch', maxepoch)
 
-state = 'exp'
+#state = 'exp'
 sett = 0; ix = 0 # for test
-statelist = ['exp', 'con']
 for state in statelist:
     for ix, sett in enumerate(mannual):
         # training 구문입니다.
@@ -550,14 +577,16 @@ for state in statelist:
 
             # control은 추가로, exp plot이 되어있는지 확인
             if state == 'con':
-                loadname = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_trainingSet_result.csv'
-                f = open(loadname, 'r', encoding='utf-8')
-                print('exp pair 없음')
-                recent_model = 0
-
+                try:
+                    loadname2 = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_' + 'exp' + '_trainingSet_result.csv'
+                    f = open(loadname2, 'r', encoding='utf-8')
+                    f.close()
+                except:
+                    print(mouselist[sett], 'exp pair 없음, control 진행을 멈춥니다.')
+                    recent_model = True
             # 학습된 모델도 없고, 최근에 진행중인것도 없으니 학습 시작합니다.    
             if not(recent_model):
-                print('mouse #', [mouselist[sett]], '학습된 exp model 없음. 새로시작합니다.')
+                print('mouse #', [mouselist[sett]], '학습된', state, 'model 없음. 새로시작합니다.')
                 model, idcode = keras_setup() # 시작과 함께 weight reset 됩니다.
 
                 df2 = [idcode]
@@ -637,8 +666,7 @@ for state in statelist:
                     # control 전용, control_epochs 구하기
                     if state == 'con':
                         mscsv = []
-                        loadname = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_trainingSet_result.csv'
-                        f = open(loadname, 'r', encoding='utf-8')
+                        f = open(loadname2, 'r', encoding='utf-8')
                         rdr = csv.reader(f)
                         for line in rdr:
                             mscsv.append(line)
@@ -659,7 +687,7 @@ for state in statelist:
                         hist_save_loss = np.array(hist.history['loss'])
                         hist_save_acc = np.array(hist.history['acc'])
 
-                        if validation_sw:
+                        if validation_sw and state == 'exp':
                             hist_save_val_loss = np.array(hist.history['val_loss'])
                             hist_save_val_acc = np.array(hist.history['val_acc'])
 
@@ -667,7 +695,7 @@ for state in statelist:
                         hist_save_loss = np.concatenate((hist_save_loss, np.array(hist.history['loss'])), axis = 0)
                         hist_save_acc = np.concatenate((hist_save_acc, np.array(hist.history['acc'])), axis = 0)
 
-                        if validation_sw:
+                        if validation_sw and state == 'exp':
                             hist_save_val_loss = np.concatenate((hist_save_val_loss, np.array(hist.history['val_loss'])), axis = 0)
                             hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_acc'])), axis = 0)
 
@@ -699,7 +727,7 @@ for state in statelist:
                 csvwriter.writerow(hist_save_loss)
                 csvfile.close()
 
-                if validation_sw:
+                if validation_sw and state == 'exp':
                     plt.figure();
                     mouseNum = mouselist[sett]
                     plt.plot(hist_save_val_loss, label= '# ' + str(mouseNum) + ' loss')
@@ -731,6 +759,7 @@ for state in statelist:
                 for k in range(N):
                     if not (k in mouselist) and k in grouped_total_list:
                         testlist.append(k)
+                testlist.append(etc)
 
             if state == 'exp':
                 final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
@@ -829,44 +858,5 @@ for state in statelist:
                         csvwriter.writerow(df1[row])
                     csvfile.close()
 
-                
- 
-# In[] 작업용, loss_val 시각화 
-
-#""" 
-#
-## tar -cvf (압축 파일명).tar (압축할 폴더 또는 파일)
-#
-## 1
-## test acc 이외의 raw data 수준에서 저장
-## acc, loss value save
-## fig, model 폴더 분리
-## tr acc save 변수 및 폴더 지정,
-## control 측정
-## validation은 일단 보류
-#
-## 20190805
-## control도 model 저장하도록,
-#            
-## 20190809
-#
-#raw, se1 부터 ROI 0 짤리는 문제 수정
-#
-#if se == 0 and ROI == 0:
-#    X_all = np.array(unknown_data); Z_all = np.array(Z); Y_all = np.array(Y)
-#elif not(se == 0 and ROI == 0):            
-#   
-## 20190811         
-## control 시작에 초기화 -> 수정
-## control 중복체크 독립적으로 -> 수정
-#
-## wnated list = cloud용, 취약점 체크용 
-#       
-#"""
-
-
-
-
-
-
+   
 
