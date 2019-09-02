@@ -189,7 +189,7 @@ painROIsave = []; [painROIsave.append([]) for i in range(N)]
 SE = 0; se = 1; ROI = 0
 for SE in range(N):
     ROInum = signalss[SE][0].shape[1]
-    painROIsave[SE] = np.zeros(ROInum)
+    [painROIsave[SE].append([]) for i in range(5)]
     for se in range(5):
         valuesave = []; pain_ROI = np.zeros(ROInum); pain_time = []
         for ROI in range(ROInum):       
@@ -203,15 +203,52 @@ for SE in range(N):
             pain_ROI[ROI] = np.mean(predict_series) # ROI vector
             pain_time.append(predict_series)
             
-            if se == 1:
-                painROIsave[SE][ROI] = pain_ROI[ROI]
+        painROIsave[SE][se] = pain_ROI
             
         pain_time = np.array(pain_time) # ROI x bins
         
         # 위까지 pain_ROI, pain_time 입력
-      
+
         hist_density = np.histogram(pain_ROI, bins = np.arange(0,1.01,0.02), density=True)[0]
         hist_density_save[se].append(hist_density) # [se][ROI][histbins]
+        
+plt.imshow(pain_time)
+
+##
+t4_sum = np.zeros((N,5)); t4_min = np.zeros((N,5))
+SE = 0; se = 1; ROI = 0
+for SE in range(N):
+    ROInum = signalss[SE][0].shape[1]
+    for se in range(5):
+        signal = np.array(signalss[SE][se])[:497,:]
+        meansignal = np.mean(signal, axis=1)
+        
+        valsave = []
+        for ROI in range(ROInum):
+            valsave.append(np.mean(signal[:,ROI]) * (painROIsave[SE][se][ROI] > 0.8) )
+        
+        t4_sum[SE,se] = np.mean(valsave)
+        
+            
+target = t4_sum     
+painGroup = highGroup + midleGroup + ketoGroup
+nonpainGroup = salineGroup + lidocainGroup
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+ms1 = accuracy_cal(pain, nonpain, False)[0]
+ms2 = accuracy_cal(pain, nonpain_within, False)[0]
+ms3 = accuracy_cal(pain, nonpain_between, False)[0]
+        
+
+print('highGroup', np.nanmean(target[highGroup,1]))
+print('midleGroup', np.nanmean(target[midleGroup,1]))
+print('lowGroup', np.nanmean(target[lowGroup,1]))
+print('restrictionGroup', np.nanmean(target[restrictionGroup,1]))
+print('ketoGroup', np.nanmean(target[ketoGroup,1]))
+print('salineGroup', np.nanmean(target[salineGroup,1]))
+print('lidocainGroup', np.nanmean(target[lidocainGroup,1]))
+print('capsaicinGroup ', np.nanmean(target[capsaicinGroup ,1]))
+
         
 # 시각화
 se = 1
@@ -221,36 +258,43 @@ plt.legend()
     
 # In[]
             
-from scipy.stats.stats import pearsonr 
 axiss = []; [axiss.append([]) for i in range(5)]
-
+t4_pain = np.zeros((N,5))
 SE = 0; se = 1; ROI = 0
-for SE in highGroup:
+for SE in painGroup:
     ROInum = signalss[SE][0].shape[1]
     pix = painROIsave[SE] > 0.9
     
-    for se in range(1):
-        meansignal = np.mean(np.array(signalss[SE][se])[:497,:], axis=1)
+    for se in [0,2]:
+        signal = np.array(signalss[SE][se])[:497,:]
+        meansignal = np.mean(signal, axis=1)
         for ROI in range(ROInum):
-            signalROI = np.array(signalss[SE][se])[:497,ROI]
-            axiss[0].append(np.mean(signalROI))
-            axiss[1].append(painROIsave[SE][ROI])   
-            axiss[2].append(pearsonr(signalROI,behavss2[SE][se][:497])[0])
-            axiss[3].append(pearsonr(signalROI,meansignal)[0])
-            
-            plt.figure(ROI)
-            plt.plot(signalROI, label=painROIsave[SE][ROI])
-            plt.legend()
-            
-    # pain cell이면, 다른 session에서는 조용할까?
+            axiss[0].append(np.sum(signal[:,ROI])/np.sum(meansignal))
+            axiss[1].append(painROIsave[SE][ROI])
+
+a = mslinear_regression(axiss[1],axiss[0])[0]
+b = mslinear_regression(axiss[1],axiss[0])[1]
+
+plt.scatter(axiss[1],axiss[0], s = 0.5)
+xaxis = list(np.arange(0,1.1,0.1))
+plt.plot(xaxis, a * np.array(xaxis) + b, c ='orange')  
+
+axiss2 = []; [axiss2.append([]) for i in range(5)]
+for thr in np.arange(0, 1, 0.01):
+    painmean = np.nanmean(np.array(axiss[0])[thr + 0.05 > np.array(axiss[1]) > thr])
+    nonpainmean = np.nanmean(np.array(axiss[0])[np.array(axiss[1]) < thr])  
     
+    print(thr, nonpainmean-painmean)
+    
+    axiss2[0].append(thr)
+    axiss2[1].append(painmean)    
+    
+plt.scatter(axiss2[0],axiss2[1], s = 0.5)  
+         
+    # pain cell이면, 다른 session에서는 조용할까?
     # pain cell classification이 되었으니, 임의로 pain cell의 acitivity로 평가해보면 어떨까?
     
     
-
-print(pearsonr(axiss[3],axiss[1])[0])
-plt.scatter(axiss[3],axiss[1])
-
 
 # In[]
 def ms_thresholding(optimalThr = 0):
@@ -438,16 +482,15 @@ for i in FPlist:
     
 import random
 
-painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup
+painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 
 pain_movement, nonpain_within_movement, nonpain_between_movement = pain_nonpain_sepreate(movement, painGroup, nonpainGroup)
 nonpain_movement = np.concatenate((nonpain_within_movement, nonpain_between_movement), axis=0)
 
-
 axiss = []; [axiss.append([]) for i in range(2)]
 totalNum = nonpain_movement.shape[0]
-epochs = 5000
+epochs = 50000
 for epoch in range(epochs):
     if epoch % int(epochs/10) == 1:
         print(epoch, '/', epochs)
@@ -462,10 +505,10 @@ for d in range(2):
     axiss[d] = np.array(axiss[d])
     axiss[d] = axiss[d][np.isnan(axiss[d])==0];
     
-maxvalue = np.max([np.concatenate((pain1, non_pain1))])
+#maxvalue = np.max([np.concatenate((pain1, non_pain1))])
     
 m, b = mslinear_regression(axiss[0], axiss[1])
-
+print(m, b)
 plt.figure()
 plt.scatter(axiss[0], axiss[1], s = 0.4)
 plt.xlabel('movement ratio mean')
@@ -473,7 +516,7 @@ plt.ylabel('accuracy by movement as feature')
 
 xaxis = np.arange(0,0.5,0.5/100)
 plt.plot(xaxis, xaxis*m + b, c = 'orange')
-plt.xlim([0,0.5]), plt.ylim([0.5,1])
+plt.xlim([0,0.5]), plt.ylim([0,1])
 
 # 대조군
 
@@ -500,18 +543,18 @@ for d in range(2):
     axiss[d] = np.array(axiss[d])
     axiss[d] = axiss[d][np.isnan(axiss[d])==0];
     
-maxvalue = np.max([np.concatenate((pain1, non_pain1))])
+#maxvalue = np.max([np.concatenate((pain1, non_pain1))])
     
 m, b = mslinear_regression(axiss[0], axiss[1])
-
+print(m, b)
 plt.figure()
 plt.scatter(axiss[0], axiss[1], s = 0.4)
 plt.xlabel('movement ratio mean')
-plt.ylabel('accuracy by movement as feature')
+plt.ylabel('accuracy by RNN')
 
 xaxis = np.arange(0,0.5,0.5/100)
 plt.plot(xaxis, xaxis*m + b, c = 'orange')
-plt.xlim([0,0.5]), plt.ylim([0.5,1])
+plt.xlim([0,0.5]), plt.ylim([0,1])
 
 # In[] to Prism
 
@@ -519,10 +562,11 @@ def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sam
     target = np.array(msmatrix)
     
     df3 = pd.DataFrame(target[highGroup]) 
-    df3 = pd.concat([df3, pd.DataFrame(target[midleGroup]), pd.DataFrame(target[lowGroup]), \
-                     pd.DataFrame(target[restrictionGroup]), pd.DataFrame(target[salineGroup]), \
+    df3 = pd.concat([df3, pd.DataFrame(target[midleGroup]), \
+                     pd.DataFrame(target[salineGroup]), \
                      pd.DataFrame(target[ketoGroup]), pd.DataFrame(target[lidocainGroup]), \
-                     pd.DataFrame(target[capsaicinGroup])], ignore_index=True, axis = 1)
+                     pd.DataFrame(target[capsaicinGroup]), pd.DataFrame(target[yohimbineGroup])], \
+                        ignore_index=True, axis = 1)
         
     df3 = np.array(df3)
     
