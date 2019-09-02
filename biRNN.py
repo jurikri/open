@@ -103,29 +103,19 @@ for i in range(msunit):
     sequenceSize[i] = int(full_sequence/6*(i+1))
 sequenceSize = sequenceSize.astype(np.int)
 
-# learning intensity
-epochs = 100 # epoch 종료를 결정할 최소 단위.
-lr = 0.0001 # learning rate
+
+
+#1e-4 == 0.0001
 
 # model complexity
 #reducesize = 0
 #bins = 20
-batch_size = 10000 # model 성능과 관련없음. ram과 model 구조가 허용하는 한도에서 높을수록 학습속도가 빠름
+batch_size = 20000 # model 성능과 관련없음. RAM과 model 구조가 허용하는 한도에서 높을수록 학습속도가 빠름
 #n_time = min_sequence - reducesize # min_sequence... 전체길이를 다쓰겟다는것 
 
 #allocated_sampleNum = len(list(range(0, min_sequence-n_time+1, bins)))
 print('full_sequence', full_sequence)
 print('sequenceSize', sequenceSize)
-
-
-
-n_hidden = 64 # LSTM node 갯수, 왠지 모르지만 2배수로 들어감.
-layer_1 = 64 # fully conneted laye node 갯수
-
-# regularization
-l2_rate = 0.2 # regularization 상수
-dropout_rate = 0.10 # dropout late
-
 
 
 # traininset에 사용 될 group을 설정합니다.
@@ -139,11 +129,6 @@ mouselist += [msGroup['lidocaineGroup'][0]] # etc set은 모든 training data를
 etc = msGroup['lidocaineGroup'][0]
 
 mouselist.sort()
-
-#wanted_se1 = highGroup
-#wanted_se2 = midleGroup + yohimbineGroup
-#wanted_se3 = [etc] + ketoGroup
-#wanted_se4 = salineGroup
 
 # startsetup
 wanted = mouselist #highGroup + midleGroup + [etc] # 작동할것을 여기에 넣어 
@@ -160,15 +145,30 @@ print('etc ix', np.where(np.array(mouselist)== etc)[0])
 
 ###############
 
-testsw = True  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
+# learning intensity
+epochs = 50 # epoch 종료를 결정할 최소 단위.
+lr = 2e-3 # learning rate
+
+n_hidden = 8 # LSTM node 갯수, 왠지 모르지만 2배수로 들어감.
+layer_1 = 8 # fully conneted laye node 갯수
+
+# regularization
+l2_rate = 0.2 # regularization 상수
+dropout_rate = 0.10 # dropout late
+
+testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
-statelist = ['exp', 'con'] # ['exp', 'con']  # random shuffled control 사용 유무
+statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
+seed = 2
+acc_thr = 0.95 # 0.93 -> 0.94
+maxepoch = 5000
+
 
 ###############
 
 #project name
-settingID =  '0819_test_1/' # 이 폴더에 저장됨
+settingID =  '0829_downsize_7_2/' # 이 폴더에 저장됨
 print('settingID', settingID)
 
 
@@ -401,7 +401,7 @@ if False:
                 
 # 정보유출을 사전차단하기 위해 set이 아닌 raw data 변수 자체를 삭제한다.
 
-inputsize = np.zeros(msunit) 
+inputsize = np.zeros(msunit, dtype=int) 
 for unit in range(msunit):
     inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
                              
@@ -443,28 +443,26 @@ def keras_setup():
         pass 
         # print('reset할 기존 model 없음')
     
-    init = initializers.he_uniform(seed=None)
+    init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용
     
-#    model = Sequential()
-    
-    input1 = []; [input1.append([]) for i in range(msunit)]
-    input2 = []; [input2.append([]) for i in range(msunit)]
+    input1 = []; [input1.append([]) for i in range(msunit)] # 최초 input layer
+    input2 = []; [input2.append([]) for i in range(msunit)] # input1을 받아서 끝까지 이어지는 변수
     
     for unit in range(msunit):
-        input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in))
-        input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit])
-        input2[unit] = Dense(layer_1, kernel_initializer = init, activation='relu')(input2[unit])
-        input2[unit] = Dropout(dropout_rate)(input2[unit])
+        input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in)) # 각 병렬 layer shape에 따라 input 받음
+        input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
+        input2[unit] = Dense(layer_1, kernel_initializer = init, activation='relu')(input2[unit]) # fully conneted layers, relu
+        input2[unit] = Dropout(dropout_rate)(input2[unit]) # dropout
     
-    added = keras.layers.Add()(input2)
-    merge_1 = Dense(layer_1, kernel_initializer = init, activation='relu')(added)
-    merge_2 = Dropout(dropout_rate)(merge_1)
-    merge_2 = Dense(n_out, kernel_initializer = init, activation='sigmoid')(merge_2)
-    merge_3 = Dense(n_out, input_dim=n_out, kernel_regularizer=regularizers.l2(l2_rate))(merge_2)
-    merge_4 = Activation('softmax')(merge_3)
+    added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
+    merge_1 = Dense(layer_1, kernel_initializer = init, activation='relu')(added) # fully conneted layers, relu
+    merge_2 = Dropout(dropout_rate)(merge_1) # dropout
+    merge_2 = Dense(n_out, kernel_initializer = init, activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
+    merge_3 = Dense(n_out, input_dim=n_out, kernel_regularizer=regularizers.l2(l2_rate))(merge_2) # regularization
+    merge_4 = Activation('softmax')(merge_3) # activation as softmax function
     
-    model = keras.models.Model(inputs=input1, outputs = merge_4)
-    model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999), metrics=['accuracy'])
+    model = keras.models.Model(inputs=input1, outputs = merge_4) # input output 선언
+    model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
     
     #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
     return model, idcode
@@ -513,9 +511,6 @@ if not os.path.exists(RESULT_SAVE_PATH + 'tmp/'):
 
 
 # In[]
-
-acc_thr = 0.92 # 0.93 -> 0.94
-maxepoch = 5000
 
 print('acc_thr', acc_thr, '여기까지 학습합니다.')
 print('maxepoch', maxepoch)
@@ -699,7 +694,7 @@ for state in statelist:
                             hist_save_val_loss = np.concatenate((hist_save_val_loss, np.array(hist.history['val_loss'])), axis = 0)
                             hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_acc'])), axis = 0)
 
-                    current_acc = np.min(hist_save_acc[-30:]) # 최근 30개 epochs 최소값
+                    current_acc = np.min(hist_save_acc[-10:]) # 최근 30개 epochs 최소값
                     if state == 'con':
                         current_acc = np.inf
 
