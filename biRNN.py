@@ -173,8 +173,8 @@ mouselist += msGroup['highGroup']
 mouselist += msGroup['ketoGroup']
 mouselist += msGroup['midleGroup']
 mouselist += msGroup['salineGroup']
-#mouselist += msGroup['yohimbineGroup']
-mouselist += [msGroup['lidocaineGroup'][0]] # etc set은 모든 training data를 전부 사용함.
+mouselist += msGroup['yohimbineGroup'] # 20190903: yohimbineGroup group , tarining set에 추가 
+mouselist += [msGroup['lidocaineGroup'][0]] # etc set의 test를 위하여 모든 training data를 사용함.
 etc = msGroup['lidocaineGroup'][0]
 mouselist.sort()
 
@@ -197,16 +197,16 @@ print('etc ix', np.where(np.array(mouselist)== etc)[0])
 epochs = 50 # epoch 종료를 결정할 최소 단위.
 lr = 2e-3 # learning rate
 
-n_hidden = 64 # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = 64 # fully conneted laye node 갯수 # 8
+n_hidden = 8 # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = 8 # fully conneted laye node 갯수 # 8
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
 l2_rate = 0.2 # regularization 상수
 dropout_rate = 0.10 # dropout late
 
-testsw = True  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
-trainingsw = False # training 하려면 True 
+testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
+trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 
@@ -219,21 +219,17 @@ batch_size = 20000
 maxepoch = 5000
 n_in =  1 # number of features
 n_out = 2 # number of class
+classratio = 1 # class under sampling ratio
 
 # project name
 # settingID =  '0903_test/' # 이 폴더에 저장됨
 # seed = 2
 
 project_list = []
-project_list.append(['0819_test_1/', None]) # proejct name, seed
-project_list.append(['0819_test_2/', None]) # proejct name, seed
-project_list.append(['0819_test_3/', None]) # proejct name, seed
-project_list.append(['0819_test_4/', None]) # proejct name, seed
-# project_list.append(['0903_seeding_1/', 1]) # proejct name, seed
-# project_list.append(['0903_seeding_1/', 1]) # proejct name, seed
-# project_list.append(['0903_seeding_2/', 2]) # proejct name, seed
-# project_list.append(['0903_seeding_3/', 3]) # proejct name, seed
-# project_list.append(['0903_seeding_4/', 4]) # proejct name, seed
+project_list.append(['0903_seeding_1/', 1]) # proejct name, seed
+project_list.append(['0903_seeding_2/', 2]) 
+# project_list.append(['0903_seeding_3/', 3]) 
+# project_list.append(['0903_seeding_4/', 4])
 
 q = project_list[0]
 for q in project_list:
@@ -265,7 +261,7 @@ for q in project_list:
         os.mkdir(RESULT_SAVE_PATH + 'model/')
     
     if not os.path.exists(RESULT_SAVE_PATH + 'tmp/'):
-        s.mkdir(RESULT_SAVE_PATH + 'tmp/')
+        os.mkdir(RESULT_SAVE_PATH + 'tmp/')
 
     # save_hyper_parameters 기록남기기
     save_hyper_parameters = []
@@ -279,7 +275,8 @@ for q in project_list:
     save_hyper_parameters.append(['acc_thr', acc_thr])
     save_hyper_parameters.append(['batch_size', batch_size])
     save_hyper_parameters.append(['seed', seed])
-
+    save_hyper_parameters.append(['classratio', classratio])
+    
     savename4 = RESULT_SAVE_PATH + 'model/' + '00_model_save_hyper_parameters.csv'
     csvfile = open(savename4, 'w', newline='')
     csvwriter = csv.writer(csvfile)
@@ -303,7 +300,7 @@ for q in project_list:
 
 
     # 각 class의 data 입력조건설정
-    painGroup = highGroup + midleGroup + ketoGroup # + capsaicinGroup 
+    painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup 
 
     for SE in range(N):
         for se in range(5):     
@@ -348,7 +345,7 @@ for q in project_list:
             for k in essentialIndex:
                 ixlist.remove(k)
                 
-            classratio = 1.2; random.seed(seed)
+            random.seed(seed)
             ixlist = random.sample(ixlist, int(sampleNum* classratio) - len(essentialIndex))
             ixlist = ixlist + essentialIndex
             
@@ -366,7 +363,9 @@ for q in project_list:
 
     # essentialList: 반드시 포함해야 하는 nonpian session
     essentialList = [[3,0], [8,0], [14,1], [15,0], [47,1], [47,3], [48,1], \
-                    [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3]] #, [60,0], [61,2]]
+        [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3], [67,0]]
+
+
 
     for i in range(n_out):
         print('class', str(i), 'sampling 이전', np.array(X_save[i]).shape[0])
@@ -701,8 +700,10 @@ for q in project_list:
                             if validation_sw and state == 'exp':
                                 hist_save_val_loss = np.concatenate((hist_save_val_loss, np.array(hist.history['val_loss'])), axis = 0)
                                 hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_acc'])), axis = 0)
-
-                        current_acc = np.min(hist_save_acc[-10:]) # 최근 30개 epochs 최소값
+                        
+                        # 종료조건: 
+                        current_acc = np.min(hist_save_acc[-10:]) 
+                        
                         if state == 'con':
                             current_acc = np.inf
 
