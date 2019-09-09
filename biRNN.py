@@ -20,12 +20,11 @@ from keras.layers.core import Dense, Activation
 from keras.layers.recurrent import LSTM
 from keras.layers.wrappers import Bidirectional
 from keras.optimizers import Adam
-import os
 #from keras.callbacks import ModelCheckpoint
 
 # set pathway
 try:
-    savepath = 'C:\\Users\\user\\Google 드라이브\\BMS Google drive\\희라쌤\\save\\tensorData\\'; os.chdir(savepath)
+    savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
     try:
         savepath = 'C:\\Users\\msbak\\Documents\\tensor\\'; os.chdir(savepath);
@@ -189,7 +188,7 @@ for i in wanted:
         print(i, 'is excluded')
 print('etc ix', np.where(np.array(mouselist)== etc)[0])
 # 구지 mannual을 두고 다시 indexing 하는 이유는, 인지하기 편하기 때문임. 딱히 안써도 됨
-
+  
 ###############
 # hyperparameters #############
 
@@ -205,9 +204,9 @@ layer_1 = 8 # fully conneted laye node 갯수 # 8
 l2_rate = 0.2 # regularization 상수
 dropout_rate = 0.10 # dropout late
 
-testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
+testsw = True  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
-statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
+statelist = ['exp', 'con'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 
 acc_thr = 0.95 # 0.93 -> 0.94
@@ -221,15 +220,14 @@ n_in =  1 # number of features
 n_out = 2 # number of class
 classratio = 1 # class under sampling ratio
 
-# project name
-# settingID =  '0903_test/' # 이 폴더에 저장됨
-# seed = 2
-
 project_list = []
-project_list.append(['0903_seeding_1/', 1]) # proejct name, seed
-project_list.append(['0903_seeding_2/', 2]) 
-# project_list.append(['0903_seeding_3/', 3]) 
-# project_list.append(['0903_seeding_4/', 4])
+ # proejct name, seed
+project_list.append(['0903_seeding_1/', 1])
+project_list.append(['0903_seeding_2/', 2])
+project_list.append(['0903_seeding_3/', 3]) 
+project_list.append(['0903_seeding_4/', 4]) 
+project_list.append(['0903_seeding_5/', 5]) 
+
 
 q = project_list[0]
 for q in project_list:
@@ -241,7 +239,7 @@ for q in project_list:
     if not os.path.exists(RESULT_SAVE_PATH):
         os.mkdir(RESULT_SAVE_PATH)
 
-    RESULT_SAVE_PATH = './result/' + settingID
+    RESULT_SAVE_PATH = './result/' + settingID + '//'
     if not os.path.exists(RESULT_SAVE_PATH):
         os.mkdir(RESULT_SAVE_PATH)
     
@@ -276,6 +274,8 @@ for q in project_list:
     save_hyper_parameters.append(['batch_size', batch_size])
     save_hyper_parameters.append(['seed', seed])
     save_hyper_parameters.append(['classratio', classratio])
+    save_hyper_parameters.append(['mouselist', mouselist])
+    
     
     savename4 = RESULT_SAVE_PATH + 'model/' + '00_model_save_hyper_parameters.csv'
     csvfile = open(savename4, 'w', newline='')
@@ -354,6 +354,7 @@ for q in project_list:
             datasetZ = np.array(datasetZ)[ixlist]
             
         elif msclass == 1:
+            random.seed(seed)
             ixlist = range(len(datasetX)); ixlist = random.sample(ixlist, int(sampleNum))
             datasetX = np.array(datasetX)[ixlist]
             datasetY = np.array(datasetY)[ixlist]
@@ -400,6 +401,7 @@ for q in project_list:
             
             identical_ix = np.where(np.sum(indexer==cbn, axis=1)==2)[0]
             if identical_ix.shape[0] != 0:
+                random.seed(seed)
                 dice = random.choice([[0,1],[1,0]])
                 Y_control[identical_ix] = dice
                 
@@ -432,7 +434,7 @@ for q in project_list:
         print('set 개수 불일치, 확인요망')
         
     # 정보유출 유무 test
-    if False:    
+    if True:    
         unitNum = 1; mouseNum = 0
         delist = np.where(indexer[:,0]==mouseNum)[0]
         
@@ -441,7 +443,7 @@ for q in project_list:
             for dataNum in range(X[unitNum][delist].shape[0]):
                 indentical_score = np.sum(testdata[row,:,:] == X[unitNum][delist][dataNum]) # mouseNum번 쥐의 raw data중 dataNum번째 시계열 data
                 if not indentical_score == 0:
-                    print(row, indentical_score)
+                    print('leaking!!', row, indentical_score)
         
                 
         # 위와 동일한 구조에서 검사대상인 set을 현재 쥐가 속하지 않은 set으로 바꾸면
@@ -449,15 +451,15 @@ for q in project_list:
         unitNum = 1; mouseNum = 0
         delist = np.where(indexer[:,0]==mouseNum)[0]
         
+        sw1 = 0
         testdata = np.array(X_training[unitNum][mouseNum+1]) # unit 번째 병렬구조 input에서 mouseNum의 training set
         for row in range(testdata.shape[0]):
             for dataNum in range(X[unitNum][delist].shape[0]):
                 indentical_score = np.sum(testdata[row,:,:] == X[unitNum][delist][dataNum]) # mouseNum번 쥐의 raw data중 dataNum번째 시계열 data
-                if not indentical_score == 0:
-                    print(row, indentical_score)
+                if not indentical_score == 0 and sw1==0:
+                    print('validation', row, indentical_score); sw1 = 1
                     
     # 정보유출을 사전차단하기 위해 set이 아닌 raw data 변수 자체를 삭제한다.
-
     inputsize = np.zeros(msunit, dtype=int) 
     for unit in range(msunit):
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
@@ -522,8 +524,14 @@ for q in project_list:
     print('acc_thr', acc_thr, '여기까지 학습합니다.')
     print('maxepoch', maxepoch)
 
-    state = 'exp'
-    sett = 0; ix = 0 # for test
+    # 학습 순서 무작위 배치, seed none으로 설정함.
+    np.random.seed(None)
+    shuffleix = list(range(len(mannual)))
+    np.random.shuffle(shuffleix)
+    print('shuffleix', shuffleix)
+    mannual = np.array(mannual)[shuffleix]
+    
+    sett = 0; ix = 0; state = 'exp' # for test
     for state in statelist:
         for ix, sett in enumerate(mannual):
             # training 구문입니다.
@@ -628,10 +636,12 @@ for q in project_list:
 
                             valid = tuple([X_all, Y_all])
 
-                    # training set을 준비합니다.    
+                    # training set을 준비합니다.   
+                    np.random.seed(seed)
                     shuffleix = list(range(X_training[0][sett].shape[0]))
                     np.random.shuffle(shuffleix) 
-
+#                    print(shuffleix)
+   
                     tr_y_shuffle = Y_training_list[sett][shuffleix]
                     tr_y_shuffle_control = Y_training_control_list[sett][shuffleix]
 
@@ -640,7 +650,7 @@ for q in project_list:
                         tr_x.append(X_training[unit][sett][shuffleix])
 
 
-                    # 특정 training acc를 만족할때까지 epoch를 100단위로 지속합니다.
+                    # 특정 training acc를 만족할때까지 epoch를 epochs단위로 지속합니다.
                     current_acc = -np.inf; cnt = -1
                     while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
                         print('stop 조건을 표시합니다')
@@ -723,6 +733,7 @@ for q in project_list:
                     plt.plot(hist_save_acc, label= '# ' + str(mouseNum) + ' acc')
                     plt.legend()
                     plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.png')
+                    plt.close()
 
                     savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.csv'
                     csvfile = open(savename, 'w', newline='')
@@ -738,6 +749,7 @@ for q in project_list:
                         plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
                         plt.legend()
                         plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.png')
+                        plt.close()
 
                         savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.csv'
                         csvfile = open(savename, 'w', newline='')
@@ -755,16 +767,20 @@ for q in project_list:
                 elif etc == mouselist[sett]:
                     print('etc group set 유무를 판단합니다.')
 
-                    # training set에 속하지 않은 모든쥐 찾기
-                    grouped_total_list = []
-                    keylist = list(msGroup.keys())
-                    for k in range(len(keylist)):
-                        grouped_total_list += msGroup[keylist[k]]
-                    for k in range(N):
-                        if not (k in mouselist) and k in grouped_total_list:
-                            testlist.append(k)
-                    testlist.append(etc)
-
+                    # training set에 속하지 않은 모든쥐 찾기 (즉, low, restriction을 포함시킷는것.)
+                    # 임시로 중단 (어차피 안쓰는데 할필요가 있나 싶어서)
+#                    grouped_total_list = []
+#                    keylist = list(msGroup.keys())
+#                    for k in range(len(keylist)):
+#                        grouped_total_list += msGroup[keylist[k]]
+#                    for k in range(N):
+#                        if not (k in mouselist) and k in grouped_total_list:
+#                            testlist.append(k)
+                    
+#                    testlist.append(etc)
+                    
+                    testlist = list(capsaicinGroup) + list(lidocaineGroup)
+                                   
                 if state == 'exp':
                     final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
                 elif state == 'con':
