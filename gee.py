@@ -1,3 +1,10 @@
+# msbak, 2019. 09. 02.
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr 20 20:58:38 2019
+
+@author: msbak
+"""
 
 import pandas as pd
 #import os
@@ -26,7 +33,7 @@ def mslinear_regression(x,y):
 import pickle
 import os
 try:
-    savepath = 'C:\\Users\\user\\Google 드라이브\\BMS Google drive\\희라쌤\\save\\tensorData\\'; os.chdir(savepath)
+    savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
     try:
         savepath = 'C:\\Users\\msbak\\Documents\\tensor\\'; os.chdir(savepath);
@@ -142,159 +149,65 @@ def pain_nonpain_sepreate(target, painGroup, nonpainGroup):
     
     return pain, nonpain_within, nonpain_between
 
-
-# In data load하여 pain nonpain grouping
-savepath = 'C:\\Users\\user\\Google 드라이브\\BMS Google drive\\희라쌤\\save\\tensorData\\'; os.chdir(savepath)
-model_name = '0819_test' # <<<<<<<<<<<<<<<<<<<
-
+# 제외된 mouse 확인용, mouseGroup
 mouseGroup = []
 for i in list(msGroup.keys()):
     mouseGroup += msGroup[i]
 print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
-      
+
+# load 할 model 경로(들) 입력
+model_name = []
+#model_name.append(['0819_test_1/', 1])
+#model_name.append(['0829_downsize_7_1/', 1])
+model_name.append(['0903_seeding_1/', 1])
+model_name.append(['0903_seeding_2/', 2])
+model_name.append(['0903_seeding_3/', 3]) 
+model_name.append(['0903_seeding_4/', 4]) 
+model_name.append(['0903_seeding_5/', 5]) 
+
+accsave = np.zeros(N); accsave[:] = np.nan
+repeat = 0
+for repeat in range(len(model_name)):
+    msloadpath = savepath + 'result\\' + model_name[repeat][0] + '\\model';
+    os.chdir(msloadpath)
+    for SE in mouselist:
+        try:
+            df1 = np.array(pd.read_csv(str(SE) + '_exp_validationSet_result.csv', header=None))
+            accsave[SE] = df1[0,-1]
+            # print(SE)
+        except:
+            # print(SE, 'none')
+            pass
+
+    print(model_name[repeat] , '>>', np.nanmean(accsave))            
+
+# test data import
 rawsave = []; [rawsave.append([]) for i in range(N)]
-for repeat in range(1,20):
-    msloadpath = savepath + 'result\\' + model_name + '_' + str(repeat) + '\\exp_raw'; 
+repeat = 0
+for repeat in range(len(model_name)):
+    msloadpath = savepath + 'result\\' + model_name[repeat][0] + '\\exp_raw'; 
 
     try:
         os.chdir(msloadpath)
-        print('repeat', repeat, 'is loaded'); printsw=False
+        print(model_name[repeat] , 'is loaded'); printsw=False
     except:
         continue
         
     for SE in range(N):
         try:
-            df1 = pd.read_csv('biRNN_raw_' + str(SE) + '.csv', header = None)
+            df1 = pd.read_csv('biRNN_raw_' + str(SE) + '.csv', header=None)
         except:
-            print(repeat, 'repeat에', SE, 'data 없음')
+            if SE in mouseGroup and SE not in (restrictionGroup + lowGroup):
+                print(repeat, 'repeat에', SE, 'data 없음')
             continue
             
         df2 = np.array(df1)
-        df2[:,4] = df2[:,4] > 0.5
+        df2[:,4] = df2[:,4] > 0.5 # binarization
         rawsave[SE].append(df2)
         
 for SE in range(N):
-    rawsave[SE] = np.nanmean(np.array(rawsave[SE]), axis=0)      
+    rawsave[SE] = np.nanmean(np.array(rawsave[SE]), axis=0) # nanmean으로 공백 매꿈     
          
-
-        
-# In[] Pain cell?
-    
-painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
-nonpainGroup = salineGroup + lidocainGroup
-    
-hist_density_save = []; [hist_density_save.append([]) for i in range(5)]
-painROIsave = []; [painROIsave.append([]) for i in range(N)]
-
-SE = 0; se = 1; ROI = 0
-for SE in range(N):
-    ROInum = signalss[SE][0].shape[1]
-    [painROIsave[SE].append([]) for i in range(5)]
-    for se in range(5):
-        valuesave = []; pain_ROI = np.zeros(ROInum); pain_time = []
-        for ROI in range(ROInum):       
-            if not rawsave[SE].shape:
-                predict_series = [0]
-                
-            elif rawsave[SE].shape:
-                rowindex = np.where((np.array(rawsave[SE][:,1]==se) * np.array( rawsave[SE][:,2]==ROI)) == True)[0]
-                predict_series = np.array(rawsave[SE][rowindex,4])
-            
-            pain_ROI[ROI] = np.mean(predict_series) # ROI vector
-            pain_time.append(predict_series)
-            
-        painROIsave[SE][se] = pain_ROI
-            
-        pain_time = np.array(pain_time) # ROI x bins
-        
-        # 위까지 pain_ROI, pain_time 입력
-
-        hist_density = np.histogram(pain_ROI, bins = np.arange(0,1.01,0.02), density=True)[0]
-        hist_density_save[se].append(hist_density) # [se][ROI][histbins]
-        
-plt.imshow(pain_time)
-
-##
-t4_sum = np.zeros((N,5)); t4_min = np.zeros((N,5))
-SE = 0; se = 1; ROI = 0
-for SE in range(N):
-    ROInum = signalss[SE][0].shape[1]
-    for se in range(5):
-        signal = np.array(signalss[SE][se])[:497,:]
-        meansignal = np.mean(signal, axis=1)
-        
-        valsave = []
-        for ROI in range(ROInum):
-            valsave.append(np.mean(signal[:,ROI]) * (painROIsave[SE][se][ROI] > 0.8) )
-        
-        t4_sum[SE,se] = np.mean(valsave)
-        
-            
-target = t4_sum     
-painGroup = highGroup + midleGroup + ketoGroup
-nonpainGroup = salineGroup + lidocainGroup
-pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
-nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
-ms1 = accuracy_cal(pain, nonpain, False)[0]
-ms2 = accuracy_cal(pain, nonpain_within, False)[0]
-ms3 = accuracy_cal(pain, nonpain_between, False)[0]
-        
-
-print('highGroup', np.nanmean(target[highGroup,1]))
-print('midleGroup', np.nanmean(target[midleGroup,1]))
-print('lowGroup', np.nanmean(target[lowGroup,1]))
-print('restrictionGroup', np.nanmean(target[restrictionGroup,1]))
-print('ketoGroup', np.nanmean(target[ketoGroup,1]))
-print('salineGroup', np.nanmean(target[salineGroup,1]))
-print('lidocainGroup', np.nanmean(target[lidocainGroup,1]))
-print('capsaicinGroup ', np.nanmean(target[capsaicinGroup ,1]))
-
-        
-# 시각화
-se = 1
-hist_density_save[se] = np.array(hist_density_save[se]) # list[se]_array[ROI, histbins]
-plt.plot(np.mean(hist_density_save[se][capsaicinGroup,:], axis=0), label = se)
-plt.legend()
-    
-# In[]
-            
-axiss = []; [axiss.append([]) for i in range(5)]
-t4_pain = np.zeros((N,5))
-SE = 0; se = 1; ROI = 0
-for SE in painGroup:
-    ROInum = signalss[SE][0].shape[1]
-    pix = painROIsave[SE] > 0.9
-    
-    for se in [0,2]:
-        signal = np.array(signalss[SE][se])[:497,:]
-        meansignal = np.mean(signal, axis=1)
-        for ROI in range(ROInum):
-            axiss[0].append(np.sum(signal[:,ROI])/np.sum(meansignal))
-            axiss[1].append(painROIsave[SE][ROI])
-
-a = mslinear_regression(axiss[1],axiss[0])[0]
-b = mslinear_regression(axiss[1],axiss[0])[1]
-
-plt.scatter(axiss[1],axiss[0], s = 0.5)
-xaxis = list(np.arange(0,1.1,0.1))
-plt.plot(xaxis, a * np.array(xaxis) + b, c ='orange')  
-
-axiss2 = []; [axiss2.append([]) for i in range(5)]
-for thr in np.arange(0, 1, 0.01):
-    painmean = np.nanmean(np.array(axiss[0])[thr + 0.05 > np.array(axiss[1]) > thr])
-    nonpainmean = np.nanmean(np.array(axiss[0])[np.array(axiss[1]) < thr])  
-    
-    print(thr, nonpainmean-painmean)
-    
-    axiss2[0].append(thr)
-    axiss2[1].append(painmean)    
-    
-plt.scatter(axiss2[0],axiss2[1], s = 0.5)  
-         
-    # pain cell이면, 다른 session에서는 조용할까?
-    # pain cell classification이 되었으니, 임의로 pain cell의 acitivity로 평가해보면 어떨까?
-    
-    
 
 # In[]
 def ms_thresholding(optimalThr = 0):
@@ -326,7 +239,7 @@ target = ms_thresholding(optimized_thr)
 # 최종 평가
 print('______________ biRNN ______________')
 
-painGroup = highGroup + midleGroup + ketoGroup
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
 nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
@@ -340,6 +253,8 @@ print('ketoGroup', np.nanmean(target[ketoGroup,1]))
 print('salineGroup', np.nanmean(target[salineGroup,1]))
 print('lidocainGroup', np.nanmean(target[lidocainGroup,1]))
 print('capsaicinGroup ', np.nanmean(target[capsaicinGroup ,1]))
+print('yohimbineGroup_early ', np.nanmean(target[yohimbineGroup ,1]))
+print('yohimbineGroup_late ', np.nanmean(target[yohimbineGroup ,3]))
 
 # control, 그룹내, 그룹외 추가 요망
 
@@ -407,7 +322,7 @@ if False:
     accuracy_cal(pain, nonpain_between, True)
 
 # In[]
-painGroup = highGroup + midleGroup + ketoGroup
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 print('movment--------------------------------')
 pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(movement, painGroup, nonpainGroup)
@@ -420,9 +335,10 @@ print('total--------------------------------')
 pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(msdict['total'], painGroup, nonpainGroup)
 nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
 accuracy_cal(pain, nonpain, True)
+
 # In[] 취약점 분석
 # predict_matrix_total
-painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 
 targetMatrix = np.array(target)
@@ -565,7 +481,7 @@ def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sam
     df3 = pd.concat([df3, pd.DataFrame(target[midleGroup]), \
                      pd.DataFrame(target[salineGroup]), \
                      pd.DataFrame(target[ketoGroup]), pd.DataFrame(target[lidocainGroup]), \
-                     pd.DataFrame(target[capsaicinGroup]), pd.DataFrame(target[yohimbineGroup])], \
+                     pd.DataFrame(target[yohimbineGroup]), pd.DataFrame(target[capsaicinGroup][:,0:3])], \
                         ignore_index=True, axis = 1)
         
     df3 = np.array(df3)
@@ -574,6 +490,258 @@ def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sam
 
 Aprism = msGrouping_nonexclude(target)
 
+# In[] fig1. movement
+target1 = np.array(movement)
+Aprism_movement_supple = msGrouping_nonexclude(target1)
+Aprism_movement_main = np.concatenate((Aprism_movement_supple[:,0:5], \
+                                       Aprism_movement_supple[:,5:10], \
+                                       Aprism_movement_supple[:,10:15], \
+                                       Aprism_movement_supple[:,25:30]), axis = 1)
+
+
+# In[] 움직임 정보를 이용하여  regression 시도
+
+target = ms_thresholding()
+
+target[highGroup,1]
+
+
+# In[] Pain cell?
+    
+painROIsave = []; [painROIsave.append([]) for i in range(N)]
+
+SE = 0; se = 1; ROI = 0
+for SE in range(N):
+    ROInum = signalss[SE][0].shape[1]
+    [painROIsave[SE].append([]) for i in range(5)]
+    for se in range(5):
+        valuesave = []; pain_ROI = np.zeros(ROInum); pain_time = []
+        [painROIsave[SE][se].append([]) for i in range(ROInum)]
+        for ROI in range(ROInum):       
+            if not rawsave[SE].shape:
+                predict_series = [0]
+                
+            elif rawsave[SE].shape:
+                rowindex = np.where((np.array(rawsave[SE][:,1]==se) * np.array( rawsave[SE][:,2]==ROI)) == True)[0]
+                predict_series = np.array(rawsave[SE][rowindex,4])
+            
+            painROIsave[SE][se][ROI] = predict_series
+            
+plt.imshow(painROIsave[SE][se])
+
+# 여기까지 pain 확률 matrix 생성
+
+# In[] session 1 pain cell의 total activity로 pain state 추정
+# painROIsave [SE][se][ROI][bins] = pain % 
+
+painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
+nonpainGroup = salineGroup + lidocainGroup
+
+##
+axiss = []; [axiss.append([]) for i in range(2)]
+for thr in np.arange(0,1+0.1,0.1):
+    print('thr', thr)
+
+    t4_sum = np.zeros((N,5)); t4_min = np.zeros((N,5))
+    SE = 0; se = 1; ROI = 0
+    for SE in range(N):
+        ROInum = signalss[SE][0].shape[1]
+        for se in range(5):
+            signal = np.array(signalss[SE][se])[:497,:]
+            meansignal = np.mean(signal, axis=1)
+            
+            valsave = []
+            for ROI in range(ROInum):
+                paincell = (np.mean(painROIsave[SE][1][ROI]) > thr) # paincell
+                valsave.append(np.mean(signal[:,ROI]) * paincell) 
+            
+            t4_sum[SE,se] = np.mean(valsave)
+            
+    target = t4_sum     
+    
+    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+    ms1 = accuracy_cal(pain, nonpain, True)[1]
+    
+    axiss[0].append(thr); axiss[1].append(ms1)
+plt.plot(axiss[0], axiss[1])
+# 결론 -> 아무짓도 안하는게 좋다.. ?
+
+####
+# In[] session 1 pain cell 추정후 min 값으로 total activity 추정
+# min: x ensemble의 activity를 esembel의 cell min으로 추정함
+painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
+nonpainGroup = salineGroup + lidocainGroup
+
+##
+axiss = []; [axiss.append([]) for i in range(2)]
+for thr in np.arange(0,1+0.1,0.1):
+    print('thr', thr)
+
+    t4_sum = np.zeros((N,5)); t4_min = np.zeros((N,5))
+    SE = 0; se = 1; ROI = 0
+    for SE in range(N):
+        ROInum = signalss[SE][0].shape[1]
+        for se in range(5):
+            signal = np.array(signalss[SE][se])[:497,:]
+            meansignal = np.mean(signal, axis=1)
+            
+            valsave = []
+            for ROI in range(ROInum):
+                paincell = (np.mean(painROIsave[SE][1][ROI]) > thr) # paincell
+                valsave.append(np.mean(signal[:,ROI]) * paincell)
+                
+            # 임의 최적화
+            valsave = np.array(valsave)
+            if np.sum(valsave>0) > 0:
+                t4_sum[SE,se] = np.min(valsave[valsave>0])
+            elif np.sum(valsave>0) == 0:
+                t4_sum[SE,se] = 0
+                
+    target = t4_sum     
+    
+    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+    ms1 = accuracy_cal(pain, nonpain, True)[1]
+    
+    axiss[0].append(thr); axiss[1].append(ms1)
+plt.plot(axiss[0], axiss[1])
+
+chanceLevel = np.max([pain.shape[0], nonpain.shape[0]]) / (pain.shape[0] + nonpain.shape[0])
+print('chanceLevel', chanceLevel)
+
+
+    
+# In[]
+# binning load
+# 여기 parameter는 model에 의존적임. model 변경시 수정필수.
+bins = 10; binningSave = []; thr = 0.5
+for frame in range(0, 497-82+1, bins):
+    binningSave.append([frame, frame+82])
+
+
+painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
+nonpainGroup = salineGroup + lidocainGroup
+axiss = []; [axiss.append([]) for i in range(2)]
+for thr in np.arange(0,1+0.1,0.1):
+    print('thr', thr)
+
+    SE = 0; se = 1; ROI = 0; bins = 0
+
+    painDegree_save = []; [painDegree_save.append([]) for i in range(N)]
+    for SE in range(N):
+        [painDegree_save[SE].append([]) for i in range(5)]
+        ROInum = signalss[SE][0].shape[1]
+        for se in range(5):
+            [painDegree_save[SE][se].append([]) for i in range(ROInum)]
+            signal = np.array(signalss[SE][se])[:497,:]
+            meansignal = np.mean(signal, axis=1)
+            valsave = []
+            for ROI in range(ROInum):
+                painMatrix = np.array(painROIsave[SE][1][ROI])
+                for bins in range(painMatrix.shape[0]):
+                    paincell = painMatrix[bins] > thr
+                    totalActivity = np.sum(signal[:,ROI][binningSave[bins][0]:binningSave[bins][1]])
+                    
+                    painDegree_save[SE][se][ROI].append(paincell * totalActivity)
+                
+    # save 후 정량 계산
+                    
+    t4_sum = np.zeros((N,5))                
+    for SE in range(N):          
+        for se in range(5):
+            t4_sum[SE,se] = np.mean(np.array(painDegree_save[SE][se]))
+            
+    target = np.array(t4_sum)
+    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+    ms1 = accuracy_cal(pain, nonpain, True)[1]
+    
+    axiss[0].append(thr); axiss[1].append(ms1)
+plt.plot(axiss[0], axiss[1])
+
+# 응 실패 
+
+###
+
+# 원본 reload
+optimized_thr = 0
+print('optimized_thr', optimized_thr)
+target = ms_thresholding(optimized_thr)
+Aprism3 = msGrouping_nonexclude(target)
+# optimizsed thr 계산
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
+nonpainGroup = salineGroup + lidocainGroup
+
+targetMatrix = np.array(target)
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(targetMatrix, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+
+pain1 = np.array(pain); non_pain1 = np.array(nonpain)
+pain1 = pain1[np.isnan(pain1)==0]; non_pain1 = non_pain1[np.isnan(non_pain1)==0]
+maxvalue = np.max([np.concatenate((pain1, non_pain1))])
+print('maxvalue', maxvalue)
+
+xaxis = []; yaxis = []
+for thr in np.arange(0,maxvalue,maxvalue/1000):
+    TP = np.sum(pain1 >= thr)
+    FN = np.sum(pain1 < thr)
+    FP = np.sum(non_pain1 >= thr)
+    TN = np.sum(non_pain1 < thr)
+    msaccuracy = (TP + TN) / (TP + TN + FN + FP)
+    
+    xaxis.append(thr)
+    yaxis.append(msaccuracy)
+    
+#    plt.plot(xaxis, yaxis)
+    
+optimized_thr = xaxis[np.argmax(yaxis)]
+print('optimized_thr', optimized_thr)
+
+msix = target>optimized_thr 
+    
+# t4 :497 계산
+t4_497 = np.zeros((N,5))
+for SE in range(N):
+    for se in range(5):
+        meansignal = np.mean(np.array(signalss[SE][se]), axis=1)
+        
+        t4_497[SE,se] = np.mean(meansignal[:497])
+        
+painDegree = np.array(t4_497 * msix)
+painDegree[painDegree==0] = np.nan
+        
+target = np.array(t4_497 * msix)
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+ms1 = accuracy_cal(pain, nonpain, True)[1]
+
+Aprism = msGrouping_nonexclude(painDegree)
+Aprism2 = msGrouping_nonexclude(t4_497)
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
 
 
