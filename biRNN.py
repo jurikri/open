@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-# msbak, 2019. 09. 02.
+"""
+Created on Sat Apr 20 20:58:38 2019
 
+@author: msbak
+"""
 # library import
 import pickle
 import os
@@ -106,7 +109,7 @@ def array_recover(X_like):
     return X_like_toarray
 
 # data 생성
-SE = 0; se = 1; label = 1
+SE = 0; se = 1; label = 1; roiNum=None
 def dataGeneration(SE, se, label, roiNum=None, bins=10):    
     X = []; Y = []; Z = []
 
@@ -401,7 +404,7 @@ for q in project_list:
             
             identical_ix = np.where(np.sum(indexer==cbn, axis=1)==2)[0]
             if identical_ix.shape[0] != 0:
-                random.seed(seed)
+                random.seed(None)  # control의 경우 seed 없음
                 dice = random.choice([[0,1],[1,0]])
                 Y_control[identical_ix] = dice
                 
@@ -603,7 +606,7 @@ for q in project_list:
                     csvfile = open(loadname, 'w', newline='')
                     csvwriter = csv.writer(csvfile)
                     csvwriter.writerow(df2)         
-                    csvfile.close()
+                    csvfile.close() 
                     print('학습시작시간을 기록합니다.', df2)        
                     print('mouse #', [mouselist[sett]])
                     print('sample distributions.. ', np.round(np.mean(Y_training_list[sett], axis = 0), 4))
