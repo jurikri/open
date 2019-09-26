@@ -11,6 +11,8 @@ import pandas as pd
 import numpy as np
 from sklearn import metrics
 import matplotlib.pyplot as plt
+import pickle
+import os
 
 def msMinMaxScaler(matrix1):
     matrix1 = np.array(matrix1)
@@ -30,8 +32,21 @@ def mslinear_regression(x,y):
 
     return m, b # bx+a
 
-import pickle
-import os
+def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sample만 뽑힘
+    target = np.array(msmatrix)
+    
+    df3 = pd.DataFrame(target[highGroup]) 
+    df3 = pd.concat([df3, pd.DataFrame(target[midleGroup]), \
+                     pd.DataFrame(target[salineGroup]), \
+                     pd.DataFrame(target[ketoGroup]), pd.DataFrame(target[lidocainGroup]), \
+                     pd.DataFrame(target[yohimbineGroup]), pd.DataFrame(target[capsaicinGroup][:,0:3])], \
+                        ignore_index=True, axis = 1)
+        
+    df3 = np.array(df3)
+    
+    return df3
+
+
 try:
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
@@ -80,9 +95,12 @@ mouselist += msGroup['salineGroup']
 mouselist += msGroup['yohimbineGroup']
 mouselist += [msGroup['lidocaineGroup'][0]]
 etc = msGroup['lidocaineGroup'][0]
-
 mouselist.sort()
 
+grouped_total_list = []
+keylist = list(msGroup.keys())
+for k in range(len(keylist)):
+    grouped_total_list += msGroup[keylist[k]]
 # 최종 평가 함수 
 def accuracy_cal(pain, non_pain, fsw):
     pos_label = 1; roc_auc = -np.inf
@@ -129,7 +147,7 @@ def pain_nonpain_sepreate(target, painGroup, nonpainGroup):
     valuetable = np.array(target)
     painset = []; nonpainset =[]
 
-    for i in mouseGroup:
+    for i in grouped_total_list:
         if i in painGroup:
             painset.append(i)
         elif i in nonpainGroup:
@@ -159,11 +177,17 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 model_name = []
 #model_name.append(['0819_test_1/', 1])
 #model_name.append(['0829_downsize_7_1/', 1])
-model_name.append(['0903_seeding_1/', 1])
-model_name.append(['0903_seeding_2/', 2])
-model_name.append(['0903_seeding_3/', 3]) 
-model_name.append(['0903_seeding_4/', 4]) 
-model_name.append(['0903_seeding_5/', 5]) 
+#model_name.append(['0903_seeding_1/', 1])
+#model_name.append(['0903_seeding_2/', 2])
+#model_name.append(['0903_seeding_3/', 3]) 
+#model_name.append(['0903_seeding_4/', 4]) 
+#model_name.append(['0903_seeding_5/', 5]) 
+
+model_name.append(['0917_5only_1/', 1]) 
+model_name.append(['0917_5only_2/', 2]) 
+model_name.append(['0917_5only_3/', 3]) 
+#model_name.append(['0917_5only_4/', 4]) 
+
 
 accsave = np.zeros(N); accsave[:] = np.nan
 repeat = 0
@@ -321,7 +345,7 @@ if False:
     print('capsaicin - between')
     accuracy_cal(pain, nonpain_between, True)
 
-# In[]
+# In[] movement와 total ROC
 painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 print('movment--------------------------------')
@@ -474,29 +498,8 @@ plt.xlim([0,0.5]), plt.ylim([0,1])
 
 # In[] to Prism
 
-def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sample만 뽑힘
-    target = np.array(msmatrix)
-    
-    df3 = pd.DataFrame(target[highGroup]) 
-    df3 = pd.concat([df3, pd.DataFrame(target[midleGroup]), \
-                     pd.DataFrame(target[salineGroup]), \
-                     pd.DataFrame(target[ketoGroup]), pd.DataFrame(target[lidocainGroup]), \
-                     pd.DataFrame(target[yohimbineGroup]), pd.DataFrame(target[capsaicinGroup][:,0:3])], \
-                        ignore_index=True, axis = 1)
-        
-    df3 = np.array(df3)
-    
-    return df3
 
-Aprism = msGrouping_nonexclude(target)
-
-# In[] fig1. movement
-target1 = np.array(movement)
-Aprism_movement_supple = msGrouping_nonexclude(target1)
-Aprism_movement_main = np.concatenate((Aprism_movement_supple[:,0:5], \
-                                       Aprism_movement_supple[:,5:10], \
-                                       Aprism_movement_supple[:,10:15], \
-                                       Aprism_movement_supple[:,25:30]), axis = 1)
+# 이 아래 다 손절예정 
 
 
 # In[] 움직임 정보를 이용하여  regression 시도
@@ -507,6 +510,7 @@ target[highGroup,1]
 
 
 # In[] Pain cell?
+# pain cell 계산을 위한 painROI matrix 생성
     
 painROIsave = []; [painROIsave.append([]) for i in range(N)]
 
@@ -610,9 +614,93 @@ plt.plot(axiss[0], axiss[1])
 chanceLevel = np.max([pain.shape[0], nonpain.shape[0]]) / (pain.shape[0] + nonpain.shape[0])
 print('chanceLevel', chanceLevel)
 
+# In[] Pain cell? version 2
+# frame 마다의 최저값으로 ensemble 추정
+
+painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
+nonpainGroup = salineGroup + lidocainGroup
+
+##
+axiss = []; [axiss.append([]) for i in range(2)]
+
+epochs = 5000
+for thr in np.arange(0.5, 1, 0.1):
+    print('thr', thr)
+
+    pain_ensemble = np.zeros((N,5))
+    SE = 0; se = 1; ROI = 0
+    for SE in range(N):
+        print(SE)
+        ROInum = signalss[SE][0].shape[1]
+        for se in range(5):
+            signal = np.array(signalss[SE][se])[:497,:]
+            meansignal = np.mean(signal, axis=1)
+            
+            # pain cell indexing
+            tmp_painix = np.zeros(ROInum)
+            for ROI in range(ROInum):
+                paincell = (np.mean(painROIsave[SE][1][ROI]) > thr) # paincell
+                tmp_painix[ROI] = paincell
+                
+            pain_matrix=[]; notpain_matrix=[]
+            for pi in range(tmp_painix.shape[0]):
+                if tmp_painix[pi] == 1:       
+                    pain_matrix.append(signal[:,pi])
+                elif tmp_painix[pi] == 0: 
+                    notpain_matrix.append(signal[:,pi])
+    
+            pain_matrix = np.array(pain_matrix); notpain_matrix = np.array(notpain_matrix)
+            
+            ##
+            
+            painNum = pain_matrix.shape[0]
+            notpainNum = signal.shape[1]-painNum
+            if painNum == 0:
+                break
+            
+            elif notpainNum == 0:
+                pain_ensemble[SE,se] = np.inf # np.sum(np.min(pain_matrix,axis=0))
+                break
+            
+            if painNum < notpainNum:
+                valsave = []
+                for epoch in range(epochs):
+                    rix = np.random.choice(range(notpain_matrix.shape[0]), painNum)
+                    valsave.append(np.sum(np.min(notpain_matrix[rix], axis=0)))
+                
+                pain_ensemble[SE,se] = np.sum(np.min(pain_matrix,axis=0)) / np.mean(valsave)
+
+            elif painNum > notpainNum:
+                valsave = []
+                for epoch in range(epochs):
+                    rix = np.random.choice(range(pain_matrix.shape[0]), notpainNum)
+                    valsave.append(np.sum(np.min(pain_matrix[rix], axis=0)))
+                
+                pain_ensemble[SE,se] = np.mean(valsave) / np.sum(np.min(notpain_matrix,axis=0))
+                
+            elif painNum == notpainNum:
+                pain_ensemble[SE,se] = \
+                np.sum(np.min(pain_matrix,axis=0)) / np.sum(np.min(notpain_matrix,axis=0))
+            
+            else:
+                print('e')
+                         
+    target = np.array(pain_ensemble)
+    
+    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+    ms1 = accuracy_cal(pain, nonpain, True)[1]
+    
+    axiss[0].append(thr); axiss[1].append(ms1)
+plt.plot(axiss[0], axiss[1])
+
+#chanceLevel = np.max([pain.shape[0], nonpain.shape[0]]) / (pain.shape[0] + nonpain.shape[0])
+#print('chanceLevel', chanceLevel)
+
+
 
     
-# In[]
+# In[] 이 아래는 버려도 되지 싶다 .
 # binning load
 # 여기 parameter는 model에 의존적임. model 변경시 수정필수.
 bins = 10; binningSave = []; thr = 0.5
@@ -664,11 +752,13 @@ plt.plot(axiss[0], axiss[1])
 
 ###
 
+# In[]
+
 # 원본 reload
 optimized_thr = 0
 print('optimized_thr', optimized_thr)
 target = ms_thresholding(optimized_thr)
-Aprism3 = msGrouping_nonexclude(target)
+Aprism_biRNN = msGrouping_nonexclude(target)
 # optimizsed thr 계산
 painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
