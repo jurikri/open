@@ -209,7 +209,7 @@ dropout_rate = 0.10 # dropout late
 
 testsw = True  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
-statelist = ['exp', 'con'] # ['exp', 'con']  # random shuffled control 사용 유무
+statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 
 acc_thr = 0.95 # 0.93 -> 0.94
@@ -225,11 +225,10 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['0903_seeding_1/', 1])
-project_list.append(['0903_seeding_2/', 2])
-project_list.append(['0903_seeding_3/', 3]) 
-project_list.append(['0903_seeding_4/', 4]) 
-project_list.append(['0903_seeding_5/', 5]) 
+project_list.append(['0917_5only_1/', 1])
+project_list.append(['0917_5only_2/', 2])
+project_list.append(['0917_5only_3/', 3])
+project_list.append(['0917_5only_4/', 4])
 
 
 q = project_list[0]
@@ -303,7 +302,7 @@ for q in project_list:
 
 
     # 각 class의 data 입력조건설정
-    painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup 
+    painGroup = highGroup + midleGroup + yohimbineGroup 
 
     for SE in range(N):
         for se in range(5):     
@@ -782,7 +781,7 @@ for q in project_list:
                     
 #                    testlist.append(etc)
                     
-                    testlist = list(capsaicinGroup) + list(lidocaineGroup)
+                    testlist = list(capsaicinGroup) + list(lidocaineGroup) + list(ketoGroup)
                                    
                 if state == 'exp':
                     final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
