@@ -172,11 +172,13 @@ print('sequenceSize', sequenceSize)
 # training set에 사용 될 group을 설정합니다.
 mouselist = []
 mouselist += msGroup['highGroup']
-mouselist += msGroup['ketoGroup']
+#mouselist += msGroup['ketoGroup']
 mouselist += msGroup['midleGroup']
 mouselist += msGroup['salineGroup']
 mouselist += msGroup['yohimbineGroup'] # 20190903: yohimbineGroup group , tarining set에 추가 
-mouselist += [msGroup['lidocaineGroup'][0]] # etc set의 test를 위하여 모든 training data를 사용함.
+mouselist += [msGroup['lidocaineGroup'][0]] # etc set
+
+##
 etc = msGroup['lidocaineGroup'][0]
 mouselist.sort()
 
@@ -196,7 +198,7 @@ print('etc ix', np.where(np.array(mouselist)== etc)[0])
 # hyperparameters #############
 
 # learning intensity
-epochs = 50 # epoch 종료를 결정할 최소 단위.
+epochs = 10 # epoch 종료를 결정할 최소 단위.
 lr = 2e-3 # learning rate
 
 n_hidden = 8 # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
@@ -213,7 +215,7 @@ statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 
 acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 20000
+batch_size = 5000
 
 ###############
 
@@ -221,14 +223,11 @@ batch_size = 20000
 maxepoch = 5000
 n_in =  1 # number of features
 n_out = 2 # number of class
-classratio = 1 # class under sampling ratio
+classratio = 1.2 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['0917_5only_1/', 1])
-project_list.append(['0917_5only_2/', 2])
-project_list.append(['0917_5only_3/', 3])
-project_list.append(['0917_5only_4/', 4])
+project_list.append(['0926_ind_expanded_1/', 1])
 
 
 q = project_list[0]
@@ -307,16 +306,20 @@ for q in project_list:
     for SE in range(N):
         for se in range(5):     
             # nonpain
-            c1 =  SE in painGroup and se in [0,2] # baseline, interphase
+            c1 =  SE in highGroup + midleGroup + yohimbineGroup and se in [0,2] # baseline, interphase
             if SE in salineGroup or c1:
                 msclass = 0 # nonpain
-                X, Y, Z = dataGeneration(SE, se, label = msclass) 
-                X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
+                
+                for ROI in range(signalss[SE][se].shape[1]):
+                    X, Y, Z = dataGeneration(SE, se, label = msclass, roiNum=ROI) 
+                    X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
 
             if SE in painGroup and se == 1 and SE not in [1, 26]: # 1, 26은 특별히 제외함. 
                 msclass = 1 # pain
-                X, Y, Z = dataGeneration(SE, se, label = msclass)
-                X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
+                
+                for ROI in range(signalss[SE][se].shape[1]):
+                    X, Y, Z = dataGeneration(SE, se, label = msclass)
+                    X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
     #            
     #        if (SE == 60 and se == 0) or (SE == 61 and se == 2): # capsacine 특이 케이스 
     #            msclass = 0 # nonpain
@@ -376,6 +379,8 @@ for q in project_list:
         ms_sampling(sampleNum, datasetX = X_save[i], datasetY = Y_save[i], datasetZ = Z_save[i], msclass = i)
         print('class', str(i),'sampling 이후', np.array(X_save2[i]).shape[0])
 
+    # In[]
+
     sw = 0
     for y in essentialList:
         if not y in Z_save[0]:
@@ -408,72 +413,13 @@ for q in project_list:
                 Y_control[identical_ix] = dice
                 
     # cross validation을 위해, training / test set split            
-
-    X_training = []; [X_training.append([]) for i in range(msunit)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
-    Y_training_list = []
-    Y_training_control_list = []
-    
-
-    Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
-
     # mouselist는 training set에 사용된 list임.
     # training set에 사용된 mouse의 마릿수 만큼 test set을 따로 만듦
 
-    for test_i in range(len(mouselist)):
-        
-        delist = np.where(indexer[:,0]==mouselist[test_i])[0] # index는 각 data의 [SE, se]를 저장하고 있음
-        for unit in range(msunit): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
-            X_training[unit].append(np.delete(X[unit], delist, 0))
-    
-        Y_training_list.append(np.delete(Y_training, delist, 0))
-        Y_training_control_list.append(np.delete(Y_training_control, delist, 0))
-
-    msc1 = len(X_training[0])
-    msc2 = len(Y_training_list)
-    msc3 = len(Y_training_control_list)
-    print(msc1, msc2, msc3, 'data, lable, label_suffled set 개수 입니다. 셋은 서로 동일해야 합니다.')
-    if not(msc1 == msc2 and msc2 == msc3):
-        print('set 개수 불일치, 확인요망')
-        
-    # 정보유출 유무 test
-    if True:    
-        unitNum = 1; mouseNum = 0
-        delist = np.where(indexer[:,0]==mouseNum)[0]
-        
-        testdata = np.array(X_training[unitNum][mouseNum]) # unit 번째 병렬구조 input에서 mouseNum의 training set
-        for row in range(testdata.shape[0]):
-            for dataNum in range(X[unitNum][delist].shape[0]):
-                indentical_score = np.sum(testdata[row,:,:] == X[unitNum][delist][dataNum]) # mouseNum번 쥐의 raw data중 dataNum번째 시계열 data
-                if not indentical_score == 0:
-                    print('leaking!!', row, indentical_score)
-        
-                
-        # 위와 동일한 구조에서 검사대상인 set을 현재 쥐가 속하지 않은 set으로 바꾸면
-        # 중복 data가 검출됨. 즉 positive control.
-        unitNum = 1; mouseNum = 0
-        delist = np.where(indexer[:,0]==mouseNum)[0]
-        
-        sw1 = 0
-        testdata = np.array(X_training[unitNum][mouseNum+1]) # unit 번째 병렬구조 input에서 mouseNum의 training set
-        for row in range(testdata.shape[0]):
-            for dataNum in range(X[unitNum][delist].shape[0]):
-                indentical_score = np.sum(testdata[row,:,:] == X[unitNum][delist][dataNum]) # mouseNum번 쥐의 raw data중 dataNum번째 시계열 data
-                if not indentical_score == 0 and sw1==0:
-                    print('validation', row, indentical_score); sw1 = 1
-                    
-    # 정보유출을 사전차단하기 위해 set이 아닌 raw data 변수 자체를 삭제한다.
     inputsize = np.zeros(msunit, dtype=int) 
     for unit in range(msunit):
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
-                                
-    del(X); del(Y); del(Z)
-    del(Y_training); del(Y_training_control); del(Y_control)
-    for j in range(n_out):
-        i = 0
-        del(X_save[i]); del(Y_save[i]); del(Z_save[i])
-        del(X_save2[i]); del(Y_save2[i]); del(Z_save2[i])
-    
-
+        
     # model setup
     def keras_setup():
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
@@ -514,15 +460,16 @@ for q in project_list:
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         return model, idcode
 
-    model, idcode = keras_setup()
-
+    model, idcode = keras_setup()    
+    
     if False: # 시각화 
         # 20190903, VS code로 옮긴뒤로 에러나는 중, 해결필요
         print(model.summary())
         from keras.utils import plot_model
         plot_model(model, to_file='./model.png')
-
-
+        
+    ##
+        
     print('acc_thr', acc_thr, '여기까지 학습합니다.')
     print('maxepoch', maxepoch)
 
@@ -532,6 +479,8 @@ for q in project_list:
     np.random.shuffle(shuffleix)
     print('shuffleix', shuffleix)
     mannual = np.array(mannual)[shuffleix]
+    
+    # In[]
     
     sett = 0; ix = 0; state = 'exp' # for test
     for state in statelist:
@@ -606,9 +555,6 @@ for q in project_list:
                     csvwriter = csv.writer(csvfile)
                     csvwriter.writerow(df2)         
                     csvfile.close() 
-                    print('학습시작시간을 기록합니다.', df2)        
-                    print('mouse #', [mouselist[sett]])
-                    print('sample distributions.. ', np.round(np.mean(Y_training_list[sett], axis = 0), 4))
 
                     # validation set을 사용할경우 준비합니다.
                     if validation_sw and state == 'exp': # control은 validation을 볼 필요가없다.
@@ -620,7 +566,7 @@ for q in project_list:
                                 label = 1
 
                             for ROI in range(totalROI):
-                                unknown_data, Y, Z = dataGeneration(mouselist[sett], se, label=label, roiNum = ROI)
+                                unknown_data, Y_val, Z = dataGeneration(mouselist[sett], se, label=label, roiNum = ROI)
                                 Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
                                 Z = np.concatenate((Z, tmpROI), axis = 1)    
 
@@ -629,27 +575,45 @@ for q in project_list:
                                 if se == 0 and ROI == 0:
                                     for k in range(msunit):
                                         X_all[k] = np.array(unknown_data_toarray[k])    
-                                    Z_all = np.array(Z); Y_all = np.array(Y)
+                                    Z_all = np.array(Z); Y_all = np.array(Y_val)
 
                                 elif not(se == 0 and ROI == 0):
                                     for k in range(msunit):
                                         X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y)), axis=0)
+                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
 
                             valid = tuple([X_all, Y_all])
 
                     # training set을 준비합니다.   
+                    
+                    X_training = []; [X_training.append([]) for i in range(msunit)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
+                    Y_training_list = []
+                    Y_training_control_list = []
+#                    Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
+                    
+                    delist = np.where(indexer[:,0]==mouselist[sett])[0] # index는 각 data의 [SE, se]를 저장하고 있음
+                    for unit in range(msunit): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
+                        X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
+                
+                    Y_training_list = np.delete(np.array(Y), delist, 0)
+                    Y_training_control_list = np.delete(np.array(Y_control), delist, 0)
+                    
+                    print('학습시작시간을 기록합니다.', df2)        
+                    print('mouse #', [mouselist[sett]])
+                    print('sample distributions.. ', np.round(np.mean(Y_training_list, axis = 0), 4))
+                    
+                    
                     np.random.seed(seed)
-                    shuffleix = list(range(X_training[0][sett].shape[0]))
+                    shuffleix = list(range(X_training[0].shape[0]))
                     np.random.shuffle(shuffleix) 
 #                    print(shuffleix)
    
-                    tr_y_shuffle = Y_training_list[sett][shuffleix]
-                    tr_y_shuffle_control = Y_training_control_list[sett][shuffleix]
+                    tr_y_shuffle = Y_training_list[shuffleix]
+                    tr_y_shuffle_control = Y_training_control_list[shuffleix]
 
                     tr_x = []
                     for unit in range(msunit):
-                        tr_x.append(X_training[unit][sett][shuffleix])
+                        tr_x.append(X_training[unit][shuffleix])
 
 
                     # 특정 training acc를 만족할때까지 epoch를 epochs단위로 지속합니다.
@@ -714,7 +678,7 @@ for q in project_list:
                                 hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_acc'])), axis = 0)
                         
                         # 종료조건: 
-                        current_acc = np.min(hist_save_acc[-10:]) 
+                        current_acc = np.min(hist_save_acc[-2:]) 
                         
                         if state == 'con':
                             current_acc = np.inf
@@ -781,7 +745,8 @@ for q in project_list:
                     
 #                    testlist.append(etc)
                     
-                    testlist = list(capsaicinGroup) + list(lidocaineGroup) + list(ketoGroup)
+                    testlist = list(capsaicinGroup) + list(lidocaineGroup) + list(ketoGroup) # + \
+                    # list(midleGroup) + list(yohimbineGroup)
                                    
                 if state == 'exp':
                     final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
@@ -824,7 +789,7 @@ for q in project_list:
 
                         for se in range(5):
                             for ROI in range(totalROI):
-                                unknown_data, Y, Z = dataGeneration(test_mouseNum, se, label=1, roiNum = ROI)
+                                unknown_data, Y_val, Z = dataGeneration(test_mouseNum, se, label=1, roiNum = ROI)
                                 Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
                                 Z = np.concatenate((Z, tmpROI), axis = 1)    
 
@@ -833,12 +798,12 @@ for q in project_list:
                                 if se == 0 and ROI == 0:
                                     for k in range(msunit):
                                         X_all[k] = np.array(unknown_data_toarray[k])    
-                                    Z_all = np.array(Z); Y_all = np.array(Y)
+                                    Z_all = np.array(Z); Y_all = np.array(Y_val)
 
                                 elif not(se == 0 and ROI == 0):
                                     for k in range(msunit):
                                         X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y)), axis=0)
+                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
 
                         prediction = model.predict(X_all)
 
