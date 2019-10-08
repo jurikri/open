@@ -900,82 +900,146 @@ for q in project_list:
                         for row in range(len(df1)):
                             csvwriter.writerow(df1[row])
                         csvfile.close()
-
-# In[] PSL posthoc
-# PSL을 10 bin 단위로 나누어서 전부다 test하고 저장한다. 
-
-    final_weightsave = RESULT_SAVE_PATH + 'model/' + str(etc) + '_my_model_weights_final.h5'
-    model.load_weights(final_weightsave) 
-    
-    bins = 10 # int(round(FPS*10))
-    # 현재 RNN 구조의 최소 timebin -> 수정, datageneration binning
-    
-    SE = 0; se = 0
-    for SE in range(N): # pslGroup:
-#        print(SE)
-        
-        # 이미 있는지 test. 
-        picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + settingID + '_PSL_result_' + str(SE) + '.pickle'
-        if True:
+                        
+            ####### test - binning 구문 입니다. ##########       
+            testbin = None
+            picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + settingID + '_PSL_result_' + str(SE) + '.pickle'
             try:
                 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
                     tmp = pickle.load(f)
-                    break
+                    testbin = True# False
             except:
-                pass
-        
-        # 없다면 시작
-        # 빈공간을 매 쥐마다 계속해서 만든다.
-        PSL_result_save = []
-        [PSL_result_save.append([]) for i in range(N)]
-        for SE2 in range(N):
-            [PSL_result_save[SE2].append([]) for i in range(5)]
-        
-        sessionNum = 5
-        if SE in capsaicinGroup or pslGroup:
-            sessionNum = 3
-        
-        for se in range(sessionNum):
-            binning = list(range(0,(signalss[SE][se].shape[0] - 497), bins))
-            binNum = len(binning)
-            [PSL_result_save[SE][se].append([]) for i in range(binNum)]
-            # dataGeneration _ modify
+                testbin = True
             
-            i = 54; ROI = 0
-            for i in range(binNum):
-                signalss_PSL_test = signalss[SE][se][binning[i]:binning[i]+497]
-                ROInum = signalss_PSL_test.shape[1]
+            if testbin:
+                PSL_result_save = []
+                [PSL_result_save.append([]) for i in range(N)]
+                for SE2 in range(N):
+                    [PSL_result_save[SE2].append([]) for i in range(5)]
                 
-                [PSL_result_save[SE][se][i].append([]) for k in range(ROInum)]
-                for ROI in range(ROInum):
-                    signal_full_roi = np.mean(signalss_PSL_test[:,ROI:ROI+1], axis=1)
+                sessionNum = 5
+                if SE in capsaicinGroup or SE in pslGroup:
+                    sessionNum = 3
                 
-                    lastsave = np.zeros(msunit, dtype=int)
-                    X_ROI = []
-                    for frame in range(0, full_sequence - np.min(sequenceSize) + 1, 10):   
-                        X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
-                            
-                        for unit in range(msunit):
-                            if frame < full_sequence - sequenceSize[unit] + 1:
-                                X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
-                                lastsave[unit] = frame
-                                
-                            else:
-                                X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
-                #                print(frame, unit, lastsave[unit])
-                
-                        X_ROI.append(X_tmp)
+                for se in range(sessionNum):
+                    binning = list(range(0,(signalss[SE][se].shape[0] - 497), bins))
+                    binNum = len(binning)
+                    [PSL_result_save[SE][se].append([]) for i in range(binNum)]
+                    # dataGeneration _ modify
+                    
+                    i = 54; ROI = 0
+                    for i in range(binNum):
+                        signalss_PSL_test = signalss[SE][se][binning[i]:binning[i]+497]
+                        ROInum = signalss_PSL_test.shape[1]
                         
-                    X_array = array_recover(X_ROI)
-                    print(SE, se, 'BINS', i ,'/', ROInum, 'ROI', ROI)
-                    prediction = model.predict(X_array)
-                    PSL_result_save[SE][se][i][ROI] = prediction
-    
-        msdata = {'PSL_result_save' : PSL_result_save}
-        
-        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-            pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
-            print(picklesavename, '저장되었습니다.')
+                        [PSL_result_save[SE][se][i].append([]) for k in range(ROInum)]
+                        for ROI in range(ROInum):
+                            signal_full_roi = np.mean(signalss_PSL_test[:,ROI:ROI+1], axis=1)
+                        
+                            lastsave = np.zeros(msunit, dtype=int)
+                            X_ROI = []
+                            for frame in range(0, full_sequence - np.min(sequenceSize) + 1, 10):   
+                                X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
+                                    
+                                for unit in range(msunit):
+                                    if frame < full_sequence - sequenceSize[unit] + 1:
+                                        X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
+                                        lastsave[unit] = frame
+                                        
+                                    else:
+                                        X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+                        #                print(frame, unit, lastsave[unit])
+                        
+                                X_ROI.append(X_tmp)
+                                
+                            X_array = array_recover(X_ROI)
+                            print(SE, se, 'BINS', i ,'/', ROInum, 'ROI', ROI)
+                            prediction = model.predict(X_array)
+                            PSL_result_save[SE][se][i][ROI] = prediction
+            
+                msdata = {'PSL_result_save' : PSL_result_save}
+                
+                with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                    pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
+                    print(picklesavename, '저장되었습니다.')
+
+                    
+
+## In[] PSL posthoc
+## PSL을 10 bin 단위로 나누어서 전부다 test하고 저장한다. 
+#
+#
+#    
+#    bins = 10 # int(round(FPS*10))
+#    # 현재 RNN 구조의 최소 timebin -> 수정, datageneration binning
+#
+#    for SE in range(N):
+#        final_weightsave = RESULT_SAVE_PATH + 'model/' + str(etc) + '_my_model_weights_final.h5'
+#        model.load_weights(final_weightsave) 
+##        print(SE)
+#        
+#        # 이미 있는지 test. 
+#        picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + settingID + '_PSL_result_' + str(SE) + '.pickle'
+#        if True:
+#            try:
+#                with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+#                    tmp = pickle.load(f)
+#                    break
+#            except:
+#                pass
+#        
+#        # 없다면 시작
+#        # 빈공간을 매 쥐마다 계속해서 만든다.
+#        PSL_result_save = []
+#        [PSL_result_save.append([]) for i in range(N)]
+#        for SE2 in range(N):
+#            [PSL_result_save[SE2].append([]) for i in range(5)]
+#        
+#        sessionNum = 5
+#        if SE in capsaicinGroup or SE in pslGroup:
+#            sessionNum = 3
+#        
+#        for se in range(sessionNum):
+#            binning = list(range(0,(signalss[SE][se].shape[0] - 497), bins))
+#            binNum = len(binning)
+#            [PSL_result_save[SE][se].append([]) for i in range(binNum)]
+#            # dataGeneration _ modify
+#            
+#            i = 54; ROI = 0
+#            for i in range(binNum):
+#                signalss_PSL_test = signalss[SE][se][binning[i]:binning[i]+497]
+#                ROInum = signalss_PSL_test.shape[1]
+#                
+#                [PSL_result_save[SE][se][i].append([]) for k in range(ROInum)]
+#                for ROI in range(ROInum):
+#                    signal_full_roi = np.mean(signalss_PSL_test[:,ROI:ROI+1], axis=1)
+#                
+#                    lastsave = np.zeros(msunit, dtype=int)
+#                    X_ROI = []
+#                    for frame in range(0, full_sequence - np.min(sequenceSize) + 1, 10):   
+#                        X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
+#                            
+#                        for unit in range(msunit):
+#                            if frame < full_sequence - sequenceSize[unit] + 1:
+#                                X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
+#                                lastsave[unit] = frame
+#                                
+#                            else:
+#                                X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+#                #                print(frame, unit, lastsave[unit])
+#                
+#                        X_ROI.append(X_tmp)
+#                        
+#                    X_array = array_recover(X_ROI)
+#                    print(SE, se, 'BINS', i ,'/', ROInum, 'ROI', ROI)
+#                    prediction = model.predict(X_array)
+#                    PSL_result_save[SE][se][i][ROI] = prediction
+#    
+#        msdata = {'PSL_result_save' : PSL_result_save}
+#        
+#        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+#            pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
+#            print(picklesavename, '저장되었습니다.')
 
 
 
