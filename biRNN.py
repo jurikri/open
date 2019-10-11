@@ -215,7 +215,7 @@ layer_1 = 8 # fully conneted laye node 갯수 # 8
 l2_rate = 0.2 # regularization 상수
 dropout_rate = 0.10 # dropout late
 
-testsw = True  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
+testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
@@ -232,11 +232,11 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['0903_seeding_1', 1])
-project_list.append(['0903_seeding_2', 2])
-project_list.append(['0903_seeding_3', 3])
-project_list.append(['0903_seeding_4', 4])
-project_list.append(['0903_seeding_5', 5])
+project_list.append(['1011_seeding_1', 1])
+#project_list.append(['0903_seeding_2', 2])
+#project_list.append(['0903_seeding_3', 3])
+#project_list.append(['0903_seeding_4', 4])
+#project_list.append(['0903_seeding_5', 5])
 
 q = project_list[0]
 for q in project_list:
@@ -287,12 +287,14 @@ for q in project_list:
     
     
     savename4 = RESULT_SAVE_PATH + 'model/' + '00_model_save_hyper_parameters.csv'
-    csvfile = open(savename4, 'w', newline='')
-    csvwriter = csv.writer(csvfile)
-    for row in range(len(save_hyper_parameters)):
-        csvwriter.writerow(save_hyper_parameters[row])
-    csvfile.close()
-
+    
+    if not (os.path.isfile(savename4)):
+        print(settingID, 'prameter를 저장합니다.')
+        csvfile = open(savename4, 'w', newline='')
+        csvwriter = csv.writer(csvfile)
+        for row in range(len(save_hyper_parameters)):
+            csvwriter.writerow(save_hyper_parameters[row])
+        csvfile.close()
 
     # preprocessing 시작
     # 각 class의 data 입력준비
@@ -421,7 +423,9 @@ for q in project_list:
 
     # essentialList: 반드시 포함해야 하는 nonpian session
     essentialList = [[3,0], [8,0], [14,1], [15,0], [15,1], [47,1], [47,3], [48,1], \
-        [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3], [67,0]]
+        [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3], [67,0], [74, 0]]
+    
+    # essentialList 를 movement 기준으로 자동으로 뽑도록 설정
 
     for i in range(n_out):
         print('class', str(i), 'sampling 이전', np.array(X_save[i]).shape[0])
@@ -789,31 +793,31 @@ for q in project_list:
                         csvwriter.writerow(hist_save_val_loss)
                         csvfile.close()
 
-            ####### test 구문 입니다. ##########            
-            if testsw:
-                testlist = []
-                if not(etc == mouselist[sett]):
-                    testlist = [mouselist[sett]]
-                    print('mouse #', [mouselist[sett]], 'set 유무를 판단합니다.')
-                elif etc == mouselist[sett]:
-                    print('etc group set 유무를 판단합니다.')
+            ####### test 구문 입니다. ##########        
+
+            testlist = []
+            if not(etc == mouselist[sett]):
+                testlist = [mouselist[sett]]
+                print('test ssesion, mouse #', [mouselist[sett]], '입니다.')
+            elif etc == mouselist[sett]:
+                print('test ssesion, etc group 입니다.')
 
 #                     training set에 속하지 않은 모든쥐 찾기 (즉, low, restriction을 포함시킷는것.)
 #                     임시로 중단 (어차피 안쓰는데 할필요가 있나 싶어서)
-                    grouped_total_list = []
-                    keylist = list(msGroup.keys())
-                    for k in range(len(keylist)):
-                        grouped_total_list += msGroup[keylist[k]]
-                    for k in range(N):
-                        c1 = not (k in mouselist) and k in grouped_total_list
-                        c2 = not k in (restrictionGroup + lowGroup)
-                        
-                        if c1 and c2:
-                            testlist.append(k)
+                grouped_total_list = []
+                keylist = list(msGroup.keys())
+                for k in range(len(keylist)):
+                    grouped_total_list += msGroup[keylist[k]]
+                for k in range(N):
+                    c1 = not (k in mouselist) and k in grouped_total_list
+                    c2 = not k in (restrictionGroup + lowGroup)
                     
-                    testlist.append(etc)
-                    
-
+                    if c1 and c2:
+                        testlist.append(k)
+                
+                testlist.append(etc)
+  
+            if testsw:
                 if state == 'exp':
                     final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
                 elif state == 'con':
@@ -911,18 +915,20 @@ for q in project_list:
                             csvwriter.writerow(df1[row])
                         csvfile.close()
                         
-            ####### test - binning 구문 입니다. ##########       
-            testbin = None
-            picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + settingID + '_PSL_result_' + str(mouselist[sett]) + '.pickle'
-            try:
-                with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-                    tmp = pickle.load(f)
-                    testbin = False
-            except:
-                testbin = True
+            ####### test - binning 구문 입니다. ##########
             
-            if testbin:
-                for test_mouseNum in testlist:
+            for test_mouseNum in testlist:
+                testbin = None
+                picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + settingID + '_PSL_result_' + str(test_mouseNum) + '.pickle'
+                try:
+                    with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+                        tmp = pickle.load(f)
+                        testbin = False
+                        print('PSL_result_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
+                except:
+                    testbin = True
+                
+                if testbin:
                     PSL_result_save = []
                     [PSL_result_save.append([]) for i in range(N)]
                     for SE2 in range(N):
