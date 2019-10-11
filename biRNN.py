@@ -176,15 +176,19 @@ print('sequenceSize', sequenceSize)
 # ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# #############
 
 # training set에 사용 될 group을 설정합니다.
-mouselist = []
-mouselist += msGroup['highGroup']
-mouselist += msGroup['ketoGroup']
-mouselist += msGroup['midleGroup']
-mouselist += msGroup['salineGroup']
-mouselist += msGroup['yohimbineGroup'] # 20190903: yohimbineGroup group , tarining set에 추가 
-mouselist += [msGroup['lidocaineGroup'][0]] # etc set
+
+#mouselist += msGroup['highGroup']
+#mouselist += msGroup['ketoGroup']
+#mouselist += msGroup['midleGroup']
+#mouselist += msGroup['salineGroup']
+#mouselist += msGroup['yohimbineGroup'] # 20190903: yohimbineGroup group , tarining set에 추가 
+#mouselist += [msGroup['lidocaineGroup'][0]] # etc set
 
 ##
+
+painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup']
+nonpainGroup = msGroup['salineGroup'] 
+mouselist = painGroup + nonpainGroup + [msGroup['lidocaineGroup'][0]]
 etc = msGroup['lidocaineGroup'][0]
 mouselist.sort()
 
@@ -289,7 +293,7 @@ for q in project_list:
     savename4 = RESULT_SAVE_PATH + 'model/' + '00_model_save_hyper_parameters.csv'
     
     if not (os.path.isfile(savename4)):
-        print(settingID, 'prameter를 저장합니다.')
+        print(settingID, 'prameter를 저장합니다. prameter를 저장합니다. prameter를 저장합니다.')
         csvfile = open(savename4, 'w', newline='')
         csvwriter = csv.writer(csvfile)
         for row in range(len(save_hyper_parameters)):
@@ -311,7 +315,7 @@ for q in project_list:
 
 
     # 각 class의 data 입력조건설정
-    painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup # validation 용도로만 사용함.
+#    painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup # validation 용도로만 사용함.
 
     for SE in range(N):
         for se in range(5):     
@@ -346,16 +350,16 @@ for q in project_list:
         GAN_loadpath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\GAN\\GAN_data\\'
         classlabel = ['notpain', 'pain']
         
-        GNA_data = []
+        GAN_data = []
         f = open(GAN_loadpath + classlabel[msclass] + '.csv', 'r', encoding='utf-8')
         rdr = csv.reader(f)
         for line in rdr:
-            GNA_data.append(line)
+            GAN_data .append(line)
         f.close()
-        GNA_data = np.array(GNA_data)
+        GAN_data  = np.array(GAN_data )
     
         for msclass in range(n_out):
-            for dataNum in range(GNA_data.shape[0]):
+            for dataNum in range(GAN_data.shape[0]):
                 X, Y, Z = dataGeneration(SE, se, label=msclass, GAN=True)
                 X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
     
@@ -369,61 +373,89 @@ for q in project_list:
         mslenlist.append(len(Y_save[i]))
     sampleNum = np.min(mslenlist)
     print('sampleNum', sampleNum)
+    
+    ix2 = []     
+    for SE in range(N):
+        for se in range(5):
+            ix2.append([SE, se])
+    
+    essentialIndex = []
+    for ix in np.array(np.argsort(movement.flatten())[::-1], dtype=int):
+        c1 = ix2[ix][0] in painGroup and ix2[ix][1] in [0,2]
+        c2 = ix2[ix][0] in nonpainGroup
+        if c1 or c2:
+            essentialIndex.append(ix2[ix])
+            
+            if len(essentialIndex) == sampleNum/42: # 42로 나누면 사용된 쥐의 마릿수가 나옴
+                break
 
     # class간에 data 갯수의 비율을 맞추기 위한 함수.
     # class 0인 nonpain이 갯수가 더 많으므로, 필수 요소 추가후 남은 숫자 만큼 랜덤하게 뽑음
     # 이 함수에서 두 class 모두 shuffled됨. 하지만 X, Y, Z가 동일 index로 shuffle 되기 때문에 구조는 유지됨
 
     def ms_sampling(sampleNum, datasetX, datasetY, datasetZ):
-        duplicated = 0
+#        duplicated = 0
         for msclass in range(n_out):
             if msclass == 0:
-                essentialIndex = []
+        
+                essentialIndex2 = []
                 for j in range(len(datasetZ[msclass])):
-                    if datasetZ[msclass][j] in essentialList:
-                        essentialIndex.append(j)
-                        
+                    if list(datasetZ[msclass][j]) in essentialIndex:
+                        essentialIndex2.append(j)
+                
                 ixlist = list(range(len(datasetZ[msclass])))
-                for k in essentialIndex:
+                for k in essentialIndex2:
                     ixlist.remove(k)
                 
-                diff = int(sampleNum* classratio) - len(essentialIndex)
+                diff = int(sampleNum* classratio) - len(essentialIndex2)
                 if diff >= 0:
-                    random_choiced_num = int(sampleNum* classratio) - len(essentialIndex)
+                    random_choiced_num = int(sampleNum* classratio) - len(essentialIndex2)
                     
                 elif diff < 0:
                     random_choiced_num = 0
                     
                 random.seed(seed)
                 ixlist = random.sample(ixlist, random_choiced_num)
-                ixlist = ixlist + essentialIndex
+                ixlist = ixlist + essentialIndex2
                 
                 datasetX[msclass] = np.array(datasetX[msclass])[ixlist]
                 datasetY[msclass] = np.array(datasetY[msclass])[ixlist]
                 datasetZ[msclass] = np.array(datasetZ[msclass])[ixlist]
+                
+                
+                #
+#                essentialList2 = [[3,0], [8,0], [14,1], [15,0], [15,1], [47,1], [47,3], [48,1], \
+#                                 [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3], [67,0], [74, 0]]
+#                
+#                
+#                for y in essentialList2:
+#                    if y in essentialIndex:
+#                        print(y, '있음')
+#                        
+#                    else:
+#                        print(y, '없으요~~')
                     
-                duplicated =  len(essentialIndex) - int(sampleNum* classratio)
+#                duplicated =  len(essentialIndex) - int(sampleNum* classratio)
                     
             elif msclass == 1:
                 random.seed(seed)
                 ixlist = range(len(datasetX[msclass])); ixlist = random.sample(ixlist, int(sampleNum))
                 
-                if duplicated > 0:
-                    random.seed(seed+1)
-                    ixlist2 = range(len(datasetX[msclass])); ixlist2 = random.sample(ixlist2, int(duplicated))
-                    ixlist = ixlist + ixlist2
+#                if duplicated > 0:
+#                    random.seed(seed+1)
+#                    ixlist2 = range(len(datasetX[msclass])); ixlist2 = random.sample(ixlist2, int(duplicated))
+#                    ixlist = ixlist + ixlist2
                 
                 datasetX[msclass] = np.array(datasetX[msclass])[ixlist]
                 datasetY[msclass] = np.array(datasetY[msclass])[ixlist]
                 datasetZ[msclass] = np.array(datasetZ[msclass])[ixlist]
                 
-                print('duplicated', duplicated)
+#                print('duplicated', duplicated)
    
         return datasetX, datasetY, datasetZ
 
     # essentialList: 반드시 포함해야 하는 nonpian session
-    essentialList = [[3,0], [8,0], [14,1], [15,0], [15,1], [47,1], [47,3], [48,1], \
-        [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3], [67,0], [74, 0]]
+
     
     # essentialList 를 movement 기준으로 자동으로 뽑도록 설정
 
@@ -441,7 +473,7 @@ for q in project_list:
     # In[]
 
     sw = 0
-    for y in essentialList:
+    for y in essentialIndex:
         if not y in Z_save[0]:
             sw = 1
             print(y, 'essentialList 누락')
