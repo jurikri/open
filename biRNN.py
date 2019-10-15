@@ -322,15 +322,15 @@ for q in project_list:
             # nonpain
             
             # notpain training 용도
-            c1 =  SE in highGroup + midleGroup + ketoGroup + yohimbineGroup and se in [0,2] # baseline, interphase
-            if SE in salineGroup or c1:
+            c1 =  SE in painGroup and se in [0,2] # baseline, interphase
+            if SE in nonpainGroup or c1:
                 msclass = 0 # nonpain
 #                
 #                for ROI in range(signalss[SE][se].shape[1]):
                 X, Y, Z = dataGeneration(SE, se, label = msclass) 
                 X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
 
-            if SE in highGroup + midleGroup + ketoGroup + yohimbineGroup and se == 1 and SE not in [1, 26]: # 1, 26은 특별히 제외함. 
+            if SE in painGroup and se == 1 and SE not in [1, 26]: # 1, 26은 특별히 제외함. 
                 msclass = 1 # pain
                 
 #                for ROI in range(signalss[SE][se].shape[1]):
