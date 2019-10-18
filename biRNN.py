@@ -157,7 +157,7 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False):
             msimg = np.zeros((msunit, full_sequence))
             
             for unit in range(msunit):
-                if frame < full_sequence - sequenceSize[unit] + 1:
+                if frame <= full_sequence - sequenceSize[unit]:
                     msimg[unit, frame : frame + sequenceSize[unit]] = 1
                     lastsave2[unit] = frame
                     
@@ -208,7 +208,7 @@ for SE in range(N):
 
 print('in data set, time duration', set(lensave.flatten()))
 print('다음과 같이 나누어서 처리합니다')
-msshort = 42; mslong = 97
+msshort = 41; mslong = 97
 print('msshort', msshort, ', mslong', mslong)
 
 #
@@ -990,12 +990,22 @@ for q in project_list:
                         [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
                         # dataGeneration _ modify
                         
-                        if binNum >= msshort-42+1 and binNum < mslong-42+1: # for 2 mins
-                            binNum2 = msshort-42+1
+                        binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
+                        if binlist[-1] + bins < mslen-np.min(sequenceSize):
+                                binlist = binlist[:len(binlist)-1]
+                        minimum_binning = len(binlist)
+                                
+                        print(minimum_binning, '41인거 체크하고 삭제')
+                        
+                        if binNum >= msshort-minimum_binning+1 and binNum < mslong-minimum_binning+1: # for 2 mins
+                            binNum2 = msshort-minimum_binning+1
                             print(SE, se, 'msshort', binNum2)
-                        elif binNum >= mslong-42+1: # for 4 mins
-                            binNum2 = mslong-42+1
+                        elif binNum >= mslong-minimum_binning+1: # for 4 mins
+                            binNum2 = mslong-minimum_binning+1
                             print(SE, se, 'mslong', binNum2)
+                        elif binNum == 0:
+                            print(SE, se, '예상되지 않은 길이입니다. 체크')
+                            sys.exit()
                         else: # for 2 mins
                             print(SE, se, '예상되지 않은 길이입니다. 체크')
                         
@@ -1010,11 +1020,16 @@ for q in project_list:
                             
                                 lastsave = np.zeros(msunit, dtype=int)
                                 X_ROI = []
-                                for frame in range(0, full_sequence - np.min(sequenceSize) + 1, 10):   
+                                
+                                binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
+                                if binlist[-1] + bins < mslen-np.min(sequenceSize):
+                                        binlist = binlist[:len(binlist)-1]
+            
+                                for frame in binlist:   
                                     X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
                                         
                                     for unit in range(msunit):
-                                        if frame < full_sequence - sequenceSize[unit] + 1:
+                                        if frame <= full_sequence - sequenceSize[unit]:
                                             X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
                                             lastsave[unit] = frame
                                             
