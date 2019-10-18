@@ -91,6 +91,17 @@ capsaicinGroup = msGroup['capsaicinGroup']
 yohimbineGroup = msGroup['yohimbineGroup']
 pslGroup = msGroup['pslGroup']
 
+painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup']
+nonpainGroup = msGroup['salineGroup'] 
+
+grouped_total_list = []
+keylist = list(msGroup.keys())
+for k in range(len(keylist)):
+    grouped_total_list += msGroup[keylist[k]]
+
+# excluded
+#highGroup.remove(1)
+
 # mouselist는 training에 사용됩니다.
 mouselist = []
 mouselist += msGroup['highGroup']
@@ -102,13 +113,9 @@ mouselist += [msGroup['lidocaineGroup'][0]]
 etc = msGroup['lidocaineGroup'][0]
 mouselist.sort()
 
-grouped_total_list = []
-keylist = list(msGroup.keys())
-for k in range(len(keylist)):
-    grouped_total_list += msGroup[keylist[k]]
 # 최종 평가 함수 
-def accuracy_cal(pain, non_pain, fsw):
-    pos_label = 1; roc_auc = -np.inf
+def accuracy_cal(pain, non_pain, fsw=False):
+    pos_label = 1; roc_auc = -np.inf; fig = None
     
     while roc_auc < 0.5:
         pain = np.array(pain); non_pain = np.array(non_pain)
@@ -133,7 +140,8 @@ def accuracy_cal(pain, non_pain, fsw):
         print('specificity', round(specificity,3), 'sensitivity', round(sensitivity,3), 'accuracy', round(accuracy,3), 'roc_auc', round(roc_auc,3)) 
     
     if fsw:
-        plt.figure()
+        sz = 1
+        fig = plt.figure(1, figsize=(7*sz, 5*sz))
         lw = 2
         plt.plot(fpr, tpr, color='darkorange',
                  lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
@@ -146,7 +154,7 @@ def accuracy_cal(pain, non_pain, fsw):
         plt.legend(loc="lower right")
         plt.show()
         
-    return accuracy, roc_auc 
+    return accuracy, roc_auc, fig
     
 def pain_nonpain_sepreate(target, painGroup, nonpainGroup):
     valuetable = np.array(target)
@@ -181,153 +189,38 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 # load 할 model 경로(들) 입력
 model_name = []
 
-model_name.append(['0903_seeding_1/', 1])
-model_name.append(['0903_seeding_2/', 2])
+model_name.append(['1011_seeding_1/', 1])
+#model_name.append(['0903_seeding_2/', 2])
+#model_name.append(['0903_seeding_2/', 3])
+#model_name.append(['0903_seeding_2/', 4])
+#model_name.append(['0903_seeding_2/', 5])
 
-
-def ms_thresholding(optimalThr = 0):
-    target = np.zeros((N,5)); target[:] = np.nan
-    for SE in range(N):
-        if rawsave[SE].shape: # 예외 data는 실행하지 않음
-            ROInum = signalss[SE][0].shape[1]
-            for se in range(5):
-                valuesave = np.zeros(ROInum); valuesave[:] = np.nan 
-                for ROI in range(ROInum):
-                    rowindex = np.where((np.array(rawsave[SE][:,1]==se) * np.array( rawsave[SE][:,2]==ROI)) == True)[0]
-                    valuesave[ROI] = np.mean(rawsave[SE][rowindex,4]>0.5) # 4 for pain probability 
-                    # >0.5 를 사용하면 loss -> acc로 변환
-                    
-    #            valuesave = valuesave > optimalThr # binary
-                valuesave[valuesave < optimalThr] = 0 # thr 이하의 값은 noise로 취급, 0으로 처리
-                    
-                target[SE,se] = np.mean(valuesave) # 데이터들 수정후, mean으로 교체
-    return target
-
-accsave = np.zeros(N); accsave[:] = np.nan
-repeat = 0
-for repeat in range(len(model_name)):
-    msloadpath = savepath + 'result\\' + model_name[repeat][0] + '\\model';
-    os.chdir(msloadpath)
-    for SE in mouselist:
-        try:
-            df1 = np.array(pd.read_csv(str(SE) + '_exp_validationSet_result.csv', header=None))
-            accsave[SE] = df1[0,-1]
-            # print(SE)
-        except:
-            # print(SE, 'none')
-            pass
-
-    print(model_name[repeat] , '>>', np.nanmean(accsave))            
-
-# test data import
-rawsave = []; [rawsave.append([]) for i in range(N)]
-repeat = 0
-for repeat in range(len(model_name)):
-    msloadpath = savepath + 'result\\' + model_name[repeat][0] + '\\exp_raw'; 
-
-    try:
-        os.chdir(msloadpath)
-        print(model_name[repeat] , 'is loaded'); printsw=False
-    except:
-        continue
-        
-    for SE in range(N):
-        try:
-            df1 = pd.read_csv('biRNN_raw_' + str(SE) + '.csv', header=None)
-        except:
-            if SE in mouseGroup and SE not in (restrictionGroup + lowGroup):
-                print(repeat, 'repeat에', SE, 'data 없음')
-            continue
-            
-        df2 = np.array(df1)
-        df2[:,4] = df2[:,4] > 0.5 # binarization
-        rawsave[SE].append(df2)
-        
-        ## 여기서 binarization 후 mean 
-for SE in range(N):
-    rawsave[SE] = np.nanmean(np.array(rawsave[SE]), axis=0) # nanmean으로 공백 매꿈     
-         
-
-# In[] prism 20191002
-
-# 원본 reload
-def reset():
-    optimized_thr = 0
-    print('optimized_thr', optimized_thr)
-    biRNN = ms_thresholding(optimized_thr)
-    Aprism_biRNN = msGrouping_nonexclude(biRNN)
-    # optimizsed thr 계산
-    painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
-    nonpainGroup = salineGroup + lidocainGroup
-    
-    targetMatrix = np.array(biRNN)
-    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(targetMatrix, painGroup, nonpainGroup)
-    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
-    
-    pain1 = np.array(pain); non_pain1 = np.array(nonpain)
-    pain1 = pain1[np.isnan(pain1)==0]; non_pain1 = non_pain1[np.isnan(non_pain1)==0]
-    maxvalue = np.max([np.concatenate((pain1, non_pain1))])
-    print('maxvalue', maxvalue)
-    
-    xaxis = []; yaxis = []
-    for thr in np.arange(0,maxvalue,maxvalue/1000):
-        TP = np.sum(pain1 >= thr)
-        FN = np.sum(pain1 < thr)
-        FP = np.sum(non_pain1 >= thr)
-        TN = np.sum(non_pain1 < thr)
-        msaccuracy = (TP + TN) / (TP + TN + FN + FP)
-        
-        xaxis.append(thr)
-        yaxis.append(msaccuracy)
-        
-    #    plt.plot(xaxis, yaxis)
-        
-    optimized_thr = xaxis[np.argmax(yaxis)]
-    print('optimized_thr', optimized_thr)
-    
-    #msix = target>optimized_thr 
-        
-    # t4 :497 계산
-    t4_497 = np.zeros((N,5))
-    for SE in range(N):
-        for se in range(5):
-            meansignal = np.mean(np.array(signalss[SE][se]), axis=1)
-            
-            t4_497[SE,se] = np.mean(meansignal[:497])
-    
-    Aprism_total = msGrouping_nonexclude(t4_497)
-    
-    # movement :497 계산
-    movement_497 = np.zeros((N,5))
-    for SE in range(N):
-        for se in range(5):
-            movement_497[SE,se] = np.mean(bahavss[SE][se][0:int(round(497/4.3*64))])
-    
-    Aprism_movement = msGrouping_nonexclude(movement_497)
-    
-    return Aprism_biRNN, Aprism_total, Aprism_movement, biRNN, t4_497, movement_497
-
-Aprism_biRNN, Aprism_total, Aprism_movement, biRNN, t4_497, movement_497 = reset()
 
 # In[] min_mean_save에 모든 data 저장
 
 # 통합
-SE=0;se=0;i=0
+SE=11;se=1;i=0
 
+msshort = 41
+mslong = 2
+
+print('msshort', msshort, 'mslong', mslong)
+
+shortlist = []; longlist = []
 min_mean_save = []
 [min_mean_save.append([]) for k in range(N)]    
 for SE in range(N):
+    if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+        print(SE, 'skip')
+        continue
 
     sessionNum = 5
     if SE in capsaicinGroup or SE in pslGroup:
         sessionNum = 3
-    # 계산당시 에러로 인해 일단 3으로 통일
-    sessionNum = 3
     
     [min_mean_save[SE].append([]) for k in range(sessionNum)]
     
     for se in range(sessionNum):
-        
         current_value = []
         for i in range(len(model_name)): # repeat model 만큼 반복 후 평균냄
             
@@ -336,25 +229,34 @@ for SE in range(N):
             with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
                 PSL_result_save = pickle.load(f)
 
-            current_value.append(np.array(PSL_result_save[SE][se]) > 0.5 ) # [BINS, ROI, bins, class]
+            current_value.append(np.array(PSL_result_save[SE][se]) > 0.5 ) # PSL_result_save[SE][se][BINS][ROI][bins]
             # # 2진화 
         
-        current_value = np.mean(np.array(current_value), axis=0)
-        binNum = current_value.shape[0]
+        current_value = np.mean(np.array(current_value), axis=0) # 모든 반복 project에 대해서 평균처리함
+        binNum = current_value.shape[0] # [BINS]
         
+        if binNum >= msshort and binNum < mslong: # for 2 mins
+            shortlist.append([SE, se])
+        elif mslen >= mslong: # for 4 mins
+            longlist.append([SE, se])
+        else: # for 2 mins
+            print(SE, se, '예상되지 않은 길이입니다. 체크')
+
         # 시계열 형태로 표현용 
-        empty_board = np.zeros((binNum, 42+((binNum-1)*1)))
+        empty_board = np.zeros((binNum, 41+((binNum-1)*1)))
         empty_board[:,:] = np.nan
 #            print(empty_board.shape)
         
-        # 2min mean 형태로 표현용
+        # 2min mean 형태로 표현용  
+        # 20191017, 2 mins 형태로는 사용하지 않고, 42 bins에서 겹치는 time windows를 평균내어 사용하고 있음.
+        # 즉 msplot은 안쓴단 말임
         msplot = []
         
         BIN = 0
         for BIN in range(binNum):
             figNum = int(str(SE)+str(se))
             plotsave = np.mean(current_value[BIN,:,:,1], axis=0) 
-            empty_board[BIN,0+BIN: 0+BIN+42] = plotsave
+            empty_board[BIN,0+BIN: 0+BIN+41] = plotsave
             msplot.append(np.mean(plotsave))
             
         empty_board = np.nanmean(empty_board, axis=0)
@@ -373,111 +275,408 @@ for SE in range(N):
         
         min_mean_save[SE][se] = empty_board
         
+        
+# min_mean_save -> 1 mins, 4 mins 그룹으로 분리
+# 20191017, test data 형성에서 이미 분리해서 만들고 있음. 아래 if False 구문은 삭제예정
+if False:
+    tmp = np.zeros((N,5))
+    for SE in range(N):
+        if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+            print(SE, 'skip')
+            continue
+    
+        sessionNum = 5
+        if SE in capsaicinGroup or SE in pslGroup:
+            sessionNum = 3
+            
+        for se in range(sessionNum):
+            min_mean_mean = np.array(min_mean_save[SE][se])
+            print(SE, se,  min_mean_mean.shape[0])
+            tmp[SE,se] = min_mean_mean.shape[0]
+    
+    print('session별 time 구성은 다음과 같습니다.')
+    print(set(tmp.flatten()))
+    print('다음과 같이 나누어서 처리합니다')
+    msshort = 41; mslong = 121
+    print([msshort, mslong])
+    
+    #ix = []; ix2 = []; cnt = -1    
+    #for SE in range(N):
+    #    for se in range(5):
+    #        cnt += 1
+    #        ix.append(cnt)
+    #        ix2.append([SE, se])
+    
+    shortlist = []
+    longlist = []
+    
+    min_mean_save2 = []
+    [min_mean_save2.append([]) for k in range(N)]  
+    for SE in range(N):
+        if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+            print(SE, 'skip')
+            continue
+    
+        sessionNum = 5
+        if SE in capsaicinGroup or SE in pslGroup:
+            sessionNum = 3
+        
+        [min_mean_save2[SE].append([]) for k in range(sessionNum)]
+        
+        for se in range(sessionNum):
+            tmp = np.array(min_mean_save[SE][se])
+            mslen = tmp.shape[0]
+            
+            if mslen >= msshort and mslen < mslong: # for 2 mins
+                min_mean_save2[SE][se] = min_mean_save[SE][se][:msshort]
+                shortlist.append([SE, se])
+            elif mslen >= mslong: # for 4 mins
+                min_mean_save2[SE][se] = min_mean_save[SE][se][:mslong]
+                longlist.append([SE, se])
+            else: # for 2 mins
+                print(SE, se, '예상되지 않은 길이입니다. 체크')
+                
+                # 안쓸듯? 
+    min_mean_save3 = [] # all short
+    [min_mean_save3.append([]) for k in range(N)]    
+    for SE in range(N):
+        if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+            print(SE, 'skip')
+            continue
+    
+        sessionNum = 5
+        if SE in capsaicinGroup or SE in pslGroup:
+            sessionNum = 3
+        
+        [min_mean_save3[SE].append([]) for k in range(sessionNum)]
+        
+        for se in range(sessionNum):
+            tmp = np.array(min_mean_save[SE][se])
+            mslen = tmp.shape[0]
+            
+            min_mean_save2[SE][se] = min_mean_save[SE][se][:msshort]
+
+        
 # In[]
         
 # maxix 적용전
-def report(biRNN = biRNN):
+def msfilter(target, msfilter):
+    msfilter = msfilter
+    target = np.array(target)
+    target2 = np.zeros((N,5)); target2[:] = np.nan
+    for SE in range(N):
+        for se in range(5):
+            if [SE, se] in msfilter:
+                target2[SE,se] = target[SE, se]
+                
+    return target2
+        
+def report(biRNN):
     # 평가용 함수, formalin pain과 PSL within- between 평가함
     
     target = biRNN
     
+    print('Formalin')
     painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
     nonpainGroup = salineGroup + lidocainGroup
-    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, shortlist), painGroup, nonpainGroup)
     nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+    print('pain #', pain.shape[0], 'nonpain #', nonpain.shape[0])
     accuracy_cal(pain, nonpain, True)        
     
-    # PSL - within
-    painGroup = pslGroup
-    nonpainGroup = salineGroup + lidocainGroup
-    # PSL은 inter가 late pain이므로 특수처리해야함.
-    print('PSL - within')
-    pain = target[pslGroup,1:3].flatten()
-    nonpain_within = target[pslGroup,0]
-    accuracy_cal(pain, nonpain_within, True)
+    print('Capsaicin')
+    painGroup = capsaicinGroup
+    nonpainGroup = salineGroup
+    pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, shortlist), painGroup, nonpainGroup)
+    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+    pain = target[capsaicinGroup,1].flatten()
+    print('pain #', pain.shape[0], 'nonpain #', nonpain.shape[0])
+    accuracy_cal(pain, nonpain, True)
     
-    # PSL - between
+    print('PSL')
     painGroup = pslGroup
-    nonpainGroup = salineGroup + lidocainGroup
-    _, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
-    print('PSL - between')
+    nonpainGroup = salineGroup
+    _, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, longlist), painGroup, nonpainGroup)
+    nonpain = np.concatenate((target[pslGroup,0], nonpain_between), axis=0)
     pain = target[pslGroup,1:3].flatten()
-    accuracy_cal(pain, nonpain_between, True)
+    print('pain #', pain.shape[0], 'nonpain #', nonpain.shape[0])
+    accuracy_cal(pain, nonpain, True)
     
     return None
 
-Aprism_biRNN, Aprism_total, Aprism_movement, biRNN, t4_497, movement_497 = reset()
-report(biRNN = biRNN)
+def ms_batchmean(target):
+    target = np.array(target)
+    out = np.zeros((N,5))
+    
+    for SE in range(N):
+        if SE == 70:
+            out[SE,:] = (target[70,:] + target[72,:])/2
+        elif SE == 72:
+            out[SE,:] = np.nan
+        else:
+            out[SE,:] = target[SE,:]
+            
+    return out
 
-# min_mean_save로 부터 각 value를 계산함
-biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
-SE = 5; se = 0
+def otimal_msduration(msduration, min_mean_save, optimalSW=False):    
+    # min_mean_save로 부터 각 value를 계산함
+    min_mean_save = min_mean_save
+    biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
+    for SE in range(N):
+        if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+#            print(SE, 'skip')
+            continue
+        
+        sessionNum = 5
+        if SE in capsaicinGroup or SE in pslGroup:
+            sessionNum = 3
+    
+        for se in range(sessionNum):
+            min_mean_mean = np.array(min_mean_save[SE][se])
+            
+            if False:
+                plt.figure()
+                figtitle = str(SE)+str(se) + '.png'
+                plt.title(figtitle)
+                plt.plot(min_mean_mean)
+                plt.ylim(0,1)
+                
+            # method 정해라
+            # 20191017 현재까지 결과 해석을 위한 method는 3가지 분기가 있다.
+            # 1. 시계열의 peak를 사용한다.
+            # 2. 모든 시계열을 평균낸다.
+            # 3. timewindow x 평균값을 계산 후, 관찰되는 peak를 사용한다.
+    
+            calculation_method = 3
+            
+            if calculation_method == 1: # max
+                maxix = np.argmax(min_mean_mean)
+                biRNN_2[SE,se] = min_mean_mean[maxix]
+                
+                startat = 10*maxix
+                movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat:int(round(startat+497/4.3*64))])
+                
+                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                t4_497_2[SE,se] = np.mean(meansignal[startat:startat+497])
+                
+            elif calculation_method == 2: # mean 
+                biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
+                
+#                startat = 10*maxix
+                movement_497_2[SE,se] = np.mean(bahavss[SE][se])
+                
+                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                t4_497_2[SE,se] = np.mean(meansignal,axis=0)
+                
+            elif calculation_method == 3: # peak duration     
+                meansave = []
+                
+                if min_mean_mean.shape[0] - msduration <= 0:
+                    print(msduration, '은 너무 길어')
+                
+                for msbin in range(min_mean_mean.shape[0] - msduration):
+                    meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
+                    
+                maxix = np.argmax(meansave)
+                biRNN_2[SE,se] = np.mean(min_mean_mean[maxix: maxix+msduration], axis=0)
+                
+                startat = 10*maxix
+        
+                movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat: \
+                              int(round(startat+ ((msduration*10+82) * (64/FPS))))])
+                # 82는 birnn 최소 분절값이고, 10은 binning frame 값임
+                # 64는 behavior 동영상 frame 값임
+                
+                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                t4_497_2[SE,se] = np.mean(meansignal[startat:startat+(msduration*10+82)])
+                
+            
+    # Aprism 변수 update
+    accuracy = None
+    if optimalSW:
+        biRNN_2 = ms_batchmean(biRNN_2)            
+        target = biRNN_2 
+#        painGroup = painGroup
+#        nonpainGroup = nonpainGroup
+        pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+#        pain = target[pslGroup,1:3].flatten()
+    #    nonpain_within = target[pslGroup,0]
+        accuracy, roc_auc, fig = accuracy_cal(pain, nonpain_between)
+        tmp = target[pslGroup,1:3]; tmp = tmp[np.isnan(tmp)==0]
+        diff = np.mean(target[painGroup,1]) - np.mean(tmp)
+        print(msduration, accuracy, 'diff', diff)
+    
+        
+    return accuracy, biRNN_2, t4_497_2, movement_497_2
+
+# In[]
+
+# 현재 사용중인 test 분석방식은 peak time window
+# 즉 특정 x time window 동안의 값을 평균내 모든 값들 중 최대값을 그 session의 value로 사용하여 평가함.
+# 계산은 control group도 동일하게 적용된느 것은 맞지만, x를 최적화 할때 평가결과를 가지고 결정하는 문제가 있다.
+# 이 계산이 bias가 아님을 증명하기 위해, time window x가 특별한 값이 아니고, 대충 아무거나 써도 마찬가지의 결과를 냄을
+# x에 따른 acc를 보여줌으로써 어필해야 한다. -> x는 일반화 가능성이 높다. = 매우 특정한 값이 아니다.   
+    
+axiss = []; [axiss.append([]) for u in range(2)]
+for msduration in range(2,40):
+    accuracy, _, _, _= otimal_msduration(msduration, min_mean_save, optimalSW=True) # 전체 값 모두 사용 
+    axiss[0].append(msduration)
+    axiss[1].append(accuracy)
+plt.plot(axiss[0], axiss[1])
+
+# 특정한 time window x를 잡고 계산 시작
+# time window x를 초로 환산하면 (approximately) mssec과 같다
+mssec = 30
+# msduration * 10 / FPS = sec
+# msduration = sec * FPS / 10
+msduration = int(round( mssec * FPS / 10 ))
+print('msduration, 체크한번하고 삭제')
+import sys
+sys.exit()
+if False:
+    for mssec in range(1, 120):
+        msduration = int(round( mssec * FPS / 10 ))
+        print(mssec, msduration)
+    
+
+print('msduration', msduration)
+_, biRNN_2, t4_497_2, movement_497_2 = otimal_msduration(msduration, min_mean_save2) # 2 mins, or 4 mins
+
+# 예외규정: 70, 72는 동일 생쥐의 반복 측정이기 때문에 평균처리한다.
+biRNN_22 = ms_batchmean(biRNN_2)
+t4_497_22 = ms_batchmean(t4_497_2)
+movement_497_22 = ms_batchmean(movement_497_2)
+
+Aprism_biRNN = msGrouping_nonexclude(biRNN_22)
+Aprism_total = msGrouping_nonexclude(t4_497_22)
+Aprism_movement = msGrouping_nonexclude(movement_497_22)           
+
+report(biRNN = biRNN_22)
+        
+# In[] optimal thr
+
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
+nonpainGroup = salineGroup + lidocainGroup
+
+targetMatrix = np.array(biRNN_2)
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(targetMatrix, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+
+pain1 = np.array(pain); non_pain1 = np.array(nonpain)
+pain1 = pain1[np.isnan(pain1)==0]; non_pain1 = non_pain1[np.isnan(non_pain1)==0]
+maxvalue = np.max([np.concatenate((pain1, non_pain1))])
+print('maxvalue', maxvalue)
+
+xaxis = []; yaxis = []
+for thr in np.arange(0,maxvalue,maxvalue/1000):
+    TP = np.sum(pain1 >= thr)
+    FN = np.sum(pain1 < thr)
+    FP = np.sum(non_pain1 >= thr)
+    TN = np.sum(non_pain1 < thr)
+    msaccuracy = (TP + TN) / (TP + TN + FN + FP)
+    
+    xaxis.append(thr)
+    yaxis.append(msaccuracy)
+    
+#    plt.plot(xaxis, yaxis)
+    
+optimized_thr = xaxis[np.argmax(yaxis)]
+print('optimized_thr', optimized_thr)
+
+
+# In[] 20191008 원천보고용 figure 작성 
+
+# biRNN
+painGroup = highGroup + midleGroup + ketoGroup
+nonpainGroup = salineGroup + lidocainGroup
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(biRNN_22, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+accuracy, roc_auc, fig = accuracy_cal(pain, nonpain, True) 
+fig.savefig('birnn_roc.png', dpi=1000) 
+
+# t4
+painGroup = highGroup + midleGroup + ketoGroup
+nonpainGroup = salineGroup + lidocainGroup
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(t4_497_22, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+accuracy, roc_auc, fig = accuracy_cal(pain, nonpain, True)
+fig.savefig('test.png', dpi=1000) 
+
+
+# movement
+painGroup = highGroup + midleGroup + ketoGroup
+nonpainGroup = salineGroup + lidocainGroup
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(movement_497_22, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+accuracy_cal(pain, nonpain, True)   
+
+
+# high vs saline
+
+# biRNN
+painGroup = highGroup
+nonpainGroup = salineGroup
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(biRNN_2, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+accuracy_cal(pain, nonpain, True)    
+
+# t4
+painGroup = highGroup
+nonpainGroup = salineGroup
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(t4_497_2, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+accuracy_cal(pain, nonpain, True)   
+
+
+# movement
+painGroup = highGroup
+nonpainGroup = salineGroup
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(movement_497_2, painGroup, nonpainGroup)
+nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+accuracy_cal(pain, nonpain, True)   
+
+
+# 각 session 별 움직임과 t4 corr
+painGroup = highGroup + midleGroup + ketoGroup
+nonpainGroup = salineGroup + lidocainGroup
+
+axiss = []; [axiss.append([]) for u in range(2)]
+
 for SE in range(N):
-    
-    sessionNum = 5
-    if SE in capsaicinGroup or SE in pslGroup:
-        sessionNum = 3
-    # 계산당시 에러로 인해 일단 3으로 통일
-    sessionNum = 3
-    
-    for se in range(sessionNum):
-        min_mean_mean = np.array(min_mean_save[SE][se])
-        maxix = np.argmax(min_mean_mean)
-        
-        if False:
-            plt.figure()
-            figtitle = str(SE)+str(se) + '.png'
-            plt.title(figtitle)
-            plt.plot(min_mean_mean)
-            plt.ylim(0,1)
-    #        plt.savefig(savepath + figtitle)
-            print('SE', SE, 'se', se,'maxix', maxix, 'value', min_mean_mean[maxix])
+    if SE in painGroup + nonpainGroup:
+        for se in range(5):
+            axiss[1].append(t4_497[SE,se])
+            axiss[0].append(movement_497[SE,se])
+            
+m, b = mslinear_regression(axiss[0], axiss[1])
+print(m, b)
+sc = 0.7
+plt.figure(1, figsize=(9.7*sc, 6*sc))
+plt.scatter(axiss[0], axiss[1], s = 2)
+plt.xlabel('movement ratio mean')
+plt.ylabel('mean of calcium intensity')
 
-        # updata
-        # maximum timewindow에 맞춰서 value fix
-        
-        calculation_method = 2
-        
-        if calculation_method == 1: # max
-            biRNN_2[SE,se] = min_mean_mean[maxix]
-            
-            startat = 10*maxix
-            movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat:int(round(startat+497/4.3*64))])
-            
-            meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-            t4_497_2[SE,se] = np.mean(meansignal[startat:startat+497])
-            
-        elif calculation_method == 2: # mean 
-            biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
-            
-            startat = 10*maxix
-            movement_497_2[SE,se] = np.mean(bahavss[SE][se])
-            
-            meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-            t4_497_2[SE,se] = np.mean(meansignal,axis=0)
+xaxis = np.arange(0,0.5,0.5/100)
+plt.plot(xaxis, xaxis*m + b, c = 'orange')
+plt.xlim([0,0.5]), plt.ylim([0,1])
 
-# Aprism 변수 update
-Aprism_biRNN = msGrouping_nonexclude(biRNN_2)
-Aprism_total = msGrouping_nonexclude(t4_497_2)
-Aprism_movement = msGrouping_nonexclude(movement_497_2)           
+import scipy
+r, p = scipy.stats.pearsonr(axiss[0], axiss[1])
+print('r square', r**2, 'p value', p)
+plt.savefig('tmp.png', dpi=1000)
 
-report(biRNN = biRNN_2)
-        
-
-    #  평균 추가하고 기존 방식 업데이트하거나 파일분리 
-    
  # In[] movement와 total ROC
 painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 print('movment--------------------------------')
-pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(movement_497_2, painGroup, nonpainGroup)
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(movement_497_22, painGroup, nonpainGroup)
 nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
 accuracy_cal(pain, nonpain, True)
 
-painGroup = highGroup + midleGroup + ketoGroup
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 print('total--------------------------------')
-pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(t4_497_2, painGroup, nonpainGroup)
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(t4_497_22, painGroup, nonpainGroup)
 nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
 accuracy_cal(pain, nonpain, True)
 
@@ -553,107 +752,116 @@ print('PSL - between')
 pain = target[pslGroup,1:3].flatten()
 accuracy_cal(pain, nonpain_between, True)
 
-
-# In[] 움직임 noise 문제 해결하기 - new
+# In[] 움직임은 speicificity에 문제가있다 - new
 
 # 2 class 상황, 적은 숫자인 pain class의 갯수 x 만큼 not pain class에서 랜덤하게 sampling 함
 # 각 class sample 등의 평균 movement와, accuracy를 x, y plot
 # OLS fitting 함
-    
-target = np.array(biRNN_2)
-movement = np.array(movement_497_2)
 
-painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
-nonpainGroup = salineGroup + lidocainGroup
-
-pain_movement, nonpain_within_movement, nonpain_between_movement = pain_nonpain_sepreate(movement, painGroup, nonpainGroup)
-nonpain_movement = np.concatenate((nonpain_within_movement, nonpain_between_movement), axis=0)
-
-axiss = []; [axiss.append([]) for i in range(2)]
-totalNum = nonpain_movement.shape[0]
-sampleNum = pain_movement.shape[0]
-epochs = 50000
-for epoch in range(epochs):
-    if epoch % int(epochs/10) == 1:
-        print(epoch, '/', epochs)
-#    random_N = random.randrange(2, sampleNum)
-    ixlist = random.sample(list(range(totalNum)), sampleNum)
+def movement_specificity():
+    target = np.array(biRNN_22)
+    movement = np.array(movement_497_22)
     
-    accuracy, _ = accuracy_cal(pain_movement, nonpain_movement[ixlist], False)
-    axiss[0].append(np.mean(nonpain_movement[ixlist], axis=0))
-    axiss[1].append(accuracy)
+    painGroup = highGroup + midleGroup + ketoGroup + capsaicinGroup + yohimbineGroup
+    nonpainGroup = salineGroup + lidocainGroup
     
-    t1 = np.mean(nonpain_movement[ixlist], axis=0)
-    t2 = accuracy
+    pain_movement, nonpain_within_movement, nonpain_between_movement = pain_nonpain_sepreate(movement, painGroup, nonpainGroup)
+    nonpain_movement = np.concatenate((nonpain_within_movement, nonpain_between_movement), axis=0)
     
-    if np.isnan(t1) or np.isnan(t2):
-        print('breaking')
-        break
+    axiss = []; [axiss.append([]) for i in range(2)]
+    totalNum = nonpain_movement.shape[0]
+    sampleNum = pain_movement.shape[0]
+    epochs = 50000
+    for epoch in range(epochs):
+        if epoch % int(epochs/10) == 1:
+            print(epoch, '/', epochs)
+    #    random_N = random.randrange(2, sampleNum)
+        ixlist = random.sample(list(range(totalNum)), sampleNum)
         
-for d in range(2):
-    axiss[d] = np.array(axiss[d])
-#    axiss[d] = axiss[d][np.isnan(axiss[d])==0];
-    
-#maxvalue = np.max([np.concatenate((pain1, non_pain1))])
-    
-m, b = mslinear_regression(axiss[0], axiss[1])
-print(m, b)
-plt.figure()
-plt.scatter(axiss[0], axiss[1], s = 0.4)
-plt.xlabel('movement ratio mean')
-plt.ylabel('accuracy by movement as feature')
-
-xaxis = np.arange(0,0.5,0.5/100)
-plt.plot(xaxis, xaxis*m + b, c = 'orange')
-plt.xlim([0,0.5]), plt.ylim([0,1])
-
-# 대조군
-
-pain_target, nonpain_within_target, nonpain_between_target = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
-nonpain_target = np.concatenate((nonpain_within_target, nonpain_between_target), axis=0)
-
-
-axiss = []; [axiss.append([]) for i in range(2)]
-totalNum = nonpain_movement.shape[0]
-sampleNum = pain_movement.shape[0]
-
-#epochs = 50000
-for epoch in range(epochs):
-    if epoch % int(epochs/10) == 1:
-        print(epoch, '/', epochs)
+        accuracy, _, _ = accuracy_cal(pain_movement, nonpain_movement[ixlist], False)
+        axiss[0].append(np.mean(nonpain_movement[ixlist], axis=0))
+        axiss[1].append(accuracy)
         
-#    random_N = random.randrange(2, sampleNum)
-    ixlist = random.sample(list(range(totalNum)), sampleNum)
+        t1 = np.mean(nonpain_movement[ixlist], axis=0)
+        t2 = accuracy
+        
+        if np.isnan(t1) or np.isnan(t2):
+            print('breaking')
+            break
+            
+    for d in range(2):
+        axiss[d] = np.array(axiss[d])
+    #    axiss[d] = axiss[d][np.isnan(axiss[d])==0];
+        
+    #maxvalue = np.max([np.concatenate((pain1, non_pain1))])
+        
+    m, b = mslinear_regression(axiss[0], axiss[1])
+    print(m, b)
+    plt.figure()
+    plt.scatter(axiss[0], axiss[1], s = 0.4)
+    plt.xlabel('movement ratio mean')
+    plt.ylabel('accuracy by movement as feature')
     
-    accuracy, _ = accuracy_cal(pain_target, nonpain_target[ixlist], False)
-    axiss[0].append(np.mean(nonpain_movement[ixlist], axis=0))
-    axiss[1].append(accuracy)
-
-for d in range(2):
-    axiss[d] = np.array(axiss[d])
-    axiss[d] = axiss[d][np.isnan(axiss[d])==0];
+    xaxis = np.arange(0,0.5,0.5/100)
+    plt.plot(xaxis, xaxis*m + b, c = 'orange')
+    plt.xlim([0,0.5]), plt.ylim([0,1])
+    plt.savefig('tmp1.png', dpi=1000)
     
-#maxvalue = np.max([np.concatenate((pain1, non_pain1))])
+    # 대조군
     
-m, b = mslinear_regression(axiss[0], axiss[1])
-print(m, b)
-plt.figure()
-plt.scatter(axiss[0], axiss[1], s = 0.4)
-plt.xlabel('movement ratio mean')
-plt.ylabel('accuracy by RNN')
-
-xaxis = np.arange(0,0.5,0.5/100)
-plt.plot(xaxis, xaxis*m + b, c = 'orange')
-plt.xlim([0,0.5]), plt.ylim([0,1])    
+    pain_target, nonpain_within_target, nonpain_between_target = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+    nonpain_target = np.concatenate((nonpain_within_target, nonpain_between_target), axis=0)
     
-
+    
+    axiss = []; [axiss.append([]) for i in range(2)]
+    totalNum = nonpain_movement.shape[0]
+    sampleNum = pain_movement.shape[0]
+    
+    #epochs = 50000
+    for epoch in range(epochs):
+        if epoch % int(epochs/10) == 1:
+            print(epoch, '/', epochs)
+            
+    #    random_N = random.randrange(2, sampleNum)
+        ixlist = random.sample(list(range(totalNum)), sampleNum)
+        
+        accuracy, _ , _= accuracy_cal(pain_target, nonpain_target[ixlist], False)
+        axiss[0].append(np.mean(nonpain_movement[ixlist], axis=0))
+        axiss[1].append(accuracy)
+    
+    for d in range(2):
+        axiss[d] = np.array(axiss[d])
+        axiss[d] = axiss[d][np.isnan(axiss[d])==0];
+        
+    #maxvalue = np.max([np.concatenate((pain1, non_pain1))])
+        
+    m, b = mslinear_regression(axiss[0], axiss[1])
+    print(m, b)
+    plt.figure()
+    plt.scatter(axiss[0], axiss[1], s = 0.4)
+    plt.xlabel('movement ratio mean')
+    plt.ylabel('accuracy by RNN')
+    
+    xaxis = np.arange(0,0.5,0.5/100)
+    plt.plot(xaxis, xaxis*m + b, c = 'orange')
+    plt.xlim([0,0.5]), plt.ylim([0,1])    
+    plt.savefig('tmp2.png', dpi=1000)
+    
+for sec in range(10, 60, 5):
+    msduration = int(round(sec/((494/42)/FPS)))
+    print('msduration', msduration, 'sec', sec)
+    _, biRNN_2, t4_497_2, movement_497_2 = otimal_msduration(msduration, min_mean_save2) # 2 mins, or 4 mins
+    biRNN_22 = ms_batchmean(biRNN_2)
+    t4_497_22 = ms_batchmean(t4_497_2)
+    movement_497_22 = ms_batchmean(movement_497_2)
+    movement_specificity()
 # In[] 취약점 분석
 # dev에서 쓸모있어서 그냥 두지만, 사용 전에 체크할것 
 # predict_matrix_total
 painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
 
-targetMatrix = np.array(target)
+targetMatrix = np.array(biRNN_2)
 pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(targetMatrix, painGroup, nonpainGroup)
 nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
 
