@@ -138,9 +138,7 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False):
     lastsave2 = np.zeros(msunit, dtype=int) # 체크용
     
     binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-    if binlist[-1] + bins < mslen-np.min(sequenceSize):
-            binlist = binlist[:len(binlist)-1]
-    
+
     for frame in binlist:   
         X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
             
@@ -201,20 +199,14 @@ for SE in range(N):
     for se in range(5):
         mslen = np.array(signalss[SE][se]).shape[0]
         binlist = list(range(0, mslen-np.min(sequenceSize), bins))
-        if binlist[-1] + bins < mslen-np.min(sequenceSize):
-            binlist = binlist[:len(binlist)-1]
-            
+  
         lensave[SE,se] = len(binlist)
 
 print('in data set, time duration', set(lensave.flatten()))
 print('다음과 같이 나누어서 처리합니다')
-msshort = 41; mslong = 97
+msshort = 42; mslong = 97
 print('msshort', msshort, ', mslong', mslong)
 
-#
-print('bin lenghth 체크 했나요?, 시각화도 체크')
-import sys
-sys.exit()
 
 # ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# #############
 
@@ -273,9 +265,9 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1015_binfix_1', 1])
-#project_list.append(['0903_seeding_2', 2])
-#project_list.append(['0903_seeding_3', 3])
+#project_list.append(['1015_binfix_1', 1])
+#project_list.append(['1015_binfix_2', 2])
+project_list.append(['1015_binfix_3', 3])
 #project_list.append(['0903_seeding_4', 4])
 #project_list.append(['0903_seeding_5', 5])
 
@@ -474,7 +466,7 @@ for q in project_list:
 
     # essentialList: 반드시 포함해야 하는 nonpian session
     essentialList = [[0,0], [3,0], [4,0], [8,0], [14,1], [14,2], [15,0], [15,1], [22,2], [47,1], [47,3], [48,1], \
-                     [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3], [66,1], [67,0], [74, 0]]
+                     [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,2], [58,3], [63,0], [66,1], [67,0], [74, 0]]
 
     for i in range(n_out):
         print('class', str(i), 'sampling 이전', np.array(X_save[i]).shape[0])
@@ -987,16 +979,12 @@ for q in project_list:
                         
                         binning = list(range(0,(signalss[test_mouseNum][se].shape[0] - 497) +1, bins))
                         binNum = len(binning)
-                        [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
+                        
                         # dataGeneration _ modify
                         
                         binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-                        if binlist[-1] + bins < mslen-np.min(sequenceSize):
-                                binlist = binlist[:len(binlist)-1]
                         minimum_binning = len(binlist)
                                 
-                        print(minimum_binning, '41인거 체크하고 삭제')
-                        
                         if binNum >= msshort-minimum_binning+1 and binNum < mslong-minimum_binning+1: # for 2 mins
                             binNum2 = msshort-minimum_binning+1
                             print(SE, se, 'msshort', binNum2)
@@ -1005,9 +993,12 @@ for q in project_list:
                             print(SE, se, 'mslong', binNum2)
                         elif binNum == 0:
                             print(SE, se, '예상되지 않은 길이입니다. 체크')
+                            import sys
                             sys.exit()
                         else: # for 2 mins
                             print(SE, se, '예상되지 않은 길이입니다. 체크')
+                            
+                        [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum2)]
                         
                         i = 54; ROI = 0
                         for i in range(binNum2):         
@@ -1022,8 +1013,6 @@ for q in project_list:
                                 X_ROI = []
                                 
                                 binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-                                if binlist[-1] + bins < mslen-np.min(sequenceSize):
-                                        binlist = binlist[:len(binlist)-1]
             
                                 for frame in binlist:   
                                     X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
