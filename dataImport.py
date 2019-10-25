@@ -11,7 +11,8 @@ N값 자동화함. Group 지정만,
 """
 
 # In[] Group 지정
-highGroup =         [0,1,2,3,4,5,6,8,9,10,11,59] # 5%                 # exclude 7은 계속아픔. baseline도 아픔. 행동도 이상함 
+highGroup =         [0,2,3,4,5,6,8,9,10,11,59] # 5%                 # exclude 7은 계속아픔. baseline도 아픔. 행동도 이상함 
+# 1추가 제거
 midleGroup =        [20,21,22,23,24,25,26,57] # 1%
 restrictionGroup =  [27,28,29,30,43,44,45] # restriction 5%
 lowGroup =          [31,32,33,35,36,37,38]  # 0.25%                  # exclude 34는 overapping이 전혀 안됨
@@ -19,8 +20,8 @@ salineGroup =       [12,13,14,15,16,17,18,19,47,48,52,53,56,58] # control
 ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
 capsaicinGroup =    [60,61,62,64,65]
-yohimbineGroup =    [63,66,67,68,69]
-pslGroup =          [70,71]
+yohimbineGroup =    [63,66,67,68,69,74]
+pslGroup =          [70,71,72,73,75,76,77,78,79]
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -54,6 +55,7 @@ print('totnal N', N)
 
 FPS = 4.3650966869   
 
+runlist = range(76, N)
    
 # In[] 
 
@@ -101,45 +103,90 @@ def smoothListGaussian(array1,window):
      return smoothed  
  
 def mssignal_save(list1):
+    newformat = [70, 71, 72, 73, 75, 76, 77, 78, 79]
     for N in list1:
-        path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
-        loadpath = path + '\\' + raw_filepath
-        df = pd.read_excel(loadpath)
-        ROI = df.shape[1]
-        for col in range(df.shape[1]):
-            if np.isnan(df.iloc[0,col]):
-                ROI = col-1
-                break
-        
-        print(str(N) + ' ' +raw_filepath + ' ROI ' + str(ROI))
-        
-        timeend = df.shape[0]
-        for row in range(df.shape[0]):
-            if np.isnan(df.iloc[row,0]):
-                timeend = row
-                break
-         
-        msraw = np.array(df.iloc[:timeend,:ROI+1])
-        print(str(N) + ' max ' + str(np.max(np.max(msraw))) + ' min ' +  str(np.min(np.min(msraw))))
-        
-        while True:
-            msraw, sw = errorCorrection(msraw)
-            if sw == 0:
-                break
-        #
+        print(N, '시작합니다')
+        if N not in newformat:
+            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
+            loadpath = path + '\\' + raw_filepath
+            df = pd.read_excel(loadpath)
+            ROI = df.shape[1]
+            for col in range(df.shape[1]):
+                if np.isnan(df.iloc[0,col]):
+                    ROI = col-1
+                    break
                 
-        phaseInfo = pd.read_excel(loadpath, sheet_name=2, header=None)
-        s = 0; array2 = list()
-        for ix in range(phaseInfo.shape[0]):
-            for frame in range(msraw.shape[0]):
-                if abs(msraw[frame,0] -  phaseInfo.iloc[ix,0]) < 0.00001:
-                    print(N,s,frame)
-                    array2.append(np.array(msraw[s:frame,1:]))
-                    s = frame;
-    
-            if ix == phaseInfo.shape[0]-1:
-                 array2.append(np.array(msraw[s:,1:]))
-                 
+            print(str(N) + ' ' +raw_filepath + ' ROI ' + str(ROI-1)) # 시간축 제외하고 표기
+            
+            timeend = df.shape[0]
+            for row in range(df.shape[0]):
+                if np.isnan(df.iloc[row,0]):
+                    timeend = row
+                    break
+             
+            msraw = np.array(df.iloc[:timeend,:ROI])
+            print(str(N) + ' max ' + str(np.max(np.max(msraw))) + ' min ' +  str(np.min(np.min(msraw))))
+            
+            while True:
+                msraw, sw = errorCorrection(msraw)
+                if sw == 0:
+                    break
+                
+            # session 나눔
+            phaseInfo = pd.read_excel(loadpath, sheet_name=2, header=None)
+            s = 0; array2 = list()
+            for ix in range(phaseInfo.shape[0]):
+                for frame in range(msraw.shape[0]):
+                    if abs(msraw[frame,0] -  phaseInfo.iloc[ix,0]) < 0.00001:
+                        print(N,s,frame)
+                        array2.append(np.array(msraw[s:frame,1:]))
+                        s = frame;
+        
+                if ix == phaseInfo.shape[0]-1:
+                     array2.append(np.array(msraw[s:,1:]))
+                     
+        elif N in newformat:
+            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
+            loadpath = path + '\\' + raw_filepath
+            array0 = []; array2 =[]; k = -1
+            while True:
+                k += 1
+                print('k', k)
+                try:
+                    df = pd.read_excel(loadpath, sheet_name=k, header=None)
+                    array0.append(df)
+                except:
+                    break
+            
+            print(N, 'newformat으로 처리됩니다.', 'total session #', k)
+                  
+            for se in range(k):
+                ROI = array0[se].shape[1]
+                for col in range(array0[se].shape[1]):
+                    if np.isnan(array0[se].iloc[0,col]):
+                        ROI = col-1
+                        print(N, 'NaN value로 인하여 data 수정합니다.')
+                        break
+                
+                timeend = array0[se].shape[0]
+                for row in range(array0[se].shape[0]):
+                    if np.isnan(array0[se].iloc[row,0]):
+                        timeend = row
+                        print(N, 'NaN value로 인하여 data 수정합니다.')
+                        break
+                    
+                array0[se] = np.array(array0[se].iloc[:timeend,:ROI])
+                print(str(N) + ' max ' + str(np.max(np.max(array0[se]))) + \
+                      ' min ' +  str(np.min(np.min(array0[se]))))
+                
+                while True:
+                    array0[se], sw = errorCorrection(array0[se])
+                    if sw == 0:
+                        break
+                    
+                array2.append(np.array(array0[se][:,1:]))
+            print(str(N) + ' ' +raw_filepath + ' ROI ', array2[0].shape[1])
+                  
         array3 = list() # after gaussian filter
         for se in range(len(array2)):
             matrix = np.array(array2[se])
@@ -254,6 +301,10 @@ def msMovementExtraction(list1):
                 thr = 1.25
             if N == 44 and i ==0:
                 thr = 0.8
+            if N == 73 and i ==0:
+                thr = 1
+            if N == 76 and i ==0:
+                thr = 1
                 
             aline = np.zeros(diffplot.shape[0]); aline[:] = thr
             
@@ -287,8 +338,8 @@ def msMovementExtraction(list1):
 # In[]
 
                       
-mssignal_save(range(N))
-msMovementExtraction(range(N))
+mssignal_save(runlist)
+msMovementExtraction(runlist)
 #N, FPS, signalss, bahavss, baseindex, movement, msGroup, basess = msRun('main')
 
 
@@ -318,7 +369,7 @@ for SE in range(N):
             behavs.append(np.array(df3))
             
         except:
-            print(SE, se, 'session 없습니다. capsaicine group으로 판단, 이전 session을 복사하여 채웁니다.')
+            print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
             signals.append(np.array(df2))
             behavs.append(np.array(df3))
   
@@ -326,7 +377,7 @@ for SE in range(N):
     signalss.append(signals)
     bahavss.append(behavs) # 변수명이 오타인데.. 이미 하도많이 사용해서 그냥 두겠음..
     
-# In[] QC
+# In QC
 # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
 thr = 10
 
@@ -373,7 +424,7 @@ for SE in range(N):
     if np.sum(ROIsw) != np.array(signals[0]).shape[1]:
         print("signal이 없는 ROI가 존재함")
     
-# In[] movement 계산 
+# In movement 계산 
 movement = np.zeros((N,5))
 for SE in range(N):
     print(SE,N)
@@ -382,7 +433,7 @@ for SE in range(N):
         behav = np.array(behavs[se])
         movement[SE,se] = np.sum(behav)/behav.shape[0]
         
-# In[]
+# In
 from scipy.stats.stats import pearsonr 
 def msbehav_syn(behav, signal): # behav syn 맞추기 
     behav = np.array(behav)
