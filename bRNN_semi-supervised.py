@@ -258,7 +258,6 @@ print('다음과 같이 나누어서 처리합니다')
 msshort = 2-1+42; mslong = 55-1+42
 print('msshort', msshort, ', mslong', mslong)
 
-
 # ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# #############
 
 # training set에 사용될 group 설정
@@ -269,8 +268,6 @@ print('msshort', msshort, ', mslong', mslong)
 #+ msGroup['capsaicinGroup'] + msGroup['pslGroup']
 #nonpainGroup = msGroup['salineGroup']
 #etc = msGroup['lidocaineGroup'][0]
-
-
   
 ###############
 # hyperparameters #############
@@ -285,7 +282,8 @@ layer_1 = 32 # fully conneted laye node 갯수 # 8
 
 # regularization
 l2_rate = 0.2 # regularization 상수
-dropout_rate = 0.10 # dropout late
+dropout_rate1 = 0.10 # dropout late
+dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 
 testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
@@ -299,12 +297,12 @@ batch_size = 500 # 5000
 # constant
 maxepoch = 5000
 n_in =  1 # number of features
-n_out = 2 # number of class
+n_out = 3 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1103_second_tr', 1])
+project_list.append(['1104_3class', 1])
 #project_list.append(['1015_binfix_2', 2])
 #project_list.append(['1029_adding_essential_1', 1])
 #project_list.append(['0903_seeding_4', 4])
@@ -531,6 +529,57 @@ for q in project_list:
             X_tmp += X; Y_tmp += Y; Z_tmp += Z
             
         datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
+        painIx2_class0 = np.array(painIx2)
+        ##
+        msclass = 2 # nonpain2
+        
+        ixsave = []
+        valsave = []
+        
+        for SE in range(N):
+            for se in range(5):
+                c1 = SE in formalin_painGroup and se in [0,2,4] # baseline, interphase, recorver
+                c2 = SE in capsaicinGroup and se in [0,2]
+                c3 = SE in pslGroup and se in [0]
+                
+                if SE in nonpainGroup or c1 or c2 or c3:# 1, 26은 특별히 제외함. 
+                    tmp = pointSave[SE][se]
+                    for BIN in range(len(tmp)):
+                        valsave.append(tmp[BIN])
+                        ixsave.append([SE,se,BIN])
+                        
+        for painThr in np.arange(1, 0, 0.0005):
+#            print('painThr', painThr)
+            painIx = np.array(valsave) < painThr
+            painIx = painIx * (painIx2_class0 == False)
+            painIx2 = np.array(painIx)
+            
+            for SE2 in range(N):
+                selfout = (np.array(ixsave)[:,0] == SE2) == False # 자기 빼고 True로, 자기는 False
+                for k in  np.argsort(np.array(valsave) * ((np.array(ixsave)[:,0] == SE2) * painIx))[:duplicatedNum]:
+                    selfout[k] = True
+                    
+                painIx2 = painIx2 * selfout
+            
+            nonpain_sampleNum = np.sum(painIx2)
+#            print(painThr, nonpain_sampleNum)
+#            print(painThr, 'nonpain_sampleNum * 42', nonpain_sampleNum * 42)
+
+            if nonpain_sampleNum * 42 < sampleNum:
+                print('nonpain thr at', painThr, '#', nonpain_sampleNum * 42)
+                break
+            
+        X_tmp = []; Y_tmp = []; Z_tmp = []
+        for i in np.array(ixsave)[painIx2]:
+            SE = i[0]; se = i[1]; BINS = i[2]
+            
+            startat = int(BINS*bins)
+            mannual_signal = signalss[SE][se][startat:startat+497,:]
+            X, Y, Z = dataGeneration(SE, se, label = msclass, Mannual=True, mannual_signal=mannual_signal)
+            X_tmp += X; Y_tmp += Y; Z_tmp += Z
+            
+        datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
+        
     
         return datasetX, datasetY, datasetZ
  
@@ -598,11 +647,11 @@ for q in project_list:
             input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in)) # 각 병렬 layer shape에 따라 input 받음
             input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
             input2[unit] = Dense(layer_1, kernel_initializer = init, activation='relu')(input2[unit]) # fully conneted layers, relu
-            input2[unit] = Dropout(dropout_rate)(input2[unit]) # dropout
+            input2[unit] = Dropout(dropout_rate1)(input2[unit]) # dropout
         
         added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
         merge_1 = Dense(layer_1, kernel_initializer = init, activation='relu')(added) # fully conneted layers, relu
-        merge_2 = Dropout(dropout_rate)(merge_1) # dropout
+        merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
         merge_2 = Dense(n_out, kernel_initializer = init, activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
         merge_3 = Dense(n_out, input_dim=n_out, kernel_regularizer=regularizers.l2(l2_rate))(merge_2) # regularization
         merge_4 = Activation('softmax')(merge_3) # activation as softmax function
@@ -676,7 +725,8 @@ for q in project_list:
     save_hyper_parameters.append(['n_hidden', n_hidden])
     save_hyper_parameters.append(['layer_1', layer_1])
     save_hyper_parameters.append(['l2_rate', l2_rate])
-    save_hyper_parameters.append(['dropout_rate', dropout_rate])
+    save_hyper_parameters.append(['dropout_rate1', dropout_rate1])
+    save_hyper_parameters.append(['dropout_rate2', dropout_rate2])
     save_hyper_parameters.append(['acc_thr', acc_thr])
     save_hyper_parameters.append(['batch_size', batch_size])
     save_hyper_parameters.append(['seed', seed])
@@ -958,7 +1008,6 @@ for q in project_list:
                 print('test ssesion, etc group 입니다.') 
                 testlist = list(etc)
             
-            # test version 1, 20191017 현재 version 2가 범용적이므로 v1 은 사용하지 않음.
             if state == 'exp':
                 final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
             elif state == 'con':
@@ -974,89 +1023,90 @@ for q in project_list:
                 trained_fortest = False
                 print('trained_fortest', trained_fortest)
             
-            if testsw:
-                for test_mouseNum in testlist:
-                    print('mouse #', test_mouseNum, '에 대한 기존 test 유무를 확인합니다.')
-                    #    test 되어있는지 확인.
-
-                    if state == 'exp':
-                        savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-                    elif state == 'con':
-                        savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-
-                    tested = False
-                    print(savename)
-                    try:
-                        csvfile = open(savename, 'r', newline='')
-                        tested = True
-                        print('tested', tested)
-                    except:
-                        tested = False
-                        print('tested', tested)
-
-                    if not(tested) and trained_fortest: 
-                        print('mouse #', test_mouseNum, 'test 진행')
-                        totalROI = signalss[test_mouseNum][0].shape[1]; painIndex = 1
-                        X_all = []; [X_all.append([]) for i in range(msunit)]
-
-                        for se in range(5):
-                            for ROI in range(totalROI):
-                                unknown_data, Y_val, Z = dataGeneration(test_mouseNum, se, label=1, roiNum = ROI)
-                                Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
-                                Z = np.concatenate((Z, tmpROI), axis = 1)    
-
-                                unknown_data_toarray = array_recover(unknown_data)
-
-                                if se == 0 and ROI == 0:
-                                    for k in range(msunit):
-                                        X_all[k] = np.array(unknown_data_toarray[k])    
-                                    Z_all = np.array(Z); Y_all = np.array(Y_val)
-
-                                elif not(se == 0 and ROI == 0):
-                                    for k in range(msunit):
-                                        X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
-
-                        prediction = model.predict(X_all)
-
-                        df1 = np.concatenate((Z_all,prediction), axis=1)
-                        df2 = [['SE', 'se', 'nonpain', 'pain']]; se = 0 # 최종결과 (acc) 저장용
-
-                        # [SE, se, ROI, nonpain, pain]
-                        for se in range(5):
-                            predicted_pain = np.mean(df1[:,painIndex+3][np.where(df1[:,1]==se)[0]] > 0.5)
-                            mspredict = [1-predicted_pain, predicted_pain] # 전통을 중시...
-
-                            df2.append([[test_mouseNum], se] + mspredict)
-
-                        for d in range(len(df2)):
-                            print(df2[d])
-
-                        # 최종평가를 위한 저장 
-                        # acc_experiment 저장
-                        if state == 'exp':
-                            savename = RESULT_SAVE_PATH + 'exp/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
-                        elif state == 'con':
-                            savename = RESULT_SAVE_PATH + 'control/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
-
-                        csvfile = open(savename, 'w', newline='')
-                        csvwriter = csv.writer(csvfile)
-                        for row in range(len(df2)):
-                            csvwriter.writerow(df2[row])
-                        csvfile.close()
-
-                        # raw 저장
-                        if state == 'exp':
-                            savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-                        elif state == 'con':
-                            savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-
-                        csvfile = open(savename, 'w', newline='')
-                        csvwriter = csv.writer(csvfile)
-                        for row in range(len(df1)):
-                            csvwriter.writerow(df1[row])
-                        csvfile.close()
-                        
+            # test version 1, 20191017 현재 version 2가 범용적이므로 v1 은 사용하지 않음.
+#            if testsw:
+#                for test_mouseNum in testlist:
+#                    print('mouse #', test_mouseNum, '에 대한 기존 test 유무를 확인합니다.')
+#                    #    test 되어있는지 확인.
+#
+#                    if state == 'exp':
+#                        savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+#                    elif state == 'con':
+#                        savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+#
+#                    tested = False
+#                    print(savename)
+#                    try:
+#                        csvfile = open(savename, 'r', newline='')
+#                        tested = True
+#                        print('tested', tested)
+#                    except:
+#                        tested = False
+#                        print('tested', tested)
+#
+#                    if not(tested) and trained_fortest: 
+#                        print('mouse #', test_mouseNum, 'test 진행')
+#                        totalROI = signalss[test_mouseNum][0].shape[1]; painIndex = 1
+#                        X_all = []; [X_all.append([]) for i in range(msunit)]
+#
+#                        for se in range(5):
+#                            for ROI in range(totalROI):
+#                                unknown_data, Y_val, Z = dataGeneration(test_mouseNum, se, label=1, roiNum = ROI)
+#                                Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
+#                                Z = np.concatenate((Z, tmpROI), axis = 1)    
+#
+#                                unknown_data_toarray = array_recover(unknown_data)
+#
+#                                if se == 0 and ROI == 0:
+#                                    for k in range(msunit):
+#                                        X_all[k] = np.array(unknown_data_toarray[k])    
+#                                    Z_all = np.array(Z); Y_all = np.array(Y_val)
+#
+#                                elif not(se == 0 and ROI == 0):
+#                                    for k in range(msunit):
+#                                        X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
+#                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
+#
+#                        prediction = model.predict(X_all)
+#
+#                        df1 = np.concatenate((Z_all,prediction), axis=1)
+#                        df2 = [['SE', 'se', 'nonpain', 'pain']]; se = 0 # 최종결과 (acc) 저장용
+#
+#                        # [SE, se, ROI, nonpain, pain]
+#                        for se in range(5):
+#                            predicted_pain = np.mean(df1[:,painIndex+3][np.where(df1[:,1]==se)[0]] > 0.5)
+#                            mspredict = [1-predicted_pain, predicted_pain] # 전통을 중시...
+#
+#                            df2.append([[test_mouseNum], se] + mspredict)
+#
+#                        for d in range(len(df2)):
+#                            print(df2[d])
+#
+#                        # 최종평가를 위한 저장 
+#                        # acc_experiment 저장
+#                        if state == 'exp':
+#                            savename = RESULT_SAVE_PATH + 'exp/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
+#                        elif state == 'con':
+#                            savename = RESULT_SAVE_PATH + 'control/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
+#
+#                        csvfile = open(savename, 'w', newline='')
+#                        csvwriter = csv.writer(csvfile)
+#                        for row in range(len(df2)):
+#                            csvwriter.writerow(df2[row])
+#                        csvfile.close()
+#
+#                        # raw 저장
+#                        if state == 'exp':
+#                            savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+#                        elif state == 'con':
+#                            savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
+#
+#                        csvfile = open(savename, 'w', newline='')
+#                        csvwriter = csv.writer(csvfile)
+#                        for row in range(len(df1)):
+#                            csvwriter.writerow(df1[row])
+#                        csvfile.close()
+#                        
             ####### test - binning 구문 입니다. ##########, test version 2
             
             # model load는 cv set 시작에서 무조건 하도록 되어 있음.
