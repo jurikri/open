@@ -1199,7 +1199,7 @@ for q in project_list:
                             print(picklesavename, '저장되었습니다.')
 
 
-
+ 
 
 
 
