@@ -19,7 +19,17 @@ import matplotlib.pyplot as plt
 from datetime import datetime # 시관 관리 
 import csv
 import random
+#import tensorflow as tf
+#from tensorflow.keras import regularizers
 
+from keras import regularizers
+from keras.layers.core import Dropout
+from keras import initializers
+import keras
+from keras.layers.core import Dense, Activation
+from keras.layers.recurrent import LSTM
+from keras.layers.wrappers import Bidirectional
+from keras.optimizers import Adam
 
 
 # set pathway
@@ -122,9 +132,9 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
     X = []; Y = []; Z = []
 
     if label == 0:
-        label = [1, 0, 0] # nonpain
+        label = [1, 0] # nonpain
     elif label == 1:
-        label = [0, 1, 0] # pain
+        label = [0, 1] # pain
     elif label == 2:
         label = [0, 0, 1] # nonpain low
  
@@ -268,11 +278,14 @@ print('msshort', msshort, ', mslong', mslong)
 # hyperparameters #############
 
 # learning intensity
-epochs = 100 # epoch 종료를 결정할 최소 단위.
-lr = 0.5e-3 # learning rate
+epochs = 50 # epoch 종료를 결정할 최소 단위.
+lr = 1e-3 # learning rate
 
-n_hidden = int(16 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(16 * 6) # fully conneted laye node 갯수 # 8
+n_hidden = int(16 * 4) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(16 * 4) # fully conneted laye node 갯수 # 8
+
+duplicatedNum = 1
+mspainThr = 0.3
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
@@ -284,20 +297,21 @@ testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 �
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
+testsw2 = False
 
 acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 500 # 5000
+batch_size = 100 # 5000
 ###############
 
-# constant
+# constant 
 maxepoch = 5000
 n_in =  1 # number of features
-n_out = 3 # number of class # 20191104: 3 class로 시도
+n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1104_3class', 1])
+project_list.append(['1111_2class', 1])
 #project_list.append(['1015_binfix_2', 2])
 #project_list.append(['1029_adding_essential_1', 1])
 #project_list.append(['0903_seeding_4', 4])
@@ -450,7 +464,7 @@ for q in project_list:
             plt.figure()
             plt.plot(axiss[0], axiss[3])
         
-        painThr = 0.2 # 어림 짐작
+        painThr = mspainThr # 어림 짐작
         painIx = np.array(valsave) > painThr
         painIx2 = np.array(painIx)
         
@@ -480,7 +494,7 @@ for q in project_list:
             plt.plot(axiss[0], axiss[2])
                         
         
-        duplicatedNum = 10 # round(len(formalin_painGroup)/len(pslGroup))
+#        duplicatedNum = duplicatedNum # round(len(formalin_painGroup)/len(pslGroup))
         print('duplicatedNum', duplicatedNum)
         
         for SE2 in range(N):
@@ -501,7 +515,12 @@ for q in project_list:
             
         datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
         
-        sampleNum = len(X_tmp); print('sampleNum', sampleNum)
+        
+#        datasetX[msclass] = np.concatenate((np.array(X_tmp),np.array(X_tmp)), axis=0)
+#        datasetY[msclass] = np.concatenate((np.array(Y_tmp),np.array(Y_tmp)), axis=0)
+#        datasetZ[msclass] = np.concatenate((np.array(Z_tmp),np.array(Z_tmp)), axis=0)
+        
+        sampleNum = round(len(datasetX[msclass]) * classratio); print('sampleNum', sampleNum)
         
         # nonpain        
         msclass = 0
@@ -550,61 +569,11 @@ for q in project_list:
             X_tmp += X; Y_tmp += Y; Z_tmp += Z
             
         datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
-        painIx2_class0 = np.array(painIx2)
-        ##
-        msclass = 2 # nonpain2
+#        painIx2_class0 = np.array(painIx2)
         
-        ixsave = []
-        valsave = []
+        # pain duplicate
         
-        for SE in range(N):
-            for se in range(5):
-                c1 = SE in formalin_painGroup and se in [0,2,4] # baseline, interphase, recorver
-                c2 = SE in capsaicinGroup and se in [0,2]
-                c3 = SE in pslGroup and se in [0]
-                
-                if SE in nonpainGroup or c1 or c2 or c3:# 1, 26은 특별히 제외함. 
-                    tmp = pointSave[SE][se]
-                    for BIN in range(len(tmp)):
-                        valsave.append(tmp[BIN])
-                        ixsave.append([SE,se,BIN])
-                        
-        for painThr in np.arange(1, 0, -0.0005):
-#            print('painThr', painThr)
-            painIx = np.array(valsave) < painThr
-            painIx = painIx * (painIx2_class0 == False)
-            painIx2 = np.array(painIx)
-            
-            for SE2 in range(N):
-                selfout = (np.array(ixsave)[:,0] == SE2) == False # 자기 빼고 True로, 자기는 False
-                sortdata = np.array(valsave)
-                sortdata[((np.array(ixsave)[:,0] == SE2) * painIx) == False] = np.inf
-                
-                for k in  np.argsort(sortdata)[:duplicatedNum]:
-                    selfout[k] = True
-                    
-                painIx2 = painIx2 * selfout
-            
-            nonpain_sampleNum = np.sum(painIx2)
-#            print(painThr, nonpain_sampleNum)
-#            print(painThr, 'nonpain_sampleNum * 42', nonpain_sampleNum * 42)
-
-            if nonpain_sampleNum * 42 < sampleNum:
-                print('nonpain thr at', painThr, '#', nonpain_sampleNum * 42)
-                break
-            
-        X_tmp = []; Y_tmp = []; Z_tmp = []
-        for i in np.array(ixsave)[painIx2]:
-            SE = i[0]; se = i[1]; BINS = i[2]
-            
-            startat = int(BINS*bins)
-            mannual_signal = signalss[SE][se][startat:startat+497,:]
-            X, Y, Z = dataGeneration(SE, se, label = msclass, Mannual=True, mannual_signal=mannual_signal)
-            X_tmp += X; Y_tmp += Y; Z_tmp += Z
-            
-        datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
         
-    
         return datasetX, datasetY, datasetZ
  
     X_save2, Y_save2, Z_save2 = ms_sampling()
@@ -635,7 +604,7 @@ for q in project_list:
             identical_ix = np.where(np.sum(indexer==cbn, axis=1)==2)[0]
             if identical_ix.shape[0] != 0:
                 random.seed(None)  # control의 경우 seed 없음
-                dice = random.choice([[1,0,0],[0,1,0],[0,0,1]])
+                dice = random.choice([[1,0],[0,1]])
                 Y_control[identical_ix] = dice
                 
     # cross validation을 위해, training / test set split            
@@ -647,16 +616,24 @@ for q in project_list:
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
         
     # model setup
-    import tensorflow as tf
-    from tensorflow.keras import regularizers
+
 #    import tf.nn.dropout as Dropout
-    from tensorflow.keras import initializers
+#    from tensorflow.keras import initializers`
 #    import keras
 #    from tensorflow.keras.layers.core import Dense, Activation
 #    from tensorflow.keras.layers.recurrent import LSTM
 #    from tensorflow.keras.layers.wrappers import Bidirectional
-    from tensorflow.keras.optimizers import Adam
+#    from tensorflow.keras.optimizers import Adam
     
+#    import tensorflow as tf
+#    from tensorflow.keras import regularizers
+##    import tf.nn.dropout as Dropout
+#    from tensorflow.keras import initializers
+#    import keras
+#    from tensorflow.keras.layers.core import Dense, Activation
+#    from tensorflow.keras.layers.recurrent import LSTM
+#    from tensorflow.keras.layers.wrappers import Bidirectional
+    # model setup
     def keras_setup():
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         
@@ -673,6 +650,47 @@ for q in project_list:
             # print('reset할 기존 model 없음')
         
         init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
+        
+        input1 = []; [input1.append([]) for i in range(msunit)] # 최초 input layer
+        input2 = []; [input2.append([]) for i in range(msunit)] # input1을 받아서 끝까지 이어지는 변수
+        
+        for unit in range(msunit):
+            input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in)) # 각 병렬 layer shape에 따라 input 받음
+            input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
+            input2[unit] = Dense(layer_1, kernel_initializer = init, activation='relu')(input2[unit]) # fully conneted layers, relu
+            input2[unit] = Dropout(dropout_rate1)(input2[unit]) # dropout
+        
+        added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
+        merge_1 = Dense(layer_1, kernel_initializer = init, activation='relu')(added) # fully conneted layers, relu
+        merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
+        merge_2 = Dense(n_out, kernel_initializer = init, activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
+        merge_3 = Dense(n_out, input_dim=n_out, kernel_regularizer=regularizers.l2(l2_rate))(merge_2) # regularization
+        merge_4 = Activation('softmax')(merge_3) # activation as softmax function
+        
+        model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
+        model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
+        
+        #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        return model, idcode
+
+    model, idcode = keras_setup()  
+    
+    def keras_setup1():
+        #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        
+        dt = datetime.now()
+        idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
+
+        #init = initializers.glorot_normal(seed=None)
+        
+#        try:
+#            model.reset_states()
+#            print('올라와있는 model이 있었기 때문에, 초기화 하였습니다.')
+#        except:
+#            pass 
+            # print('reset할 기존 model 없음')
+        
+        init = tf.keras.initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
         
         input1 = []; [input1.append([]) for i in range(msunit)] # 최초 input layer
         input2 = []; [input2.append([]) for i in range(msunit)] # input1을 받아서 끝까지 이어지는 변수
@@ -764,7 +782,7 @@ for q in project_list:
     save_hyper_parameters.append(['acc_thr', acc_thr])
     save_hyper_parameters.append(['batch_size', batch_size])
     save_hyper_parameters.append(['seed', seed])
-    save_hyper_parameters.append(['classratio', classratio])
+#    save_hyper_parameters.append(['classratio', classratio])
     save_hyper_parameters.append(['mouselist', mouselist])
     
     
@@ -855,33 +873,33 @@ for q in project_list:
                     csvwriter.writerow(df2)         
                     csvfile.close() 
 
-                    # validation set을 사용할경우 준비합니다.
-#                    if validation_sw and state == 'exp': # control은 validation을 볼 필요가없다.
-#                        totalROI = signalss[mouselist[sett]][0].shape[1]#; painIndex = 1
-#                        X_all = []; [X_all.append([]) for i in range(msunit)]
-#                        for se in range(3):
-#                            label = 0
-#                            if mouselist[sett] in painGroup and se == 1:
-#                                label = 1
-#
-#                            for ROI in range(totalROI):
-#                                unknown_data, Y_val, Z = dataGeneration(mouselist[sett], se, label=label, roiNum = ROI)
-#                                Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
-#                                Z = np.concatenate((Z, tmpROI), axis = 1) # Z에 SE, se + ROI 정보까지 저장
-#
-#                                unknown_data_toarray = array_recover(unknown_data)
-#
-#                                if se == 0 and ROI == 0:
-#                                    for k in range(msunit):
-#                                        X_all[k] = np.array(unknown_data_toarray[k])    
-#                                    Z_all = np.array(Z); Y_all = np.array(Y_val)
-#
-#                                elif not(se == 0 and ROI == 0):
-#                                    for k in range(msunit):
-#                                        X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-#                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
-#
-#                        valid = tuple([X_all, Y_all])
+#                     validation set을 사용할경우 준비합니다.
+                    if validation_sw and state == 'exp': # control은 validation을 볼 필요가없다.
+                        totalROI = signalss[mouselist[sett]][0].shape[1]#; painIndex = 1
+                        X_all = []; [X_all.append([]) for i in range(msunit)]
+                        for se in range(3):
+                            label = 0
+                            if mouselist[sett] in pslGroup and se in [1,2]:
+                                label = 1
+
+                            for ROI in range(totalROI):
+                                unknown_data, Y_val, Z = dataGeneration(mouselist[sett], se, label=label, roiNum = ROI)
+                                Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
+                                Z = np.concatenate((Z, tmpROI), axis = 1) # Z에 SE, se + ROI 정보까지 저장
+
+                                unknown_data_toarray = array_recover(unknown_data)
+
+                                if se == 0 and ROI == 0:
+                                    for k in range(msunit):
+                                        X_all[k] = np.array(unknown_data_toarray[k])    
+                                    Z_all = np.array(Z); Y_all = np.array(Y_val)
+
+                                elif not(se == 0 and ROI == 0):
+                                    for k in range(msunit):
+                                        X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
+                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
+
+                        valid = tuple([X_all, Y_all])
 
                     # training set을 준비합니다. cross validation split 
                     
@@ -956,8 +974,8 @@ for q in project_list:
                             mscsv = np.array(mscsv)
                             control_epochs = mscsv.shape[1]
                         
-                        # validation이 가치가없으므로 끔 
-                        validation_sw = False
+#                        # validation이 가치가없으므로 끔 
+#                        validation_sw = False
                         
                         if validation_sw and state == 'exp':
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
@@ -1147,7 +1165,7 @@ for q in project_list:
             ####### test - binning 구문 입니다. ##########, test version 2
             
             # model load는 cv set 시작에서 무조건 하도록 되어 있음.
-            if trained_fortest:
+            if trained_fortest and testsw2:
                 for test_mouseNum in testlist:
                     testbin = None
                     picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_' + str(test_mouseNum) + '.pickle'
