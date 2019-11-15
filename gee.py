@@ -66,8 +66,8 @@ with open('mspickle_msdict.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdict = pickle.load(f)
     msdict = msdict['msdict']
     
-with open('PSL_result_save.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
-    PSL_result_save = pickle.load(f)
+#with open('PSL_result_save.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+#    PSL_result_save = pickle.load(f)
 #    PSL_result_save = PSL_result_save['PSL_result_save']
     
 FPS = msdata_load['FPS']
@@ -192,8 +192,9 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 model_name = []
 
 #model_name.append(['1103_second_tr/', 1])
-model_name.append(['1107_2class/', 1])
-#model_name.append(['1015_binfix_2/', 2])
+#model_name.append(['1107_2class/', 1])
+model_name.append(['1015_binfix_1/', 1])
+model_name.append(['1015_binfix_2/', 2])
 #model_name.append(['0903_seeding_2/', 3])
 #model_name.append(['0903_seeding_2/', 4])
 #model_name.append(['0903_seeding_2/', 5])
@@ -226,27 +227,38 @@ pointSave = []
 [pointSave.append([]) for k in range(N)]
 for SE in range(N):
     if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
-        print(SE, 'skip')
+#        print(SE, 'skip')
         continue
 
     sessionNum = 5
-    if SE in capsaicinGroup or SE in pslGroup:
+    if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
         sessionNum = 3
     
     [min_mean_save[SE].append([]) for k in range(sessionNum)]
     [pointSave[SE].append([]) for k in range(sessionNum)]
-    
+    msreport = True
     for se in range(sessionNum):
         # In
-        if False:
-            SE = 74; se = 0
         # 문제아들, 67,74
         current_value = []
         for i in range(len(model_name)): # repeat model 만큼 반복 후 평균냄
+            ssw = False
             
             loadpath5 = savepath + 'result\\' + model_name[i][0] + 'exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
-            
+          
             if os.path.isfile(loadpath5):
+                ssw = True
+            else:
+                loadpath5 = savepath + 'result\\' + model_name[i][0] + 'exp_raw\\' + \
+                model_name[i][0][:-1] + '_PSL_result_' + str(SE) + '.pickle'
+                if os.path.isfile(loadpath5):
+                    ssw = True
+                else:
+                    if msreport:
+                        msreport = False
+                        print(SE, 'skip')
+            
+            if ssw:
                 with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
                     PSL_result_save = pickle.load(f)
             
@@ -314,7 +326,7 @@ for SE in range(N):
             min_mean_save[SE][se] = np.nan
 
 if False:
-    with open('pointSave_2.pickle', 'wb') as f:  # Python 3: open(..., 'wb')
+    with open('pointSave.pickle', 'wb') as f:  # Python 3: open(..., 'wb')
         pickle.dump(pointSave, f, pickle.HIGHEST_PROTOCOL)
         print('pointSave.pickle 저장되었습니다.')
         
@@ -357,20 +369,27 @@ def report(biRNN, PLStest=False):
         _, _, fig = accuracy_cal(pain, nonpain, True)
         fig.savefig('ROC_capsaicin.png', dpi=1000)
     
-    if not(PLStest):
-        print('PSL')
+    if PLStest:
+#        print('PSL전용으로 계산됩니다.')
     #  우선은 , 4mins sample이 없으니깐, nonpain의 모든 그룹을 다 사용하자
-    painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup + ketoGroup
-    nonpainGroup = salineGroup + yohimbineGroup
-    _, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, longlist), painGroup, nonpainGroup)
-    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
-    nonpain = nonpain[np.isnan(nonpain)==0]
+        painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup + ketoGroup
+        nonpainGroup = salineGroup + yohimbineGroup
+        _, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, longlist), painGroup, nonpainGroup)
+        nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+        nonpain = nonpain[np.isnan(nonpain)==0]
+        
+        # nonpain에 psl base 추가 
+        nonpain2 = msfilter(target, longlist)[pslGroup][:,0]
+        nonpain2 = nonpain2[np.isnan(nonpain2)==0]
+        nonpain = np.concatenate((nonpain, nonpain2), axis=0)
+        
+        # nonpain에 psl sham 추가 
+        nonpain3 = msfilter(target, longlist)[shamGroup].flatten()
+        nonpain3 = nonpain3[np.isnan(nonpain3)==0]
+        nonpain = np.concatenate((nonpain, nonpain3), axis=0)
+        
+        pain = target[pslGroup,1:3].flatten()
     
-    nonpain2 = msfilter(target, longlist)[pslGroup][:,0]
-    nonpain2 = nonpain2[np.isnan(nonpain2)==0]
-    nonpain = np.concatenate((nonpain, nonpain2), axis=0)
-    
-    pain = target[pslGroup,1:3].flatten()
     
     if not(PLStest):
         print('pain #', pain.shape[0], 'nonpain #', nonpain.shape[0])
@@ -407,7 +426,7 @@ def relu_optimize(msduration, min_mean_save):
                 continue
             
             sessionNum = 5
-            if SE in capsaicinGroup or SE in pslGroup:
+            if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
                 sessionNum = 3
         
             for se in range(sessionNum):
@@ -443,7 +462,7 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
     biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
     biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
     
-    calculation_method = 4
+    calculation_method = 3
     if calculation_method == 4:
         optimizedthr = relu_optimize(msduration, min_mean_save)
         print('optimizedthr', optimizedthr)
@@ -454,7 +473,7 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
             continue
         
         sessionNum = 5
-        if SE in capsaicinGroup or SE in pslGroup:
+        if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
             sessionNum = 3
     
         for se in range(sessionNum):
@@ -570,7 +589,7 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
 #
 
 # 특정한 time window x를 잡고 계산 시작
-# time window x를 초로 환산하면 (approximately) mssec과 같다
+#  time window x를 초로 환산하면 (approximately) mssec과 같다
 mssec = 25
 # (82 + ((msduration-1) * 10)) / FPS = sec
 msduration = int(round((((mssec*FPS)-82)/10)+1))
@@ -581,6 +600,8 @@ if False:
         print(mssec, msduration)
     
 print('msduration', msduration)
+
+#msduration = 25 # 의미없음 
 _, biRNN_2, t4_497_2, movement_497_2, _ = otimal_msduration(msduration, min_mean_save) # 2 mins, or 4 mins
 
 # 예외규정: 70, 72는 동일 생쥐의 반복 측정이기 때문에 평균처리한다.
