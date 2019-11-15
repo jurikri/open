@@ -68,6 +68,7 @@ lidocaineGroup = msGroup['lidocaineGroup'] # 5% formalin + lidocaine
 capsaicinGroup = msGroup['capsaicinGroup'] # capsaicin
 yohimbineGroup = msGroup['yohimbineGroup'] # 5% formalin + yohimbine
 pslGroup = msGroup['pslGroup'] # partial sciatic nerve injury model
+shamGroup = msGroup['shamGroup']
 
 grouped_total_list = []
 keylist = list(msGroup.keys())
@@ -113,8 +114,8 @@ def array_recover(X_like):
     return X_like_toarray
 
 # data 생성
-SE = 0; se = 1; label = 1; roiNum=None
-def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False):    
+SE = 0; se = 1; label = 1; roiNum=None; GAN=False; Mannual=False; mannual_signal=None
+def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=False, mannual_signal=None):    
     X = []; Y = []; Z = []
 
     if label == 0:
@@ -126,8 +127,13 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False):
         s = roiNum; e = roiNum+1
     elif roiNum==None:
         s = 0; e = signalss[SE][se].shape[1]
+    
+    if Mannual:
+        signal_full = mannual_signal
         
-    signal_full = np.array(signalss_497[SE][se])
+    elif not(Mannual):
+        signal_full = np.array(signalss_497[SE][se])
+        
     signal_full_roi = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
     
     if GAN:
@@ -138,9 +144,7 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False):
     lastsave2 = np.zeros(msunit, dtype=int) # 체크용
     
     binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-    if binlist[-1] + bins < mslen-np.min(sequenceSize):
-            binlist = binlist[:len(binlist)-1]
-    
+
     for frame in binlist:   
         X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
             
@@ -153,19 +157,54 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False):
                 X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
 #                print(frame, unit, lastsave[unit])
                 
-        if False: # 시각화로 체크
-            msimg = np.zeros((msunit, full_sequence))
+        if False: # 시각화로 체크 위치만
+            msimg = np.zeros((msunit*10, full_sequence))
             
             for unit in range(msunit):
                 if frame <= full_sequence - sequenceSize[unit]:
-                    msimg[unit, frame : frame + sequenceSize[unit]] = 1
+                    msimg[unit*10:(unit+1)*10, frame : frame + sequenceSize[unit]] = 1
                     lastsave2[unit] = frame
                     
                 else:
-                    msimg[unit, lastsave2[unit] : lastsave2[unit] + sequenceSize[unit]] = 1
+                    msimg[unit*10:(unit+1)*10, lastsave2[unit] : lastsave2[unit] + sequenceSize[unit]] = 1
                     
             plt.figure()
-            plt.msimg(msimg)
+            plt.imshow(msimg)
+            
+         # signal 자체를 시각화로 체크 
+         # frame은 계속 돌려야 하기 때문에, if문을 개별적으로 설정함
+        if False:
+            if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
+                plt.figure(frame, figsize=(8,3))
+                
+            for unit in range(msunit):
+                if frame <= full_sequence - sequenceSize[unit]:
+                    lastsave2[unit] = frame 
+                    start = frame
+                    end = frame + sequenceSize[unit]
+                    
+                else: 
+                    start = lastsave2[unit]
+                    end = lastsave2[unit] + sequenceSize[unit]
+                    
+                if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
+                    if unit == 0:
+                        ax1 = plt.subplot(msunit, 1, unit+1)
+                        tmp = np.mean(signalss[SE][se], axis=1)
+                        tmp[:start] = np.nan; tmp[end:] = np.nan
+                        ax1.plot(tmp)
+                        ax1.axes.get_xaxis().set_visible(False)
+                        ax1.axes.get_yaxis().set_visible(False) 
+                    else:
+                        ax2 = plt.subplot(msunit, 1, unit+1, sharex = ax1)
+                        tmp = np.mean(signalss[SE][se], axis=1)
+                        tmp[:start] = np.nan; tmp[end:] = np.nan
+                        ax2.plot(tmp)
+                        ax2.axes.get_xaxis().set_visible(False)
+                        ax2.axes.get_yaxis().set_visible(False)
+                        
+                    plt.savefig(str(frame) + '.png')
+                    
 
         X.append(X_tmp)
         Y.append(label)
@@ -201,20 +240,14 @@ for SE in range(N):
     for se in range(5):
         mslen = np.array(signalss[SE][se]).shape[0]
         binlist = list(range(0, mslen-np.min(sequenceSize), bins))
-        if binlist[-1] + bins < mslen-np.min(sequenceSize):
-            binlist = binlist[:len(binlist)-1]
-            
+  
         lensave[SE,se] = len(binlist)
 
 print('in data set, time duration', set(lensave.flatten()))
 print('다음과 같이 나누어서 처리합니다')
-msshort = 41; mslong = 97
+msshort = 42; mslong = 97
 print('msshort', msshort, ', mslong', mslong)
 
-#
-print('bin lenghth 체크 했나요?, 시각화도 체크')
-import sys
-sys.exit()
 
 # ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# #############
 
@@ -230,7 +263,7 @@ mouselist = painGroup + nonpainGroup + [etc]
 mouselist.sort()
 
 # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-wanted = mouselist # mouselist #highGroup + midleGroup + [etc] # 작동할것을 여기에 넣어 
+wanted = mouselist # mouselist # mouselist #highGroup + midleGroup + [etc] # 작동할것을 여기에 넣어 
 mannual = [] # 절대 아무것도 넣지마 
 print('wanted', wanted)
 for i in wanted:
@@ -262,7 +295,7 @@ statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 
 acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 5000
+batch_size = 500 # 5000
 ###############
 
 # constant
@@ -274,8 +307,8 @@ classratio = 1 # class under sampling ratio
 project_list = []
  # proejct name, seed
 project_list.append(['1015_binfix_1', 1])
-#project_list.append(['0903_seeding_2', 2])
-#project_list.append(['0903_seeding_3', 3])
+project_list.append(['1015_binfix_2', 2])
+#project_list.append(['1029_adding_essential_2', 1])
 #project_list.append(['0903_seeding_4', 4])
 #project_list.append(['0903_seeding_5', 5])
 
@@ -355,7 +388,7 @@ for q in project_list:
     for SE in range(N):
         for se in range(5):     
             # nonpain
-            c1 =  SE in painGroup and se in [0,2] # baseline, interphase
+            c1 =  SE in painGroup and se in [0,2,4] # baseline, interphase, recorver
             if SE in nonpainGroup or c1:
                 msclass = 0 # nonpain
 #                
@@ -425,62 +458,72 @@ for q in project_list:
     # 이 함수에서 두 class 모두 shuffled됨. 하지만 X, Y, Z가 동일 index로 shuffle 되기 때문에 구조는 유지됨
 
     def ms_sampling(sampleNum, datasetX, datasetY, datasetZ):
-        duplicated = 0
+        msclass = 0
         for msclass in range(n_out):
             if msclass == 0:
+
                 essentialIndex = []
                 for j in range(len(datasetZ[msclass])):
-                    if datasetZ[msclass][j] in essentialList:
+                    if list(datasetZ[msclass][j]) in essentialList:
                         essentialIndex.append(j)
                         
+                X_tmp = np.array(datasetX[msclass])[essentialIndex]
+                Y_tmp = np.array(datasetY[msclass])[essentialIndex]
+                Z_tmp = np.array(datasetZ[msclass])[essentialIndex]
+                
+                for startat in [200, 190, 290, 110, 210]:
+                    mannual_signal = signalss[0][0][startat:startat+497,:]
+                    X, Y, Z = dataGeneration(0, 0, label = msclass, Mannual=True, mannual_signal=mannual_signal)
+                    X_tmp = np.concatenate((X_tmp, np.array(X)), axis=0)
+                    Y_tmp = np.concatenate((Y_tmp, np.array(Y)), axis=0)
+                    Z_tmp = np.concatenate((Z_tmp, np.array(Z)), axis=0)
+                
+
+                diff = int(sampleNum* classratio) - X_tmp.shape[0]
                 ixlist = list(range(len(datasetZ[msclass])))
+                
                 for k in essentialIndex:
                     ixlist.remove(k)
+                if diff > 0:         
+                    random.seed(seed)
+                    ixlist = random.sample(ixlist, diff)
+
+                    X_tmp = np.concatenate((X_tmp, np.array(datasetX[msclass])[ixlist]), axis=0)
+                    Y_tmp = np.concatenate((Y_tmp, np.array(datasetY[msclass])[ixlist]), axis=0)
+                    Z_tmp = np.concatenate((Z_tmp, np.array(datasetZ[msclass])[ixlist]), axis=0)
+                    
+                datasetX[msclass] = X_tmp
+                datasetY[msclass] = Y_tmp
+                datasetZ[msclass] = Z_tmp
                 
-                diff = int(sampleNum* classratio) - len(essentialIndex)
-                if diff > 0:
-                    random_choiced_num = diff
-                    
-                elif diff <= 0:
-                    random_choiced_num = 0
-                    
-                random.seed(seed)
-                ixlist = random.sample(ixlist, random_choiced_num)
-                ixlist = ixlist + essentialIndex
-                
-                datasetX[msclass] = np.array(datasetX[msclass])[ixlist]
-                datasetY[msclass] = np.array(datasetY[msclass])[ixlist]
-                datasetZ[msclass] = np.array(datasetZ[msclass])[ixlist]
-                    
-                duplicated =  -diff
-                    
             elif msclass == 1:
                 random.seed(seed)
                 ixlist = range(len(datasetX[msclass])); ixlist = random.sample(ixlist, int(sampleNum))
                 # 걍 섞기 ..
                 
-                if duplicated > 0:
+                if diff < 0:
                     random.seed(seed+1)
-                    ixlist2 = range(len(datasetX[msclass])); ixlist2 = random.sample(ixlist2, int(duplicated))
+                    ixlist2 = range(len(datasetX[msclass])); ixlist2 = random.sample(ixlist2, int(-diff))
                     ixlist = ixlist + ixlist2
                 
                 datasetX[msclass] = np.array(datasetX[msclass])[ixlist]
                 datasetY[msclass] = np.array(datasetY[msclass])[ixlist]
                 datasetZ[msclass] = np.array(datasetZ[msclass])[ixlist]
                 
-                print('duplicated', duplicated)
+            print('essential을 제외한', diff/42, '개의 nonpain sample session을 random으로 채움')
    
         return datasetX, datasetY, datasetZ
 
     # essentialList: 반드시 포함해야 하는 nonpian session
-    essentialList = [[0,0], [3,0], [4,0], [8,0], [14,1], [14,2], [15,0], [15,1], [22,2], [47,1], [47,3], [48,1], \
-                     [48,3], [52,0], [53,1], [53,3], [53,4], [58,1], [58,3], [66,1], [67,0], [74, 0]]
+    essentialList = [[0,0], [3,0], [4,0], [5,4], [8,0], [14,1], [14,2], [15,0], [15,1], [22,2], [47,1], [47,3], [48,1], \
+                     [48,3], [52,0], [53,1], [53,3], [58,1], [58,2], [58,3], [63,0], [66,4], [67,0], [74, 0]]
 
     for i in range(n_out):
         print('class', str(i), 'sampling 이전', np.array(X_save[i]).shape[0])
         
     X_save2, Y_save2, Z_save2 = \
     ms_sampling(sampleNum, datasetX = X_save, datasetY = Y_save, datasetZ = Z_save)
+    #  datasetX = X_save; datasetY = Y_save; datasetZ = Z_save
     
     for i in range(n_out):
         print('class', str(i),'sampling 이후', np.array(X_save2[i]).shape[0])
@@ -542,7 +585,7 @@ for q in project_list:
             pass 
             # print('reset할 기존 model 없음')
         
-        init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용
+        init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
         
         input1 = []; [input1.append([]) for i in range(msunit)] # 최초 input layer
         input2 = []; [input2.append([]) for i in range(msunit)] # input1을 받아서 끝까지 이어지는 변수
@@ -577,6 +620,10 @@ for q in project_list:
         with open('modelsummary.txt', 'w') as f:
             with redirect_stdout(f):
                 model.summary()
+                
+        from keras.utils import plot_model
+        plot_model(model, to_file='model.png')
+        
              
     ##
         
@@ -773,19 +820,19 @@ for q in project_list:
 
                         if cnt == 0:
                             hist_save_loss = np.array(hist.history['loss'])
-                            hist_save_acc = np.array(hist.history['acc'])
+                            hist_save_acc = np.array(hist.history['accuracy'])
 
                             if validation_sw and state == 'exp':
                                 hist_save_val_loss = np.array(hist.history['val_loss'])
-                                hist_save_val_acc = np.array(hist.history['val_acc'])
+                                hist_save_val_acc = np.array(hist.history['val_accuracy'])
 
                         elif cnt > 0:
                             hist_save_loss = np.concatenate((hist_save_loss, np.array(hist.history['loss'])), axis = 0)
-                            hist_save_acc = np.concatenate((hist_save_acc, np.array(hist.history['acc'])), axis = 0)
+                            hist_save_acc = np.concatenate((hist_save_acc, np.array(hist.history['accuracy'])), axis = 0)
 
                             if validation_sw and state == 'exp':
                                 hist_save_val_loss = np.concatenate((hist_save_val_loss, np.array(hist.history['val_loss'])), axis = 0)
-                                hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_acc'])), axis = 0)
+                                hist_save_val_acc = np.concatenate((hist_save_val_acc, np.array(hist.history['val_accuracy'])), axis = 0)
                         
                         # 종료조건: 
                         current_acc = np.min(hist_save_acc[-int(epochs*0.2):]) 
@@ -987,16 +1034,12 @@ for q in project_list:
                         
                         binning = list(range(0,(signalss[test_mouseNum][se].shape[0] - 497) +1, bins))
                         binNum = len(binning)
-                        [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
+                        
                         # dataGeneration _ modify
                         
                         binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-                        if binlist[-1] + bins < mslen-np.min(sequenceSize):
-                                binlist = binlist[:len(binlist)-1]
                         minimum_binning = len(binlist)
                                 
-                        print(minimum_binning, '41인거 체크하고 삭제')
-                        
                         if binNum >= msshort-minimum_binning+1 and binNum < mslong-minimum_binning+1: # for 2 mins
                             binNum2 = msshort-minimum_binning+1
                             print(SE, se, 'msshort', binNum2)
@@ -1005,9 +1048,12 @@ for q in project_list:
                             print(SE, se, 'mslong', binNum2)
                         elif binNum == 0:
                             print(SE, se, '예상되지 않은 길이입니다. 체크')
+                            import sys
                             sys.exit()
                         else: # for 2 mins
                             print(SE, se, '예상되지 않은 길이입니다. 체크')
+                            
+                        [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum2)]
                         
                         i = 54; ROI = 0
                         for i in range(binNum2):         
@@ -1022,8 +1068,6 @@ for q in project_list:
                                 X_ROI = []
                                 
                                 binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-                                if binlist[-1] + bins < mslen-np.min(sequenceSize):
-                                        binlist = binlist[:len(binlist)-1]
             
                                 for frame in binlist:   
                                     X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
@@ -1049,6 +1093,7 @@ for q in project_list:
                     with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
                         pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
                         print(picklesavename, '저장되었습니다.')
+
 
 
 
