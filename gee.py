@@ -361,7 +361,7 @@ def report(biRNN, PLStest=False):
         
         print('Capsaicin')
         painGroup = capsaicinGroup
-        nonpainGroup = salineGroup
+        nonpainGroup = salineGroup + lidocainGroup
         pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, shortlist), painGroup, nonpainGroup)
         nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
         pain = target[capsaicinGroup,1].flatten()
@@ -369,29 +369,30 @@ def report(biRNN, PLStest=False):
         _, _, fig = accuracy_cal(pain, nonpain, True)
         fig.savefig('ROC_capsaicin.png', dpi=1000)
     
-    if PLStest:
+#    if PLStest:
 #        print('PSL전용으로 계산됩니다.')
     #  우선은 , 4mins sample이 없으니깐, nonpain의 모든 그룹을 다 사용하자
-        painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup + ketoGroup
-        nonpainGroup = salineGroup + yohimbineGroup
-        _, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, longlist), painGroup, nonpainGroup)
-        nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
-        nonpain = nonpain[np.isnan(nonpain)==0]
-        
-        # nonpain에 psl base 추가 
-        nonpain2 = msfilter(target, longlist)[pslGroup][:,0]
-        nonpain2 = nonpain2[np.isnan(nonpain2)==0]
-        nonpain = np.concatenate((nonpain, nonpain2), axis=0)
-        
-        # nonpain에 psl sham 추가 
-        nonpain3 = msfilter(target, longlist)[shamGroup].flatten()
-        nonpain3 = nonpain3[np.isnan(nonpain3)==0]
-        nonpain = np.concatenate((nonpain, nonpain3), axis=0)
-        
-        pain = target[pslGroup,1:3].flatten()
+    painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup + ketoGroup
+    nonpainGroup = salineGroup + yohimbineGroup
+    _, nonpain_within, nonpain_between = pain_nonpain_sepreate(msfilter(target, longlist), painGroup, nonpainGroup)
+    nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
+    nonpain = nonpain[np.isnan(nonpain)==0]
+    
+    # nonpain에 psl base 추가 
+    nonpain2 = msfilter(target, longlist)[pslGroup][:,0]
+    nonpain2 = nonpain2[np.isnan(nonpain2)==0]
+    nonpain = np.concatenate((nonpain, nonpain2), axis=0)
+    
+    # nonpain에 psl sham 추가 
+    nonpain3 = msfilter(target, longlist)[shamGroup].flatten()
+    nonpain3 = nonpain3[np.isnan(nonpain3)==0]
+    nonpain = np.concatenate((nonpain, nonpain3), axis=0)
+    
+    pain = target[pslGroup,1:3].flatten()
     
     
     if not(PLStest):
+        print('PSL')
         print('pain #', pain.shape[0], 'nonpain #', nonpain.shape[0])
         acc, _, fig = accuracy_cal(pain, nonpain, True)
         fig.savefig('ROC_PSL.png', dpi=1000)
@@ -462,7 +463,7 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
     biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
     biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
     
-    calculation_method = 3
+    calculation_method = 4
     if calculation_method == 4:
         optimizedthr = relu_optimize(msduration, min_mean_save)
         print('optimizedthr', optimizedthr)
