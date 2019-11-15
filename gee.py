@@ -52,7 +52,7 @@ try:
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
     try:
-        savepath = 'C:\\Users\\msbak\\Documents\\tensor\\'; os.chdir(savepath);
+        savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
     except:
         savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
@@ -91,6 +91,7 @@ lidocainGroup = msGroup['lidocaineGroup']
 capsaicinGroup = msGroup['capsaicinGroup']
 yohimbineGroup = msGroup['yohimbineGroup']
 pslGroup = msGroup['pslGroup']
+shamGroup = msGroup['shamGroup']
 
 painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup']
 nonpainGroup = msGroup['salineGroup'] 
@@ -190,8 +191,9 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 # load 할 model 경로(들) 입력
 model_name = []
 
-#model_name.append(['1015_binfix_1/', 1])
-model_name.append(['1015_binfix_2/', 2])
+#model_name.append(['1103_second_tr/', 1])
+model_name.append(['1107_2class/', 1])
+#model_name.append(['1015_binfix_2/', 2])
 #model_name.append(['0903_seeding_2/', 3])
 #model_name.append(['0903_seeding_2/', 4])
 #model_name.append(['0903_seeding_2/', 5])
@@ -199,7 +201,7 @@ model_name.append(['1015_binfix_2/', 2])
 # In short, long test 1차 by signalss
 msshort = 42; mslong = 97; bins = 10
 shortlist = []; longlist = []
-SE=11;se=1;i=0
+SE=79;se=2;i=0
 for SE in range(N):
     for se in range(5):
         binNum = len(list(range(0,(np.array(signalss[SE][se]).shape[0] - 497) +1, bins)))
@@ -217,7 +219,11 @@ for SE in range(N):
 # In min_mean_save에 모든 data 저장
 
 min_mean_save = []
-[min_mean_save.append([]) for k in range(N)]    
+[min_mean_save.append([]) for k in range(N)]
+
+# pointSvae - 2차 학습 label 판단에 사용하기 위해 예측 평균값 저장
+pointSave = []
+[pointSave.append([]) for k in range(N)]
 for SE in range(N):
     if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
         print(SE, 'skip')
@@ -228,79 +234,89 @@ for SE in range(N):
         sessionNum = 3
     
     [min_mean_save[SE].append([]) for k in range(sessionNum)]
+    [pointSave[SE].append([]) for k in range(sessionNum)]
     
     for se in range(sessionNum):
-        # In[]
-        if True:
+        # In
+        if False:
             SE = 74; se = 0
         # 문제아들, 67,74
         current_value = []
         for i in range(len(model_name)): # repeat model 만큼 반복 후 평균냄
             
-            loadpath5 = savepath + 'result\\' + model_name[i][0] + 'exp_raw\\' + \
-            model_name[i][0][:-1] + '_PSL_result_' + str(SE) + '.pickle'
-            with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
-                PSL_result_save = pickle.load(f)
+            loadpath5 = savepath + 'result\\' + model_name[i][0] + 'exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
             
-            if [SE, se] in shortlist:
-                PSL_result_save2 = PSL_result_save[SE][se][:msshort-minimum_binning+1]
-            elif [SE, se] in longlist:
-                PSL_result_save2 = PSL_result_save[SE][se][:mslong-minimum_binning+1]
-            else:
-                print('e')
+            if os.path.isfile(loadpath5):
+                with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                    PSL_result_save = pickle.load(f)
+            
+                if [SE, se] in shortlist:
+                    PSL_result_save2 = PSL_result_save[SE][se][:msshort-minimum_binning+1]
+                elif [SE, se] in longlist:
+                    PSL_result_save2 = PSL_result_save[SE][se][:mslong-minimum_binning+1]
+                else:
+                    print('e')
+                    
+                current_value.append(np.array(PSL_result_save2) > 0.5 ) # PSL_result_save2[BINS][ROI][bins][nonpain,pain]
                 
-            current_value.append(np.array(PSL_result_save2) > 0.5 ) # PSL_result_save2[BINS][ROI][bins][nonpain,pain]
-
             # # 2진화 
-        
-        current_value = np.mean(np.array(current_value), axis=0) # 모든 반복 project에 대해서 평균처리함
-        binNum = current_value.shape[0] # [BINS]
-        
-        # 시계열 형태로 표현용 
-        empty_board = np.zeros((binNum, minimum_binning + binNum-1))
-        empty_board[:,:] = np.nan
-#            print(empty_board.shape)
-        
-        # 2min mean 형태로 표현용  
-        # 20191017, 2 mins 형태로는 사용하지 않고, 42 bins에서 겹치는 time windows를 평균내어 사용하고 있음.
-        # 즉 msplot은 안쓴단 말임
-#        msplot = []
-        
-        BIN = 0; maxsave=[]; [maxsave.append([]) for u in range(binNum)]
-        for BIN in range(binNum):
-            plotsave = np.mean(current_value[BIN,:,:,1], axis=0) 
-            empty_board[BIN, BIN: BIN+minimum_binning] = plotsave
+        if len(current_value) > 0:
+            current_value = np.mean(np.array(current_value), axis=0) # 모든 반복 project에 대해서 평균처리함
+            binNum = current_value.shape[0] # [BINS]
             
-            maxsave[BIN] = np.mean(plotsave)
+            # 시계열 형태로 표현용 
+            empty_board = np.zeros((binNum, minimum_binning + binNum-1))
+            empty_board[:,:] = np.nan
+    #            print(empty_board.shape)
             
-#            figNum = int(str(SE)+str(se))
-#            msplot.append(np.mean(plotsave))
+            # 2min mean 형태로 표현용  
+            # 20191017, 2 mins 형태로는 사용하지 않고, 42 bins에서 겹치는 time windows를 평균내어 사용하고 있음.
+            # 즉 msplot은 안쓴단 말임
+    #        msplot = []
             
-        empty_board = np.nanmean(empty_board, axis=0)
-        
-        if True:
-            plt.plot(empty_board) # 2 mins window의 시계열을 그대로 남겨, 모든 bins를 평균내어 연결
-            plt.ylim(0,1)
+            BIN = 0;
+            [pointSave[SE][se].append([]) for u in range(binNum)]
+            for BIN in range(binNum):
+                plotsave = np.mean(current_value[BIN,:,:,1], axis=0) 
+                empty_board[BIN, BIN: BIN+minimum_binning] = plotsave
+                
+                pointSave[SE][se][BIN] = np.mean(plotsave)
+                
+    #            figNum = int(str(SE)+str(se))
+    #            msplot.append(np.mean(plotsave))
+                
+            empty_board = np.nanmean(empty_board, axis=0)
             
-            plt.plot(maxsave)
+#            if False:
+#                plt.plot(empty_board) # 2 mins window의 시계열을 그대로 남겨, 모든 bins를 평균내어 연결
+#                plt.ylim(0,1)
+#                
+#                plt.plot(maxsave)
+#                
+#                binning = list(range(0,(signalss[SE][se].shape[0] - 497) +1, bins))
+#                
+#                for top in range(5):
+#                    startat = binning[np.argsort(np.array(maxsave))[::-1][top]]
+#                    print('startat', startat)
+#                    print('top', top, maxsave[np.argsort(np.array(maxsave))[::-1][top]])
+#                
+#    #            plt.figure() 
+#    #            plt.plot(msplot) # 2 mins window를 평균내서 각각 플롯 
+#    #            plt.ylim(0,1)
+                
+            # In
+                
+            # plotsave와 empty_board는 별개로 생각할 수 있음. 
+            # 당장은 empty_board는 사용하지 않음 
             
-            binning = list(range(0,(signalss[SE][se].shape[0] - 497) +1, bins))
-            
-            for top in range(5):
-                startat = binning[np.argsort(np.array(maxsave))[::-1][top]]
-                print('startat', startat)
-                print('top', top, maxsave[np.argsort(np.array(maxsave))[::-1][top]])
-            
-#            plt.figure() 
-#            plt.plot(msplot) # 2 mins window를 평균내서 각각 플롯 
-#            plt.ylim(0,1)
-            
-        # In[]
-            
-        # plotsave와 empty_board는 별개로 생각할 수 있음. 
-        # 당장은 empty_board는 사용하지 않음 
-        
-        min_mean_save[SE][se] = empty_board
+            min_mean_save[SE][se] = empty_board
+        elif len(current_value) == 0:
+            min_mean_save[SE][se] = np.nan
+
+if False:
+    with open('pointSave_2.pickle', 'wb') as f:  # Python 3: open(..., 'wb')
+        pickle.dump(pointSave, f, pickle.HIGHEST_PROTOCOL)
+        print('pointSave.pickle 저장되었습니다.')
         
 # In[]
         
@@ -380,11 +396,58 @@ def ms_batchmean(target):
             
     return out
 
+def relu_optimize(msduration, min_mean_save):
+    mssave = []
+    for optimizedthr in np.arange(0.1,0.5,0.001):
+        biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
+        biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
+        for SE in range(N):
+            if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+    #            print(SE, 'skip')
+                continue
+            
+            sessionNum = 5
+            if SE in capsaicinGroup or SE in pslGroup:
+                sessionNum = 3
+        
+            for se in range(sessionNum):
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                if not np.isnan(np.nanmean(min_mean_mean)):
+    
+                    biRNN_2[SE,se] = np.mean(np.array(min_mean_mean) > optimizedthr)
+                    
+        biRNN_22 = ms_batchmean(biRNN_2)            
+        target = biRNN_22
+        tmp = target[pslGroup,1:3]; tmp = tmp[np.isnan(tmp)==0]
+#        diff = np.mean(target[painGroup,1]) - np.mean(tmp)
+        PSL_acc = report(biRNN = biRNN_22, PLStest=True)
+        pslbase = biRNN_22[pslGroup,:][:,0]; pslbase = pslbase[np.isnan(pslbase)==0]
+        pslday3 = biRNN_22[pslGroup,:][:,1]; pslday3 = pslday3[np.isnan(pslday3)==0]
+        pslday10 = biRNN_22[pslGroup,:][:,2]; pslday10 = pslday10[np.isnan(pslday10)==0]
+        day3p = stats.ttest_rel(pslbase, pslday3)[1]
+        day10p = stats.ttest_rel(pslbase, pslday10)[1]
+        
+        msloss = PSL_acc - day3p - day10p
+        mssave.append([optimizedthr, msloss])
+#        print(optimizedthr, msloss)
+#    plt.plot(np.array(mssave)[:,0], np.array(mssave)[:,1])
+    return np.array(mssave)[:,0][np.nanargmax(np.array(mssave)[:,1])]
+        
+    
+
 def otimal_msduration(msduration, min_mean_save, optimalSW=False):    
     # min_mean_save로 부터 각 value를 계산함
     PSL_acc = None
     min_mean_save = min_mean_save
+               
     biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
+    biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
+    
+    calculation_method = 4
+    if calculation_method == 4:
+        optimizedthr = relu_optimize(msduration, min_mean_save)
+        print('optimizedthr', optimizedthr)
+    
     for SE in range(N):
         if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
 #            print(SE, 'skip')
@@ -396,62 +459,67 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
     
         for se in range(sessionNum):
             min_mean_mean = np.array(min_mean_save[SE][se])
-            
-            if False:
-                plt.figure()
-                figtitle = str(SE)+str(se) + '.png'
-                plt.title(figtitle)
-                plt.plot(min_mean_mean)
-                plt.ylim(0,1)
-                
-            # method 정해라
-            # 20191017 현재까지 결과 해석을 위한 method는 3가지 분기가 있다.
-            # 1. 시계열의 peak를 사용한다.
-            # 2. 모든 시계열을 평균낸다.
-            # 3. timewindow x 평균값을 계산 후, 관찰되는 peak를 사용한다.
+            if not np.isnan(np.nanmean(min_mean_mean)):
+                if False:
+                    plt.figure()
+                    figtitle = str(SE)+str(se) + '.png'
+                    plt.title(figtitle)
+                    plt.plot(min_mean_mean)
+                    plt.ylim(0,1)
     
-            calculation_method = 3
-            
-            if calculation_method == 1: # max
-                maxix = np.argmax(min_mean_mean)
-                biRNN_2[SE,se] = min_mean_mean[maxix]
-                
-                startat = 10*maxix
-                movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat:int(round(startat+497/4.3*64))])
-                
-                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-                t4_497_2[SE,se] = np.mean(meansignal[startat:startat+497])
-                
-            elif calculation_method == 2: # mean 
-                biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
-                
-#                startat = 10*maxix
-                movement_497_2[SE,se] = np.mean(bahavss[SE][se])
-                
-                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-                t4_497_2[SE,se] = np.mean(meansignal,axis=0)
-                
-            elif calculation_method == 3: # peak duration     
-                meansave = []
-                
-                if min_mean_mean.shape[0] - msduration <= 0:
-                    print(msduration, '은 너무 길어')
-                
-                for msbin in range(min_mean_mean.shape[0] - msduration):
-                    meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
+                if calculation_method == 1: # max
+                    maxix = np.argmax(min_mean_mean)
+                    biRNN_2[SE,se] = min_mean_mean[maxix]
                     
-                maxix = np.argmax(meansave)
-                biRNN_2[SE,se] = np.mean(min_mean_mean[maxix: maxix+msduration], axis=0)
-                
-                startat = 10*maxix
-        
-                movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat: \
-                              int(round(startat+ ((msduration*10+82) * (64/FPS))))])
-                # 82는 birnn 최소 분절값이고, 10은 binning frame 값임
-                # 64는 behavior 동영상 frame 값임
-                
-                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-                t4_497_2[SE,se] = np.mean(meansignal[startat:startat+(msduration*10+82)])
+                    startat = 10*maxix
+                    movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat:int(round(startat+497/4.3*64))])
+                    
+                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                    t4_497_2[SE,se] = np.mean(meansignal[startat:startat+497])
+                    
+                elif calculation_method == 2: # mean 
+                    biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
+                    
+    #                startat = 10*maxix
+                    movement_497_2[SE,se] = np.mean(bahavss[SE][se])
+                    
+                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                    t4_497_2[SE,se] = np.mean(meansignal,axis=0)
+                    
+                elif calculation_method == 3: # peak duration     
+                    meansave = []
+                    
+                    if min_mean_mean.shape[0] - msduration <= 0:
+                        print(msduration, '은 너무 길어')
+                    
+                    for msbin in range(min_mean_mean.shape[0] - msduration):
+                        meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
+                        
+                    maxix = np.argmax(meansave)
+                    biRNN_2[SE,se] = np.mean(min_mean_mean[maxix: maxix+msduration], axis=0)
+                    
+                    startat = 10*maxix
+            
+                    movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat: \
+                                  int(round(startat+ ((msduration*10+82) * (64/FPS))))])
+                    # 82는 birnn 최소 분절값이고, 10은 binning frame 값임
+                    # 64는 behavior 동영상 frame 값임
+                    
+                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                    t4_497_2[SE,se] = np.mean(meansignal[startat:startat+(msduration*10+82)])
+                    
+                elif calculation_method == 4: # relu
+                    biRNN_2[SE,se] = np.mean(np.array(min_mean_mean) > optimizedthr)
+                    
+                    movement_497_2[SE,se] = np.mean(bahavss[SE][se])
+                    
+                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                    t4_497_2[SE,se] = np.mean(meansignal,axis=0)
+             
+            elif np.isnan(np.nanmean(min_mean_mean)):
+                biRNN_2[SE,se] = np.nan
+                movement_497_2[SE,se] = np.nan
+                t4_497_2[SE,se] = np.nan
                 
             
     # Aprism 변수 update
@@ -461,14 +529,13 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
         target = biRNN_22
 #        painGroup = painGroup
 #        nonpainGroup = nonpainGroup
-        pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
+#        pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
 #        pain = target[pslGroup,1:3].flatten()
     #    nonpain_within = target[pslGroup,0]
-        accuracy, roc_auc, fig = accuracy_cal(pain, nonpain_between)
+#        accuracy, roc_auc, fig = accuracy_cal(pain, nonpain_between)
         tmp = target[pslGroup,1:3]; tmp = tmp[np.isnan(tmp)==0]
         diff = np.mean(target[painGroup,1]) - np.mean(tmp)
         
-    
         PSL_acc = report(biRNN = biRNN_22, PLStest=True)
         
         pslbase = biRNN_22[pslGroup,:][:,0]; pslbase = pslbase[np.isnan(pslbase)==0]
@@ -492,19 +559,19 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
 # 이 계산이 bias가 아님을 증명하기 위해, time window x가 특별한 값이 아니고, 대충 아무거나 써도 마찬가지의 결과를 냄을
 # x에 따른 acc를 보여줌으로써 어필해야 한다. -> x는 일반화 가능성이 높다. = 매우 특정한 값이 아니다.   
     
-axiss = []; [axiss.append([]) for u in range(2)]
-for msduration in range(2,42):
-    accuracy, _, _, _, PSL_acc= otimal_msduration(msduration, min_mean_save, optimalSW=True) # 전체 값 모두 사용 
-    axiss[0].append(msduration)
-    axiss[1].append(PSL_acc)
-plt.plot(axiss[0], axiss[1])
+#axiss = []; [axiss.append([]) for u in range(2)]
+#for msduration in range(2,20):
+#    accuracy, _, _, _, PSL_acc= otimal_msduration(msduration, min_mean_save, optimalSW=True) # 전체 값 모두 사용 
+#    axiss[0].append(msduration)
+#    axiss[1].append(PSL_acc)
+#plt.plot(axiss[0], axiss[1])
 
 
 #
 
 # 특정한 time window x를 잡고 계산 시작
 # time window x를 초로 환산하면 (approximately) mssec과 같다
-mssec = 111
+mssec = 25
 # (82 + ((msduration-1) * 10)) / FPS = sec
 msduration = int(round((((mssec*FPS)-82)/10)+1))
 
@@ -570,9 +637,16 @@ accuracy, roc_auc, fig = accuracy_cal(pain, nonpain, True)
 fig.savefig('birnn_roc.png', dpi=1000) 
 
 # t4
-painGroup = highGroup + midleGroup + ketoGroup
+
+t4_497 = np.zeros((N,5)); movement_497 = np.zeros((N,5))
+for SE in range(N):
+    for se in range(5):
+        t4_497[SE,se] = np.mean(signalss[SE][se][:497,:])
+        movement_497[SE,se] = np.mean(bahavss[SE][se][:int(round(497/4.3*64)),0])
+
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
-pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(t4_497_22, painGroup, nonpainGroup)
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(t4_497, painGroup, nonpainGroup)
 nonpain = np.concatenate((nonpain_within, nonpain_between), axis=0)
 accuracy, roc_auc, fig = accuracy_cal(pain, nonpain, True)
 fig.savefig('test.png', dpi=1000) 
@@ -612,22 +686,24 @@ accuracy_cal(pain, nonpain, True)
 
 
 # 각 session 별 움직임과 t4 corr
-painGroup = highGroup + midleGroup + ketoGroup
+painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
 nonpainGroup = salineGroup + lidocainGroup
+
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(movement_497, painGroup, nonpainGroup)
+pain_movement = np.array(pain)
+nonpain_movement = np.concatenate((nonpain_within, nonpain_between))
+
+pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(t4_497, painGroup, nonpainGroup)
+pain_t4 = np.array(pain)
+nonpain_t4 = np.concatenate((nonpain_within, nonpain_between))
 
 axiss = []; [axiss.append([]) for u in range(2)]
 
-for SE in range(N):
-    if SE in painGroup + nonpainGroup:
-        for se in range(5):
-            axiss[1].append(t4_497[SE,se])
-            axiss[0].append(movement_497[SE,se])
-            
-m, b = mslinear_regression(axiss[0], axiss[1])
+m, b = mslinear_regression(nonpain_movement, nonpain_t4)
 print(m, b)
 sc = 0.7
 plt.figure(1, figsize=(9.7*sc, 6*sc))
-plt.scatter(axiss[0], axiss[1], s = 2)
+plt.scatter(nonpain_movement, nonpain_t4, s = 2)
 plt.xlabel('movement ratio mean')
 plt.ylabel('mean of calcium intensity')
 
@@ -636,7 +712,7 @@ plt.plot(xaxis, xaxis*m + b, c = 'orange')
 plt.xlim([0,0.5]), plt.ylim([0,1])
 
 import scipy
-r, p = scipy.stats.pearsonr(axiss[0], axiss[1])
+r, p = scipy.stats.pearsonr(nonpain_movement, nonpain_t4)
 print('r square', r**2, 'p value', p)
 plt.savefig('tmp.png', dpi=1000)
 
