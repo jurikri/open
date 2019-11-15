@@ -27,7 +27,7 @@ try:
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
     try:
-        savepath = 'C:\\Users\\msbak\\Documents\\tensor\\'; os.chdir(savepath);
+        savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
     except:
         savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
