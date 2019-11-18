@@ -286,7 +286,7 @@ n_hidden = int(12 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수�
 layer_1 = int(12 * 1) # fully conneted laye node 갯수 # 8
 
 duplicatedNum = 1
-mspainThr = 0.305
+mspainThr = 0.27
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
@@ -301,7 +301,7 @@ validation_sw = True # 시각화목적으로만 test set을 validset으로 배�
 testsw2 = False
 
 acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 500 # 5000
+batch_size = 300 # 5000
 ###############
 
 # constant 
@@ -312,7 +312,7 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1111_2class', 2])
+project_list.append(['1117_2class', 2])
 #project_list.append(['1015_binfix_2', 2])
 #project_list.append(['1029_adding_essential_1', 1])
 #project_list.append(['0903_seeding_4', 4])
