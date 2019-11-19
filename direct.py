@@ -294,17 +294,17 @@ print('in data set, time duration', set(lensave.flatten()))
 
 # learning intensity
 epochs = 50 # epoch 종료를 결정할 최소 단위.
-lr = 2e-3 # learning rate
+lr = 3e-3 # learning rate
 
-n_hidden = int(10 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(10 * 1) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 1) # fully conneted laye node 갯수 # 8
 
 duplicatedNum = 1
 mspainThr = 0.27
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.2 # regularization 상수
+l2_rate = 0.25 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 
