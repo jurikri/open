@@ -41,7 +41,7 @@ def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sam
                      pd.DataFrame(target[salineGroup]), \
                      pd.DataFrame(target[ketoGroup]), pd.DataFrame(target[lidocainGroup]), \
                      pd.DataFrame(target[yohimbineGroup]), pd.DataFrame(target[capsaicinGroup][:,0:3]), \
-                     pd.DataFrame(target[pslGroup][:,0:3])], ignore_index=True, axis = 1)
+                     pd.DataFrame(target[pslGroup][:,0:3]), pd.DataFrame(target[shamGroup][:,0:3])], ignore_index=True, axis = 1)
         
     df3 = np.array(df3)
     
@@ -191,11 +191,12 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 # load 할 model 경로(들) 입력
 model_name = []
 
-#model_name.append(['1103_second_tr/', 1])
+model_name.append(['1118_direct_2/', 2])
 #model_name.append(['1107_2class/', 1])
-model_name.append(['1015_binfix_1/', 1])
-model_name.append(['1015_binfix_2/', 2])
-#model_name.append(['0903_seeding_2/', 3])
+##model_name.append(['1111_2class/', 1])
+#model_name.append(['1015_binfix_1/', 1])
+#model_name.append(['1015_binfix_2/', 2])
+#model_name.append(['1117_2class/', 2])
 #model_name.append(['0903_seeding_2/', 4])
 #model_name.append(['0903_seeding_2/', 5])
 
@@ -416,7 +417,8 @@ def ms_batchmean(target):
             
     return out
 
-def relu_optimize(msduration, min_mean_save):
+def relu_optimize(min_mean_save):
+    print('relu optimize를 실행합니다.')
     mssave = []
     for optimizedthr in np.arange(0.1,0.5,0.001):
         biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
@@ -436,38 +438,42 @@ def relu_optimize(msduration, min_mean_save):
     
                     biRNN_2[SE,se] = np.mean(np.array(min_mean_mean) > optimizedthr)
                     
-        biRNN_22 = ms_batchmean(biRNN_2)            
-        target = biRNN_22
-        tmp = target[pslGroup,1:3]; tmp = tmp[np.isnan(tmp)==0]
-#        diff = np.mean(target[painGroup,1]) - np.mean(tmp)
-        PSL_acc = report(biRNN = biRNN_22, PLStest=True)
-        pslbase = biRNN_22[pslGroup,:][:,0]; pslbase = pslbase[np.isnan(pslbase)==0]
-        pslday3 = biRNN_22[pslGroup,:][:,1]; pslday3 = pslday3[np.isnan(pslday3)==0]
-        pslday10 = biRNN_22[pslGroup,:][:,2]; pslday10 = pslday10[np.isnan(pslday10)==0]
-        day3p = stats.ttest_rel(pslbase, pslday3)[1]
-        day10p = stats.ttest_rel(pslbase, pslday10)[1]
-        
-        msloss = PSL_acc - day3p - day10p
+        msloss = msloss2(biRNN_2)
         mssave.append([optimizedthr, msloss])
 #        print(optimizedthr, msloss)
 #    plt.plot(np.array(mssave)[:,0], np.array(mssave)[:,1])
     return np.array(mssave)[:,0][np.nanargmax(np.array(mssave)[:,1])]
         
+def msloss2(biRNN_2):
+    biRNN_22 = ms_batchmean(biRNN_2) # 중복 데이터 처리.. 평균을 내든 뺴든 ...        
+    PSL_acc = report(biRNN = biRNN_22, PLStest=True)
+            
+    pslbase = biRNN_22[pslGroup,:][:,0]; pslbase = pslbase[np.isnan(pslbase)==0]
+    pslday3 = biRNN_22[pslGroup,:][:,1]; pslday3 = pslday3[np.isnan(pslday3)==0]
+    pslday10 = biRNN_22[pslGroup,:][:,2]; pslday10 = pslday10[np.isnan(pslday10)==0]
+    sham = biRNN_22[shamGroup,:][:,0:3].flatten()
+                
+    base_3 = stats.ttest_rel(pslbase, pslday3)[1]
+    base_10 = stats.ttest_rel(pslbase, pslday10)[1]
+    sham_3 = stats.ttest_ind(sham, pslday3)[1]
+    sham_10 = stats.ttest_ind(sham, pslday10)[1]
     
-
+    msindex1 = (PSL_acc * 10) - (base_3 + base_10 + sham_3 + sham_10)
+    
+    return msindex1
+    
+# 모든 optimal, method 다 고려해서 추천
 def otimal_msduration(msduration, min_mean_save, optimalSW=False):    
     # min_mean_save로 부터 각 value를 계산함
-    PSL_acc = None
+#    PSL_acc = None
     min_mean_save = min_mean_save
-               
+    exceptlist = [[70, 0], [71, 0], [72, 0]] # 2분 촬영 psl은 제외 한다.
+    minimal_size = 497
+          
     biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
     biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
     
-    calculation_method = 4
-    if calculation_method == 4:
-        optimizedthr = relu_optimize(msduration, min_mean_save)
-        print('optimizedthr', optimizedthr)
-    
+    ## 우선 평균값으로 채워넣고,
     for SE in range(N):
         if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
 #            print(SE, 'skip')
@@ -476,60 +482,133 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
         sessionNum = 5
         if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
             sessionNum = 3
-    
+            
         for se in range(sessionNum):
             min_mean_mean = np.array(min_mean_save[SE][se])
             if not np.isnan(np.nanmean(min_mean_mean)):
-                if False:
-                    plt.figure()
-                    figtitle = str(SE)+str(se) + '.png'
-                    plt.title(figtitle)
-                    plt.plot(min_mean_mean)
-                    plt.ylim(0,1)
+                biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
+                
+#                startat = 10*maxix
+                movement_497_2[SE,se] = np.mean(bahavss[SE][se])
+                
+                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                t4_497_2[SE,se] = np.mean(meansignal,axis=0)
+             
+    ## 그다음 PSL을 특수 처리한다.
     
-                if calculation_method == 1: # max
-                    maxix = np.argmax(min_mean_mean)
-                    biRNN_2[SE,se] = min_mean_mean[maxix]
+    method_num = 4
+    msindex = []; [msindex.append([]) for u in range(method_num)]
+    
+    # test 0: maxpeak
+    for SE in range(N):
+        for se in range(3):
+#            c1 = SE in pslGroup + shamGroup
+            c2 = se in [0,1,2]
+            c3 = [SE, se] in longlist
+            
+            if c3 and c2:
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                # method1
+                maxix = np.argmax(min_mean_mean)
+                biRNN_2[SE,se] = min_mean_mean[maxix]
+    
+    msindex[0] = msloss2(biRNN_2)
+
+    # test 1: mean
+    for SE in range(N):
+        for se in range(3):
+    #            c1 = SE in pslGroup + shamGroup
+            c2 = se in [0,1,2]
+            c3 = [SE, se] in longlist
+            
+            if c3 and c2:
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
+                
+    msindex[1] = msloss2(biRNN_2)
+    
+    # test 2: timewindow
+    mssave = []; forlist = list(range(1, 300)) # 앞뒤가 nan이 찍히는 모든 범위로 설정 할 것 
+    print('test2: timewindow 최적화를 시작합니다.')
+    for mssec in forlist:
+#        print(mssec)
+        skipsw = False
+        msduration = int(round((((mssec*FPS)-82)/10)+1))
+        for SE in range(N):
+            for se in range(3):
+        #            c1 = SE in pslGroup + shamGroup
+                c2 = se in [0,1,2]
+                c3 = [SE, se] in longlist
+                
+                if c3 and c2:
+                    min_mean_mean = np.array(min_mean_save[SE][se])
                     
-                    startat = 10*maxix
-                    movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat:int(round(startat+497/4.3*64))])
+                    if min_mean_mean.shape[0] - msduration <= 0 or msduration < 1:
+                        skipsw = True
+                        break
                     
-                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-                    t4_497_2[SE,se] = np.mean(meansignal[startat:startat+497])
-                    
-                elif calculation_method == 2: # mean 
-                    biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
-                    
-    #                startat = 10*maxix
-                    movement_497_2[SE,se] = np.mean(bahavss[SE][se])
-                    
-                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-                    t4_497_2[SE,se] = np.mean(meansignal,axis=0)
-                    
-                elif calculation_method == 3: # peak duration     
                     meansave = []
-                    
-                    if min_mean_mean.shape[0] - msduration <= 0:
-                        print(msduration, '은 너무 길어')
-                    
                     for msbin in range(min_mean_mean.shape[0] - msduration):
                         meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
                         
                     maxix = np.argmax(meansave)
                     biRNN_2[SE,se] = np.mean(min_mean_mean[maxix: maxix+msduration], axis=0)
-                    
-                    startat = 10*maxix
+    
+        msacc = msloss2(biRNN_2)
+#        print(msacc)
+        if not(skipsw):
+            mssave.append(msacc)
+        elif skipsw:
+            mssave.append(np.nan)
             
-                    movement_497_2[SE,se] = np.mean(bahavss[SE][se][startat: \
-                                  int(round(startat+ ((msduration*10+82) * (64/FPS))))])
-                    # 82는 birnn 최소 분절값이고, 10은 binning frame 값임
-                    # 64는 behavior 동영상 frame 값임
+    mssec = forlist[np.nanargmax(mssave)]
+    msduration = int(round((((mssec*FPS)-82)/10)+1))
+    print('optimized time window', msduration)
+    for SE in range(N):
+        for se in range(3):
+    #            c1 = SE in pslGroup + shamGroup
+            c2 = se in [0,1,2]
+            c3 = [SE, se] in longlist
+            
+            if c3 and c2:
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                
+                if min_mean_mean.shape[0] - msduration <= 0 or msduration < 1:
+                    skipsw = True
+                    break
+                
+                meansave = []
+                for msbin in range(min_mean_mean.shape[0] - msduration):
+                    meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
                     
-                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-                    t4_497_2[SE,se] = np.mean(meansignal[startat:startat+(msduration*10+82)])
+                maxix = np.argmax(meansave)
+                biRNN_2[SE,se] = np.mean(min_mean_mean[maxix: maxix+msduration], axis=0)
+            
                     
-                elif calculation_method == 4: # relu
-                    biRNN_2[SE,se] = np.mean(np.array(min_mean_mean) > optimizedthr)
+    msindex[2] = msloss2(biRNN_2)
+
+                    
+    # test 3: relu 
+    othr = relu_optimize(min_mean_save)
+    for SE in range(N):
+        for se in range(3):
+    #            c1 = SE in pslGroup + shamGroup
+            c2 = se in [0,1,2]
+            c3 = [SE, se] in longlist
+            
+            if c3 and c2:
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                biRNN_2[SE,se] = np.mean(np.array(min_mean_mean) > optimizedthr)
+                
+    msindex[3] = msloss2(biRNN_2)
+    
+    print(msindex)
+
+
+
+
+
+
                     
                     movement_497_2[SE,se] = np.mean(bahavss[SE][se])
                     
