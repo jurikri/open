@@ -1039,31 +1039,13 @@ for q in project_list:
                             binNum = len(binning)
                             
                             if signalss[test_mouseNum][se].shape[0] == full_sequence:
-                                binNum = [0]
-                                
-                            binNum2 = binNum
-                            
-                            # dataGeneration _ modify
-#                            binlist = list(range(0, signalss[test_mouseNum][se].shape[0]-full_sequence, bins))
-#                            minimum_binning = len(binlist) + 1
-                                    
-#                            if minimum_binning == 1  : # for 2 mins
-#                                binNum2 = 1
-#                                print(SE, se, 'msshort', binNum2)
-#                            elif binNum >= mslong +1 -42: # for 4 mins
-#                                binNum2 = mslong-minimum_binning+1
-#                                print(SE, se, 'mslong', binNum2)
-#                            elif binNum == 0:
-#                                print(SE, se, '예상되지 않은 길이입니다. 체크')
-#                                import sys
-#                                sys.exit()
-#                            else: # for 2 mins
-#                                print(SE, se, '예상되지 않은 길이입니다. 체크')
-                                
-                            [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum2)]
+                                binNum = 1
+                                binning = [0]
+                                                           
+                            [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
                             
                             i = 54; ROI = 0
-                            for i in range(binNum2):         
+                            for i in range(binNum):         
                                 signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
                                 ROInum = signalss_PSL_test.shape[1]
                                 
