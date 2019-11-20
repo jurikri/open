@@ -96,7 +96,7 @@ keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
 
-bins = 10 # 최소 time frame 간격
+bins = 10 # 최소 time frame 간격                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
 # preprocessing setup
 
 # preprecessing 사용자정의함수 선언
@@ -338,7 +338,7 @@ project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 
 q = project_list[0]
 for q in project_list:
-    settingID = q[0]; seed = q[1]; seed2 = int(seed)
+    settingID = q[0]; seed = q[1]; seed2 = int(seed+1)
     continueSW = q[2]
     
     print('settingID', settingID, 'seed', seed, 'continueSW', continueSW)
