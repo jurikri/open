@@ -41,7 +41,7 @@ def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sam
                      pd.DataFrame(target[salineGroup]), \
                      pd.DataFrame(target[ketoGroup]), pd.DataFrame(target[lidocainGroup]), \
                      pd.DataFrame(target[yohimbineGroup]), pd.DataFrame(target[capsaicinGroup][:,0:3]), \
-                     pd.DataFrame(target[pslGroup][:,0:3]), pd.DataFrame(target[shamGroup][:,0:3])], ignore_index=True, axis = 1)
+                     pd.DataFrame(target[pslGroup][:,0:3]), pd.DataFrame(target[shamGroup][:,0:3].flatten())], ignore_index=True, axis = 1)
         
     df3 = np.array(df3)
     
@@ -191,41 +191,38 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 # load 할 model 경로(들) 입력
 model_name = []
 
-model_name.append(['1118_direct_2/', 2])
+#model_name.append(['1118_direct_2/', 2])
 #model_name.append(['1107_2class/', 1])
-##model_name.append(['1111_2class/', 1])
-#model_name.append(['1015_binfix_1/', 1])
-#model_name.append(['1015_binfix_2/', 2])
+#model_name.append(['1111_2class/', 1])
+model_name.append(['1015_binfix_1/', 1])
+model_name.append(['1015_binfix_2/', 2])
 #model_name.append(['1117_2class/', 2])
 #model_name.append(['0903_seeding_2/', 4])
 #model_name.append(['0903_seeding_2/', 5])
 
 # In short, long test 1차 by signalss
-msshort = 42; mslong = 97; bins = 10
+#msshort = 42; mslong = 97; 
+bins = 10
 shortlist = []; longlist = []
-SE=79;se=2;i=0
+#SE=79;se=2;i=0
 for SE in range(N):
     for se in range(5):
-        binNum = len(list(range(0,(np.array(signalss[SE][se]).shape[0] - 497) +1, bins)))
-        minimum_binning = 42
-        
-        if binNum >= msshort-minimum_binning+1 and binNum < mslong-minimum_binning+1: # for 2 mins
-            shortlist.append([SE,se])
-#            print(SE, se, 'msshort')
-        elif binNum >= mslong-minimum_binning+1: # for 4 mins
+        length = np.array(signalss[SE][se]).shape[0]
+        if length > 180*FPS:
             longlist.append([SE,se])
-#            print(SE, se, 'mslong')
+        elif length < 180*FPS:
+            shortlist.append([SE,se])
         else:
-            print('e')
+            print('error')
+
 
 # In min_mean_save에 모든 data 저장
-
 min_mean_save = []
 [min_mean_save.append([]) for k in range(N)]
 
-# pointSvae - 2차 학습 label 판단에 사용하기 위해 예측 평균값 저장
-pointSave = []
-[pointSave.append([]) for k in range(N)]
+## pointSvae - 2차 학습 label 판단에 사용하기 위해 예측 평균값 저장
+#pointSave = []
+#[pointSave.append([]) for k in range(N)]
 for SE in range(N):
     if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
 #        print(SE, 'skip')
@@ -236,7 +233,7 @@ for SE in range(N):
         sessionNum = 3
     
     [min_mean_save[SE].append([]) for k in range(sessionNum)]
-    [pointSave[SE].append([]) for k in range(sessionNum)]
+#    [pointSave[SE].append([]) for k in range(sessionNum)]
     msreport = True
     for se in range(sessionNum):
         # In
@@ -263,14 +260,9 @@ for SE in range(N):
                 with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
                     PSL_result_save = pickle.load(f)
             
-                if [SE, se] in shortlist:
-                    PSL_result_save2 = PSL_result_save[SE][se][:msshort-minimum_binning+1]
-                elif [SE, se] in longlist:
-                    PSL_result_save2 = PSL_result_save[SE][se][:mslong-minimum_binning+1]
-                else:
-                    print('e')
-                    
-                current_value.append(np.array(PSL_result_save2) > 0.5 ) # PSL_result_save2[BINS][ROI][bins][nonpain,pain]
+            # ##################################
+            PSL_result_save2 = PSL_result_save[SE][se]
+            current_value.append(np.array(PSL_result_save2[:,1]) > 0.5 ) # PSL_result_save2[BINS][ROI][bins][nonpain,pain]
                 
             # # 2진화 
         if len(current_value) > 0:
@@ -288,12 +280,12 @@ for SE in range(N):
     #        msplot = []
             
             BIN = 0;
-            [pointSave[SE][se].append([]) for u in range(binNum)]
+#            [pointSave[SE][se].append([]) for u in range(binNum)]
             for BIN in range(binNum):
                 plotsave = np.mean(current_value[BIN,:,:,1], axis=0) 
-                empty_board[BIN, BIN: BIN+minimum_binning] = plotsave
+#                empty_board[BIN, BIN: BIN+minimum_binning] = plotsave
                 
-                pointSave[SE][se][BIN] = np.mean(plotsave)
+#                pointSave[SE][se][BIN] = np.mean(plotsave)
                 
     #            figNum = int(str(SE)+str(se))
     #            msplot.append(np.mean(plotsave))
@@ -326,10 +318,10 @@ for SE in range(N):
         elif len(current_value) == 0:
             min_mean_save[SE][se] = np.nan
 
-if False:
-    with open('pointSave.pickle', 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(pointSave, f, pickle.HIGHEST_PROTOCOL)
-        print('pointSave.pickle 저장되었습니다.')
+#if False:
+#    with open('pointSave.pickle', 'wb') as f:  # Python 3: open(..., 'wb')
+#        pickle.dump(pointSave, f, pickle.HIGHEST_PROTOCOL)
+#        print('pointSave.pickle 저장되었습니다.')
         
 # In[]
         
@@ -463,12 +455,12 @@ def msloss2(biRNN_2):
     return msindex1
     
 # 모든 optimal, method 다 고려해서 추천
-def otimal_msduration(msduration, min_mean_save, optimalSW=False):    
+def otimal_msduration(min_mean_save):    
     # min_mean_save로 부터 각 value를 계산함
 #    PSL_acc = None
     min_mean_save = min_mean_save
-    exceptlist = [[70, 0], [71, 0], [72, 0]] # 2분 촬영 psl은 제외 한다.
-    minimal_size = 497
+#    exceptlist = [[70, 0], [71, 0], [72, 0]] # 2분 촬영 psl은 제외 한다.
+#    minimal_size = 497
           
     biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
     biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
@@ -563,19 +555,14 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
             
     mssec = forlist[np.nanargmax(mssave)]
     msduration = int(round((((mssec*FPS)-82)/10)+1))
-    print('optimized time window', msduration)
+    print('optimized time window, mssec', mssec)
     for SE in range(N):
         for se in range(3):
-    #            c1 = SE in pslGroup + shamGroup
             c2 = se in [0,1,2]
             c3 = [SE, se] in longlist
             
             if c3 and c2:
                 min_mean_mean = np.array(min_mean_save[SE][se])
-                
-                if min_mean_mean.shape[0] - msduration <= 0 or msduration < 1:
-                    skipsw = True
-                    break
                 
                 meansave = []
                 for msbin in range(min_mean_mean.shape[0] - msduration):
@@ -592,63 +579,37 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
     othr = relu_optimize(min_mean_save)
     for SE in range(N):
         for se in range(3):
-    #            c1 = SE in pslGroup + shamGroup
             c2 = se in [0,1,2]
             c3 = [SE, se] in longlist
             
             if c3 and c2:
                 min_mean_mean = np.array(min_mean_save[SE][se])
-                biRNN_2[SE,se] = np.mean(np.array(min_mean_mean) > optimizedthr)
+                biRNN_2[SE,se] = np.mean(np.array(min_mean_mean) > othr)
                 
     msindex[3] = msloss2(biRNN_2)
     
-    print(msindex)
-
-
-
-
-
-
-                    
-                    movement_497_2[SE,se] = np.mean(bahavss[SE][se])
-                    
-                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-                    t4_497_2[SE,se] = np.mean(meansignal,axis=0)
-             
-            elif np.isnan(np.nanmean(min_mean_mean)):
-                biRNN_2[SE,se] = np.nan
-                movement_497_2[SE,se] = np.nan
-                t4_497_2[SE,se] = np.nan
-                
-            
-    # Aprism 변수 update
-    accuracy = None
-    if optimalSW:
-        biRNN_22 = ms_batchmean(biRNN_2)            
-        target = biRNN_22
-#        painGroup = painGroup
-#        nonpainGroup = nonpainGroup
-#        pain, nonpain_within, nonpain_between = pain_nonpain_sepreate(target, painGroup, nonpainGroup)
-#        pain = target[pslGroup,1:3].flatten()
-    #    nonpain_within = target[pslGroup,0]
-#        accuracy, roc_auc, fig = accuracy_cal(pain, nonpain_between)
-        tmp = target[pslGroup,1:3]; tmp = tmp[np.isnan(tmp)==0]
-        diff = np.mean(target[painGroup,1]) - np.mean(tmp)
-        
-        PSL_acc = report(biRNN = biRNN_22, PLStest=True)
-        
-        pslbase = biRNN_22[pslGroup,:][:,0]; pslbase = pslbase[np.isnan(pslbase)==0]
-        pslday3 = biRNN_22[pslGroup,:][:,1]; pslday3 = pslday3[np.isnan(pslday3)==0]
-        pslday10 = biRNN_22[pslGroup,:][:,2]; pslday10 = pslday10[np.isnan(pslday10)==0]
-        
-        day3p = stats.ttest_rel(pslbase, pslday3)[1]
-        day10p = stats.ttest_rel(pslbase, pslday10)[1]
-                
-        print(msduration, 'Formalin_acc', accuracy, 'PSL_acc', PSL_acc, 'diff', diff)
-        print(msduration, 'day3p', day3p, 'day10p', day10p)
+    bestix = np.argmax(msindex)
+    print('bestix', bestix)
     
-        
-    return accuracy, biRNN_2, t4_497_2, movement_497_2, PSL_acc
+    if bestix == 2:
+        for SE in range(N):
+            for se in range(3):
+                c2 = se in [0,1,2]
+                c3 = [SE, se] in longlist
+                
+                if c3 and c2:
+                    min_mean_mean = np.array(min_mean_save[SE][se])
+                    
+                    meansave = []
+                    for msbin in range(min_mean_mean.shape[0] - msduration):
+                        meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
+                        
+                    maxix = np.argmax(meansave)
+                    startat = 10*maxix
+                    meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                    t4_497_2[SE,se] = np.mean(meansignal[startat:startat+(msduration*bins+82)])
+ 
+    return biRNN_2, t4_497_2, movement_497_2
 
 # In[]
 
@@ -658,31 +619,8 @@ def otimal_msduration(msduration, min_mean_save, optimalSW=False):
 # 이 계산이 bias가 아님을 증명하기 위해, time window x가 특별한 값이 아니고, 대충 아무거나 써도 마찬가지의 결과를 냄을
 # x에 따른 acc를 보여줌으로써 어필해야 한다. -> x는 일반화 가능성이 높다. = 매우 특정한 값이 아니다.   
     
-#axiss = []; [axiss.append([]) for u in range(2)]
-#for msduration in range(2,20):
-#    accuracy, _, _, _, PSL_acc= otimal_msduration(msduration, min_mean_save, optimalSW=True) # 전체 값 모두 사용 
-#    axiss[0].append(msduration)
-#    axiss[1].append(PSL_acc)
-#plt.plot(axiss[0], axiss[1])
 
-
-#
-
-# 특정한 time window x를 잡고 계산 시작
-#  time window x를 초로 환산하면 (approximately) mssec과 같다
-mssec = 25
-# (82 + ((msduration-1) * 10)) / FPS = sec
-msduration = int(round((((mssec*FPS)-82)/10)+1))
-
-if False:
-    for mssec in range(1, 120):
-        msduration = int(round((((mssec*FPS)-82)/10)+1))
-        print(mssec, msduration)
-    
-print('msduration', msduration)
-
-#msduration = 25 # 의미없음 
-_, biRNN_2, t4_497_2, movement_497_2, _ = otimal_msduration(msduration, min_mean_save) # 2 mins, or 4 mins
+biRNN_2, t4_497_2, movement_497_2 = otimal_msduration(min_mean_save) # 2 mins, or 4 mins
 
 # 예외규정: 70, 72는 동일 생쥐의 반복 측정이기 때문에 평균처리한다.
 biRNN_22 = ms_batchmean(biRNN_2)
@@ -1068,7 +1006,10 @@ for i in FPlist:
         
     
     
-    
+timtable = np.zeros((N,5))
+for SE in range(N):
+    for se in range(5):
+        timtable[SE,se] = signalss[SE][se].shape[0]
     
     
     
