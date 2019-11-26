@@ -292,7 +292,7 @@ dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = True
+testsw2 = False
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -616,7 +616,7 @@ for q in project_list:
     for unit in range(msunit):
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
         
-    def keras_setup(model = None):
+    def keras_setup():
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         
         dt = datetime.now()
@@ -625,7 +625,6 @@ for q in project_list:
         #init = initializers.glorot_normal(seed=None)
         
         try:
-            model.reset_states()
             keras.backend.clear_session()
             print('올라와있는 model이 있었기 때문에, 초기화 하였습니다.')
         except:
@@ -656,7 +655,10 @@ for q in project_list:
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         return model, idcode
     
-    model, idcode = keras_setup()    
+    model, idcode = keras_setup()   
+    
+    initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
+    model.save_weights(initial_weightsave)
     
     if False: # 시각화 
         # 20190903, VS code로 옮긴뒤로 에러나는 중, 해결필요
@@ -829,49 +831,18 @@ for q in project_list:
                 # 학습된 모델도 없고, 최근에 진행중인것도 없으니 학습 시작합니다.    
                 if not(recent_model):
                     print('mouse #', [mouselist[sett]], '학습된', state, 'model 없음. 새로시작합니다.')
-                    model, idcode = keras_setup(model) # 시작과 함께 weight reset 됩니다.
-
+                    model.load_weights(initial_weightsave)
+                    dt = datetime.now()
+                    idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
+                        
+                    # 나중에 idcode는 없애던지.. 해야될듯 
+                    
                     df2 = [idcode]
                     csvfile = open(loadname, 'w', newline='')
                     csvwriter = csv.writer(csvfile)
                     csvwriter.writerow(df2)         
                     csvfile.close() 
 
-#                     validation set을 사용할경우 준비합니다.
-#                    if validation_sw and state == 'exp': # control은 validation을 볼 필요가없다.
-#                        init = True
-#                        totalROI = signalss[mouselist[sett]][0].shape[1]#; painIndex = 1
-#                        X_all = []; [X_all.append([]) for i in range(msunit)]
-#                        for se in range(3):
-#                            if [mouselist[sett], se] in longlist:
-#                                label = 0
-#                                if mouselist[sett] in pslGroup and se in [1,2]:
-#                                    label = 1
-#    
-#                                for ROI in range(totalROI):
-#                                    unknown_data, Y_val, Z, _ = \
-#                                    dataGeneration(mouselist[sett], se, roiNum=ROI, label=label)
-#                                    Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
-#                                    Z = np.concatenate((Z, tmpROI), axis = 1) # Z에 SE, se + ROI 정보까지 저장
-#    
-#                                    unknown_data_toarray = array_recover(unknown_data)
-#    
-#                                    if init:
-#                                        for k in range(msunit):
-#                                            X_all[k] = np.array(unknown_data_toarray[k])    
-#                                        Z_all = np.array(Z); Y_all = np.array(Y_val)
-#                                        init = False
-#    
-#                                    elif not(init):
-#                                        for k in range(msunit):
-#                                            X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-#                                        Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
-#                                            
-#                                        # Z는 안쓰는데,, 걍 복붙이라 남아있는듯? 
-#                        valid = tuple([X_all, Y_all])
-
-                    # training set을 준비합니다. cross validation split 
-                    
                     X_training = []; [X_training.append([]) for i in range(msunit)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
                     X_valid = []; [X_valid.append([]) for i in range(msunit)]
                     Y_training_list = []
@@ -926,7 +897,9 @@ for q in project_list:
 
                         if cnt > maxepoch/epochs:
                             seed += 1
-                            model, idcode = keras_setup(model)
+                            model.load_weights(initial_weightsave)
+                            dt = datetime.now()
+                            idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
                             current_acc = -np.inf; cnt = -1
                             print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
 
