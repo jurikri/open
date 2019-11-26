@@ -119,31 +119,6 @@ for SE in range(N):
 
 msset = [[70,72],[71,84],[75,85],[76,86]]
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-# preprocessing setup
-
-# preprecessing 사용자정의함수 선언
-#def preprocessing(endpoint=False , mannualsw=False):
-#    # mannual setting
-#    signalss_semi = []; [signalss_semi.append([]) for u in range(N)]
-#    for SE in range(N):
-#        if SE in totaldataset:
-#            [signalss_semi[SE].append([]) for u in range(3)]
-#            for se in range(3):
-#                if [SE, se] in longlist:
-#                    
-#                    signal = np.array(signalss[SE][se])
-#                    s = 0
-#                    
-#                    if not(endpoint):
-#                        e = signal.shape[0] 
-#                    elif endpoint:
-#                        e = endpoint # 497 # 첫 497만  쓴다.
-#                     
-#                    mstmp = signal[s:e,:]
-#                    signalss_semi[SE][se] = mstmp
-#            
-#    return signalss_semi
-
 def array_recover(X_like):
     X_like_toarray = []; X_like = np.array(X_like)
     for input_dim in range(msunit):
@@ -291,33 +266,7 @@ sequenceSize = sequenceSize.astype(np.int)
 
 print('full_sequence', full_sequence)
 print('sequenceSize', sequenceSize)
-        
-# test version 2 저장용 최소길이 사전 계산
-#lensave = np.zeros((N,5))
-#for SE in range(N):
-#    if SE in totaldataset:
-#        for se in range(5):
-#            if [SE, se] in longlist:
-#                mslen = np.array(signalss[SE][se]).shape[0]
-#                binlist = list(range(0, mslen-full_sequence, bins))
-#          
-#                lensave[SE,se] = len(binlist)
-#
-#print('in data set, time duration', set(lensave.flatten()))
-#print('다음과 같이 나누어서 처리합니다')
-#msshort = 2-1+42; mslong = 55-1+42
-#print('msshort', msshort, ', mslong', mslong)
 
-# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# #############
-
-# training set에 사용될 group 설정
-# painGroup, nonpainGroup 변수를 이용해서 설정해야 뒤에 data generation과 연동된다.
-# etc는 trainig set으로는 사용되지 않고, 단지 etc test를 위해 모든 trainig set으로 돌리기 위해 예외적으로 추가한다.
-
-#painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup'] \
-#+ msGroup['capsaicinGroup'] + msGroup['pslGroup']
-#nonpainGroup = msGroup['salineGroup']
-#etc = msGroup['lidocaineGroup'][0]
   
 ###############
 # hyperparameters #############
@@ -343,7 +292,7 @@ dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = False
+testsw2 = True
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -351,12 +300,12 @@ testsw2 = False
 #    import tensorflow as tf
 
 # 집 컴퓨터, test 전용으로 수정
-if savepath == 'D:\\painDecorder\\save\\tensorData\\':
+if savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
     trainingsw = False
     testsw2 = True
 
 acc_thr = 0.94 # 0.93 -> 0.94
-batch_size = 1000 # 5000
+batch_size = 2000 # 5000
 ###############
 
 # constant 
@@ -367,7 +316,7 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1126_binfix2', 3, None])
+project_list.append(['1126_binfix2_saline', 3, None])
 #project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 #project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
 #project_list.append(['1015_binfix_2', 2])
@@ -480,8 +429,9 @@ for q in project_list:
                         c2 = SE in capsaicinGroup and se in [0,2]
                         c3 = SE in pslGroup and se in [0]
                         c4 = SE in shamGroup and se in [0,1,2]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
                         
-                        if c1 or c2 or c3 or c4:
+                        if c1 or c2 or c3 or c4 or c5:
                             mssignal = np.mean(signalss[SE][se], axis=1)
                             msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
