@@ -18,9 +18,10 @@ Created on Sat Apr 20 20:58:38 2019
 
 @author: msbak
 """
+import os  # 경로 관리
 # library import
 import pickle # python 변수를 외부저장장치에 저장, 불러올 수 있게 해줌
-import os  # 경로 관리
+
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime # 시관 관리 
@@ -44,9 +45,12 @@ try:
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
     try:
-        savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
+        savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
     except:
-        savepath = ''; # os.chdir(savepath);
+        try:
+            savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
+        except:
+            savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 
 # check the save pathway
@@ -319,8 +323,8 @@ print('sequenceSize', sequenceSize)
 # hyperparameters #############
  
 # learning intensity
-epochs = 20 # epoch 종료를 결정할 최소 단위.
-lr = 3e-3 # learning rate
+epochs = 10 # epoch 종료를 결정할 최소 단위.
+lr = 1e-3 # learning rate
 
 n_hidden = int(8 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
 layer_1 = int(8 * 1) # fully conneted laye node 갯수 # 8
@@ -335,11 +339,16 @@ l2_rate = 0.25 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 
-testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
+#testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 testsw2 = False
+#if testsw2:
+##    import os
+#    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+#    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+#    import tensorflow as tf
 
 # 집 컴퓨터, test 전용으로 수정
 if savepath == 'D:\\painDecorder\\save\\tensorData\\':
@@ -347,7 +356,7 @@ if savepath == 'D:\\painDecorder\\save\\tensorData\\':
     testsw2 = True
 
 acc_thr = 0.94 # 0.93 -> 0.94
-batch_size = 500 # 5000
+batch_size = 1000 # 5000
 ###############
 
 # constant 
@@ -358,7 +367,7 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1125_binfix2', 3, None])
+project_list.append(['1126_binfix2', 3, None])
 #project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 #project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
 #project_list.append(['1015_binfix_2', 2])
@@ -738,7 +747,7 @@ for q in project_list:
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    wanted = shamGroup + [etc[0]] + pslGroup
+    wanted = [etc[0]] + shamGroup + pslGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -998,10 +1007,8 @@ for q in project_list:
 #                        # validation이 가치가없으므로 끔 
 #                        validation_sw = False
                         
-                        if  Y_valid.shape[0] == 0:
-                            validation_sw = False
-                        
-                        if validation_sw and state == 'exp':
+  
+                        if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
                             #1
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
@@ -1020,7 +1027,7 @@ for q in project_list:
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                             
-                        elif not(validation_sw) and state == 'exp': 
+                        elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs) #, validation_data = valid)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                         elif state == 'con':
@@ -1041,12 +1048,12 @@ for q in project_list:
 
                     # 학습 model 최종 저장
                     #5: 마지막으로 validation 찍음
-                    if validation_sw and state == 'exp':
+                    if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
                         hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
                         hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                         hist_save_val_loss += list(np.array(hist.history['val_loss']))
                         hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
-                    elif not(validation_sw) and state == 'exp': 
+                    elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
                         hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1) #, validation_data = valid)
                         hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                     
@@ -1116,7 +1123,7 @@ for q in project_list:
         
             ####### test - binning 구문 입니다. ##########, test version 2
             # model load는 cv set 시작에서 무조건 하도록 되어 있음.
-            if trained_fortest and testsw2:
+            if trained_fortest and testsw2:   
                 for test_mouseNum in testlist:
                     testbin = None
                     picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_' + str(test_mouseNum) + '.pickle'
