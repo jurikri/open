@@ -616,7 +616,7 @@ for q in project_list:
     for unit in range(msunit):
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
         
-    def keras_setup():
+    def keras_setup(model = None):
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         
         dt = datetime.now()
@@ -626,6 +626,7 @@ for q in project_list:
         
         try:
             model.reset_states()
+            keras.backend.clear_session()
             print('올라와있는 model이 있었기 때문에, 초기화 하였습니다.')
         except:
             pass 
@@ -828,7 +829,7 @@ for q in project_list:
                 # 학습된 모델도 없고, 최근에 진행중인것도 없으니 학습 시작합니다.    
                 if not(recent_model):
                     print('mouse #', [mouselist[sett]], '학습된', state, 'model 없음. 새로시작합니다.')
-                    model, idcode = keras_setup() # 시작과 함께 weight reset 됩니다.
+                    model, idcode = keras_setup(model) # 시작과 함께 weight reset 됩니다.
 
                     df2 = [idcode]
                     csvfile = open(loadname, 'w', newline='')
@@ -925,7 +926,7 @@ for q in project_list:
 
                         if cnt > maxepoch/epochs:
                             seed += 1
-                            model, idcode = keras_setup()
+                            model, idcode = keras_setup(model)
                             current_acc = -np.inf; cnt = -1
                             print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
 
