@@ -697,6 +697,9 @@ for q in project_list:
     mouselist = list(trainingset)
     mouselist.sort()
     
+    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
+        mouselist = list(np.sort(np.array(mouselist))[::-1])
+    
     if not(len(etc) == 0):
         mouselist.append(etc[0])
     
@@ -1029,6 +1032,10 @@ for q in project_list:
             testlist = []
             testlist = [mouselist[sett]]
             
+            if mouselist[sett] in np.array(msset)[:,0]:
+                for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+                    testlist.append(u)
+ 
             if not(len(etc) == 0):
                 if etc[0] == mouselist[sett]:
                     print('test ssesion, etc group 입니다.') 
