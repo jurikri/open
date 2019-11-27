@@ -300,9 +300,9 @@ testsw2 = False
 #    import tensorflow as tf
 
 # 집 컴퓨터, test 전용으로 수정
-#if savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
-#    trainingsw = False
-#    testsw2 = True
+if savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
+    trainingsw = False
+    testsw2 = True
 
 acc_thr = 0.95 # 0.93 -> 0.94
 batch_size = 2000 # 5000
@@ -463,7 +463,7 @@ for q in project_list:
                 break
             
         # nonpain 2
-        for lowThr in np.arange(0.8, 0, -0.001):
+        for lowThr in np.arange(0.08, 0, -0.001):
             msclass = 2 # nonpain
             X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
             for SE in range(N):
