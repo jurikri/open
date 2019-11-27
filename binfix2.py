@@ -691,8 +691,8 @@ for q in project_list:
     mouselist = list(trainingset)
     mouselist.sort()
     
-    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
-        mouselist = list(np.sort(np.array(mouselist))[::-1])
+#    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
+#        mouselist = list(np.sort(np.array(mouselist))[::-1])
     
     if not(len(etc) == 0):
         mouselist.append(etc[0])
@@ -909,8 +909,9 @@ for q in project_list:
                                                    Mannual=True, mannual_signal=mannual_signal)
                                     
                                     X_tmp += Xtest; Y_tmp += Ytest
-                                    Xtest = array_recover(Xtest)
-                                    Ytest = np.array(Ytest); Y = np.reshape(Ytest, (Ytest.shape[0], n_out))
+                                    
+                        Xtest = array_recover(X_tmp)
+                        Ytest = np.array(Y_tmp); Ytest = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
                                     
                         valid = tuple([Xtest, Ytest])
                         Y_valid = np.array(Ytest)
