@@ -139,11 +139,11 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
     X = []; Y = []; Z = []
 
     if label == 0:
-        label = [1, 0] # nonpain
+        label = [1, 0, 0] # nonpain
     elif label == 1:
-        label = [0, 1] # pain
-#    elif label == 2:
-#        label = [0, 0, 1] # nonpain low
+        label = [0, 1, 0] # pain
+    elif label == 2:
+        label = [0, 0, 1] # nonpain low
  
     if not(roiNum==None):
         s = roiNum; e = roiNum+1
@@ -257,7 +257,7 @@ print('full_sequence', full_sequence, 'frames')
 
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
 
-msunit = 6 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+msunit = 8 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
 sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
@@ -304,14 +304,14 @@ testsw2 = False
 #    trainingsw = False
 #    testsw2 = True
 
-acc_thr = 0.94 # 0.93 -> 0.94
+acc_thr = 0.95 # 0.93 -> 0.94
 batch_size = 2000 # 5000
 ###############
 
 # constant 
 maxepoch = 300
 n_in =  1 # number of features
-n_out = 2 # number of class # 20191104: 3 class로 시도
+n_out = 3 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
 
 project_list = []
@@ -419,7 +419,7 @@ for q in project_list:
         sampleNum[msclass] = len(datasetX[msclass]); print('pain_sampleNum', sampleNum[msclass])
         
         # nonpain      
-        for activityThr in np.arange(1.4,3,0.005):
+        for activityThr in np.arange(1.41, 3, 0.005):
             msclass = 0 # nonpain
             X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
             for SE in range(N):
@@ -458,12 +458,49 @@ for q in project_list:
             
             
             sampleNum[msclass] = len(datasetX[msclass])
-            
             print(activityThr, 'nonpain_sampleNum', sampleNum[msclass], '수동 최적화.. 확인 !')
-            
             if sampleNum[msclass] < sampleNum[1]:
                 break
-    
+            
+        # nonpain 2
+        for lowThr in np.arange(0.8, 0, -0.001):
+            msclass = 2 # nonpain
+            X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
+            for SE in range(N):
+                if SE in trainingset:
+                    for se in range(5):      
+                        # pain Group에 들어갈 수 있는 모든 경우의 수 
+                        c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup and se in [0,2,4]
+                        c2 = SE in capsaicinGroup and se in [0,2]
+                        c3 = SE in pslGroup and se in [0]
+                        c4 = SE in shamGroup and se in [0,1,2]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
+                        
+                        if c1 or c2 or c3 or c4 or c5:
+                            mssignal = np.mean(signalss[SE][se], axis=1)
+                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                            
+                            for u in msbins:
+                                mannual_signal = mssignal[u:u+full_sequence]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal)
+                                
+                                X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
+                        
+            datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
+            
+            msix1 = (np.array(T_tmp) < lowThr) # 임의 
+                  
+            datasetX[msclass] = np.array(datasetX[msclass])[msix1]
+            datasetY[msclass] = np.array(datasetY[msclass])[msix1] 
+            datasetZ[msclass] = np.array(datasetZ[msclass])[msix1]
+            
+            sampleNum[msclass] = len(datasetX[msclass])
+            print(lowThr, 'nonpain_sampleNum', sampleNum[msclass], '수동 최적화.. 확인 !')
+            if sampleNum[msclass] < sampleNum[1]:
+                break
+             
         return datasetX, datasetY, datasetZ
     
     def ms_sampling_continue():
@@ -606,7 +643,7 @@ for q in project_list:
             identical_ix = np.where(np.sum(indexer==cbn, axis=1)==2)[0]
             if identical_ix.shape[0] != 0:
                 random.seed(None)  # control의 경우 seed 없음
-                dice = random.choice([[1,0],[0,1]])
+                dice = random.choice([[1,0,0], [0,1,0], [0,0,1]])
                 Y_control[identical_ix] = dice
                 
     # cross validation을 위해, training / test set split            
@@ -892,29 +929,31 @@ for q in project_list:
                                     msclass = 1
                                 elif test_mouseNum in pslGroup and se in [1,2]:
                                     msclass = 1
-                                
-                                binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
-                                binNum = len(binning)
-                                
-                                if signalss[test_mouseNum][se].shape[0] == full_sequence:
-                                    binNum = 1
-                                    binning = [0]
                                     
-                                for i in range(binNum):         
-                                    signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                    signal_full_roi = np.mean(signalss_PSL_test, axis=1)
+                                if msclass == 1:
+                                    binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                                    binNum = len(binning)
                                     
-                                    mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
-                                    Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
-                                                   Mannual=True, mannual_signal=mannual_signal)
-                                    
-                                    X_tmp += Xtest; Y_tmp += Ytest
-                                    
-                        Xtest = array_recover(X_tmp); 
-                        Y_tmp = np.array(Y_tmp); Ytest = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
-                                    
-                        valid = tuple([Xtest, Ytest])
-                        Y_valid = np.array(Ytest)
+                                    if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                                        binNum = 1
+                                        binning = [0]
+                                        
+                                    for i in range(binNum):         
+                                        signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                        signal_full_roi = np.mean(signalss_PSL_test, axis=1)
+                                        
+                                        mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
+                                        Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
+                                                       Mannual=True, mannual_signal=mannual_signal)
+                                        
+                                        X_tmp += Xtest; Y_tmp += Ytest
+                                        
+                        Y_valid = np.array(Y_tmp)                
+                        if Y_valid.shape[0] != 0:      
+                            Xtest = array_recover(X_tmp); 
+                            Y_tmp = np.array(Y_tmp); Y_tmp = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
+                                        
+                            valid = tuple([Xtest, Y_tmp])
                                     
                     print('학습시작시간을 기록합니다.', df2)        
                     print('mouse #', [mouselist[sett]])
