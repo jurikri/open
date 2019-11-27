@@ -317,7 +317,7 @@ classratio = 1 # class under sampling ratio
 project_list = []
  # proejct name, seed
 project_list.append(['1126_binfix2_saline', 3, None])
-project_list.append(['1126_binfix2_saline2', 4, None])
+#project_list.append(['1126_binfix2_saline2', 4, None])
 #project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 #project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
 #project_list.append(['1015_binfix_2', 2])
@@ -693,6 +693,7 @@ for q in project_list:
         if SE in c2:
             for u in np.array(msset)[np.where(np.array(msset)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
+                etc.append(u)
             
     mouselist = list(trainingset)
     mouselist.sort()
