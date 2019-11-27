@@ -292,7 +292,7 @@ dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = False
+testsw2 = True
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -1133,7 +1133,8 @@ for q in project_list:
                             print(picklesavename, '저장되었습니다.')
 
 
- 
+# In[]
+
 
 
 
