@@ -257,7 +257,7 @@ print('full_sequence', full_sequence, 'frames')
 
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
 
-msunit = 8 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+msunit = 6 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
 sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
@@ -884,15 +884,15 @@ for q in project_list:
                             if test_mouseNum in capsaicinGroup + pslGroup + shamGroup:
                                 sessionNum = 3
                             
-                            # class
-                            msclass = 0
-                            formalin = highGroup + midleGroup + ketoGroup + yohimbineGroup
-                            if test_mouseNum in formalin + capsaicinGroup and se in [1]:
-                                msclass = 1
-                            elif test_mouseNum in pslGroup and se in [1,2]:
-                                msclass = 1
-
                             for se in range(sessionNum):
+                                # class
+                                msclass = 0
+                                formalin = highGroup + midleGroup + ketoGroup + yohimbineGroup
+                                if test_mouseNum in formalin + capsaicinGroup and se in [1]:
+                                    msclass = 1
+                                elif test_mouseNum in pslGroup and se in [1,2]:
+                                    msclass = 1
+                                
                                 binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
                                 binNum = len(binning)
                                 
@@ -985,22 +985,22 @@ for q in project_list:
   
                         if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
                             #1
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
+                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                             hist_save_val_loss += list(np.array(hist.history['val_loss']))
                             hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
                             
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                            
-                            #2
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                            hist_save_val_loss += list(np.array(hist.history['val_loss']))
-                            hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
-                            
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
+#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+#                            
+#                            #2
+#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
+#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+#                            hist_save_val_loss += list(np.array(hist.history['val_loss']))
+#                            hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
+#                            
+#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
+#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                             
                         elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs) #, validation_data = valid)
