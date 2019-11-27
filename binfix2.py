@@ -910,8 +910,8 @@ for q in project_list:
                                     
                                     X_tmp += Xtest; Y_tmp += Ytest
                                     
-                        Xtest = array_recover(X_tmp)
-                        Ytest = np.array(Y_tmp); Ytest = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
+                        Xtest = array_recover(X_tmp); 
+                        Y_tmp = np.array(Y_tmp); Ytest = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
                                     
                         valid = tuple([Xtest, Ytest])
                         Y_valid = np.array(Ytest)
