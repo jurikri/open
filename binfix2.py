@@ -292,7 +292,7 @@ dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = True
+testsw2 = False
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -300,9 +300,9 @@ testsw2 = True
 #    import tensorflow as tf
 
 # 집 컴퓨터, test 전용으로 수정
-if savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
-    trainingsw = False
-    testsw2 = True
+#if savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
+#    trainingsw = False
+#    testsw2 = True
 
 acc_thr = 0.94 # 0.93 -> 0.94
 batch_size = 2000 # 5000
@@ -316,7 +316,7 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1126_binfix2_saline', 3, None])
+project_list.append(['1127_binfix2_valid', 3, None])
 #project_list.append(['1126_binfix2_saline2', 4, None])
 #project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 #project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
@@ -624,14 +624,7 @@ for q in project_list:
         idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
 
         #init = initializers.glorot_normal(seed=None)
-        
-        try:
-            keras.backend.clear_session()
-            print('올라와있는 model이 있었기 때문에, 초기화 하였습니다.')
-        except:
-            pass 
-            # print('reset할 기존 model 없음')
-        
+
         init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
         
         input1 = []; [input1.append([]) for i in range(msunit)] # 최초 input layer
@@ -862,14 +855,66 @@ for q in project_list:
                     
                     for unit in range(msunit): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
                         X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
-                        X_valid[unit] = np.array(X[unit])[delist]
+#                        X_valid[unit] = np.array(X[unit])[delist]
                 
                     Y_training_list = np.delete(np.array(Y), delist, 0)
                     Y_training_control_list = np.delete(np.array(Y_control), delist, 0)
-                    Y_valid = np.array(Y)[delist]
+#                    Y_valid = np.array(Y)[delist]
                     
-                    valid = tuple([X_valid, Y_valid])
+#                    valid = tuple([X_valid, Y_valid])
                     
+                    # validation
+                    if validation_sw:
+                        X_tmp = []; Y_tmp = []
+                        
+                        testlist = []
+                        testlist = [mouselist[sett]]
+                        
+                        if mouselist[sett] in np.array(msset)[:,0]:
+                            for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+                                testlist.append(u)
+             
+                        if not(len(etc) == 0):
+                            if etc[0] == mouselist[sett]:
+                                print('test ssesion, etc group 입니다.') 
+                                testlist = list(etc)
+                        
+                        for test_mouseNum in testlist:
+                            sessionNum = 5
+                            if test_mouseNum in capsaicinGroup + pslGroup + shamGroup:
+                                sessionNum = 3
+                            
+                            # class
+                            msclass = 0
+                            formalin = highGroup + midleGroup + ketoGroup + yohimbineGroup
+                            if test_mouseNum in formalin + capsaicinGroup and se in [1]:
+                                msclass = 1
+                            elif test_mouseNum in pslGroup and se in [1,2]:
+                                msclass = 1
+
+                            for se in range(sessionNum):
+                                binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                                binNum = len(binning)
+                                
+                                if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                                    binNum = 1
+                                    binning = [0]
+                                    
+                                for i in range(binNum):         
+                                    signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                    signal_full_roi = np.mean(signalss_PSL_test, axis=1)
+                                    
+                                    mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
+                                    Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
+                                                   Mannual=True, mannual_signal=mannual_signal)
+                                    
+                                    X_tmp += Xtest; Y_tmp += Ytest
+                                    Xtest = array_recover(Xtest)
+                                    Ytest = np.array(Ytest); Y = np.reshape(Ytest, (Ytest.shape[0], n_out))
+                                    
+                        valid = tuple([Xtest, Ytest])
+                        Y_valid = np.array(Ytest)
+                                    
                     print('학습시작시간을 기록합니다.', df2)        
                     print('mouse #', [mouselist[sett]])
                     print('sample distributions.. ', np.round(np.mean(Y_training_list, axis = 0), 4))
