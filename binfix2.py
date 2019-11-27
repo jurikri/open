@@ -317,6 +317,7 @@ classratio = 1 # class under sampling ratio
 project_list = []
  # proejct name, seed
 project_list.append(['1126_binfix2_saline', 3, None])
+project_list.append(['1126_binfix2_saline2', 4, None])
 #project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 #project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
 #project_list.append(['1015_binfix_2', 2])
@@ -700,7 +701,7 @@ for q in project_list:
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    wanted = [etc[0]] + shamGroup + pslGroup
+    wanted = mouselist
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -973,12 +974,15 @@ for q in project_list:
                     # 학습 model 최종 저장
                     #5: 마지막으로 validation 찍음
                     if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5) #, validation_data = valid)
+                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                        
                         hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
                         hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                         hist_save_val_loss += list(np.array(hist.history['val_loss']))
                         hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
                     elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
-                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1) #, validation_data = valid)
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5+1) #, validation_data = valid)
                         hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                     
                     model.save_weights(final_weightsave)   
