@@ -272,11 +272,11 @@ print('sequenceSize', sequenceSize)
 # hyperparameters #############
  
 # learning intensity
-epochs = 10 # epoch 종료를 결정할 최소 단위.
+epochs = 30 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 
-n_hidden = int(8 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 1) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 2) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 2) # fully conneted laye node 갯수 # 8
 
 #duplicatedNum = 1
 #mspainThr = 0.27
@@ -305,11 +305,11 @@ if savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore
     testsw2 = True
 
 acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 2000 # 5000
+batch_size = 3000 # 5000
 ###############
 
 # constant 
-maxepoch = 300
+maxepoch = 600
 n_in =  1 # number of features
 n_out = 3 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
