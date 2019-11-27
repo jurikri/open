@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Mon Nov 18 13:22:18 2019
+
+@author: msbak
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Thu Oct 31 12:27:10 2019
 
 @author: msbak
@@ -11,9 +18,10 @@ Created on Sat Apr 20 20:58:38 2019
 
 @author: msbak
 """
+import os  # 경로 관리
 # library import
 import pickle # python 변수를 외부저장장치에 저장, 불러올 수 있게 해줌
-import os  # 경로 관리
+
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime # 시관 관리 
@@ -37,9 +45,12 @@ try:
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
     try:
-        savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
+        savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
     except:
-        savepath = ''; # os.chdir(savepath);
+        try:
+            savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
+        except:
+            savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 
 # check the save pathway
@@ -60,8 +71,8 @@ with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
     
 
-with open('pointSave.pickle', 'rb') as f:  # Python 3: open(..., 'wb')
-    pointSave = pickle.load(f)
+#with open('pointSave.pickle', 'rb') as f:  # Python 3: open(..., 'wb')
+#    pointSave = pickle.load(f)
     
 FPS = msdata_load['FPS']
 N = msdata_load['N']
@@ -89,30 +100,25 @@ keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
 
-bins = 10 # 최소 time frame 간격
-# preprocessing setup
+bins = 10 # 최소 time frame 간격     
 
-# preprecessing 사용자정의함수 선언
-def preprocessing(endpoint=False , mannualsw=False):
-    # mannual setting
-    SE = 0; se = 1
-    signalss_semi = []
-    for SE in range(N):
-        signalss_semi.append([])
+totaldataset = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + \
+salineGroup + pslGroup + shamGroup
+        
+shortlist = []; longlist = []
+for SE in range(N):
+    if SE in totaldataset:
         for se in range(5):
-            signal = np.array(signalss[SE][se])
-            s = 0
-            
-            if not(endpoint):
-                e = signal.shape[0] 
-            elif endpoint:
-                e = endpoint # 497 # 첫 497만  쓴다.
-             
-            mstmp = signal[s:e,:]
-            signalss_semi[SE].append(mstmp)
-            
-    return signalss_semi
+            length = np.array(signalss[SE][se]).shape[0]
+            if length > 180*FPS:
+                longlist.append([SE,se])
+            elif length < 180*FPS:
+                shortlist.append([SE,se])
+            else:
+                print('error')                   
 
+msset = [[70,72],[71,84],[75,85],[76,86]]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
 def array_recover(X_like):
     X_like_toarray = []; X_like = np.array(X_like)
     for input_dim in range(msunit):
@@ -128,8 +134,8 @@ def array_recover(X_like):
     return X_like_toarray
 
 # data 생성
-SE = 0; se = 1; label = 1; roiNum=None; GAN=False; Mannual=False; mannual_signal=None
-def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=False, mannual_signal=None):    
+SE = 70; se = 1; label = 1; roiNum=None; GAN=False; Mannual=False; mannual_signal=None; passframesave=np.array([])
+def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=False, mannual_signal=None, passframesave=np.array([])):    
     X = []; Y = []; Z = []
 
     if label == 0:
@@ -148,7 +154,7 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
         signal_full = mannual_signal
         
     elif not(Mannual):
-        signal_full = np.array(signalss_497[SE][se])
+        signal_full = np.array(signalss_cut[SE][se])
         
     signal_full_roi = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
     
@@ -161,17 +167,26 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
     
     binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
 
+    if passframesave.shape[0] != 0:
+        binlist = passframesave
+
+    t4_save = []
     for frame in binlist:   
         X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
-            
+
         for unit in range(msunit):
             if frame <= full_sequence - sequenceSize[unit]:
                 X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
                 lastsave[unit] = frame
                 
+                if unit == 0:
+                    t4_save.append(np.mean(signal_full_roi[frame : frame + sequenceSize[unit]]))
+                
             else:
                 X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
 #                print(frame, unit, lastsave[unit])
+                if unit == 0:
+                    t4_save.append(np.mean(signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))
                 
         if False: # 시각화로 체크 위치만
             msimg = np.zeros((msunit*10, full_sequence))
@@ -226,93 +241,85 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
         Y.append(label)
         Z.append([SE,se])
 
-    return X, Y, Z
+    return X, Y, Z, t4_save
 
 # 최소길이 찾기
-msvalue = []
+mslength = np.zeros((N,5)); mslength[:] = np.nan
 for SE in range(N):
-    for se in range(5):
-        signal = np.array(signalss[SE][se])
-        msvalue.append(signal.shape[0])
+    if SE in totaldataset:
+        for se in range(5):
+#            if [SE, se] in longlist:
+            signal = np.array(signalss[SE][se])
+            mslength[SE,se] = signal.shape[0]
 
-full_sequence = np.min(msvalue)
+full_sequence = int(np.nanmin(mslength))
 print('full_sequence', full_sequence, 'frames')
 
-signalss_497 = preprocessing(endpoint=int(full_sequence))
+#signalss_cut = preprocessing(endpoint=int(full_sequence))
 
-msunit = 6 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+msunit = 8 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
 sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
-    sequenceSize[i] = int(full_sequence/6*(i+1))
+    sequenceSize[i] = int(full_sequence/msunit*(i+1))
 sequenceSize = sequenceSize.astype(np.int)
 
 print('full_sequence', full_sequence)
 print('sequenceSize', sequenceSize)
-        
-# test version 2 저장용 최소길이 사전 계산
-lensave = np.zeros((N,5))
-for SE in range(N):
-    for se in range(5):
-        mslen = np.array(signalss[SE][se]).shape[0]
-        binlist = list(range(0, mslen-497, bins))
-  
-        lensave[SE,se] = len(binlist)
 
-print('in data set, time duration', set(lensave.flatten()))
-print('다음과 같이 나누어서 처리합니다')
-msshort = 2-1+42; mslong = 55-1+42
-print('msshort', msshort, ', mslong', mslong)
-
-# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# ############# #############
-
-# training set에 사용될 group 설정
-# painGroup, nonpainGroup 변수를 이용해서 설정해야 뒤에 data generation과 연동된다.
-# etc는 trainig set으로는 사용되지 않고, 단지 etc test를 위해 모든 trainig set으로 돌리기 위해 예외적으로 추가한다.
-
-#painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup'] \
-#+ msGroup['capsaicinGroup'] + msGroup['pslGroup']
-#nonpainGroup = msGroup['salineGroup']
-#etc = msGroup['lidocaineGroup'][0]
   
 ###############
 # hyperparameters #############
-
+ 
 # learning intensity
-epochs = 50 # epoch 종료를 결정할 최소 단위.
-lr = 2e-3 # learning rate
+epochs = 10 # epoch 종료를 결정할 최소 단위.
+lr = 1e-3 # learning rate
 
-n_hidden = int(12 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(12 * 1) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 1) # fully conneted laye node 갯수 # 8
 
-duplicatedNum = 1
-mspainThr = 0.27
+#duplicatedNum = 1
+#mspainThr = 0.27
+#acitivityThr = 0.4
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.2 # regularization 상수
-dropout_rate1 = 0.10 # dropout late
+l2_rate = 0.25 # regularization 상수
+dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
 
-testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
+#testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 testsw2 = False
+#if testsw2:
+##    import os
+#    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+#    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+#    import tensorflow as tf
 
-acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 300 # 5000
+# 집 컴퓨터, test 전용으로 수정
+#if savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
+#    trainingsw = False
+#    testsw2 = True
+
+acc_thr = 0.94 # 0.93 -> 0.94
+batch_size = 2000 # 5000
 ###############
 
 # constant 
-maxepoch = 500
+maxepoch = 300
 n_in =  1 # number of features
 n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1117_2class', 2])
+project_list.append(['1127_binfix2_valid', 3, None])
+#project_list.append(['1126_binfix2_saline2', 4, None])
+#project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
+#project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
 #project_list.append(['1015_binfix_2', 2])
 #project_list.append(['1029_adding_essential_1', 1])
 #project_list.append(['0903_seeding_4', 4])
@@ -320,8 +327,10 @@ project_list.append(['1117_2class', 2])
 
 q = project_list[0]
 for q in project_list:
-    settingID = q[0]; seed = q[1]
-    print('settingID', settingID, 'seed', seed)
+    settingID = q[0]; seed = q[1]; seed2 = int(seed+1)
+    continueSW = q[2]
+    
+    print('settingID', settingID, 'seed', seed, 'continueSW', continueSW)
 
     # set the pathway2
     RESULT_SAVE_PATH = './result/'
@@ -350,73 +359,34 @@ for q in project_list:
     if not os.path.exists(RESULT_SAVE_PATH + 'tmp/'):
         os.mkdir(RESULT_SAVE_PATH + 'tmp/')
 
-
-    # preprocessing 시작
-    # 각 class의 data 입력준비
-    X_save = []; Y_save = []; Z_save = []
-#    X_save2 = []; Y_save2 = []; Z_save2 = [];
-    for classnum in range(n_out):
-        X_save.append([]); Y_save.append([]); Z_save.append([])
-        
-#        X_save2.append([])
-#        Y_save2.append([])
-#        Z_save2.append([])
-
-
     # 각 class의 data 입력조건설정
-    formalin_painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
-    nonpainGroup = salineGroup + lidocaineGroup
-    all_painGroup = formalin_painGroup + capsaicinGroup + pslGroup
+#    formalin_painGroup = highGroup + midleGroup + ketoGroup + yohimbineGroup
+#    nonpainGroup = salineGroup + lidocaineGroup
+#    all_painGroup = formalin_painGroup + capsaicinGroup + pslGroup
+    
+     # 학습 순서 무작위 배치, seed none으로 설정함.
+     
+    # 여기서 totaldataset의 정의: 전체 data set범위
+    
+    testset = []
+    trainingset = list(totaldataset)
+    for u in testset:
+        try:
+            trainingset.remove(u)
+        except:
+            pass
+    
+#    fortmp = np.array(trainingset)
+#    for u in fortmp:
+#        if not u in np.array(longlist)[:,0]:
+##            print(u)
+#            trainingset.remove(u)
+##            print(trainingset)
 
-#    for SE in range(N):
-#        for se in range(5):     
-#            # nonpain
-#            c1 = SE in formalin_painGroup and se in [0,2,4] # baseline, interphase, recorver
-#            c2 = SE in capsaicinGroup and se in [0,2]
-#            c3 = SE in pslGroup and se in [0]            
-#            if SE in nonpainGroup or c1 or c2 or c3:
-#                msclass = 0 # nonpain
-##                
-##                for ROI in range(signalss[SE][se].shape[1]):
-#                X, Y, Z = dataGeneration(SE, se, label = msclass) 
-#                X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
-#
-#            if (SE in all_painGroup and se == 1) or (SE in pslGroup and se == 2): # 1, 26은 특별히 제외함. 
-#                msclass = 1 # pain
-#                
-##                for ROI in range(signalss[SE][se].shape[1]):
-#                X, Y, Z = dataGeneration(SE, se, label = msclass)
-#                X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
-    #            
-    #        if (SE == 60 and se == 0) or (SE == 61 and se == 2): # capsacine 특이 케이스 
-    #            msclass = 0 # nonpain
-    #            X, Y, Z = dataGeneration(SE, se, label = msclass)
-    #            X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
-                
-    # class 별로 sample수 맞추기, 최소 갯수 기준으로 넘치는 class는 random sampling 한다. 
-    
-    # GAN data import
-    
-    if False:
-        GAN_loadpath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\GAN\\GAN_data\\'
-        classlabel = ['notpain', 'pain']
-        
-        GAN_data = []
-        f = open(GAN_loadpath + classlabel[msclass] + '.csv', 'r', encoding='utf-8')
-        rdr = csv.reader(f)
-        for line in rdr:
-            GAN_data .append(line)
-        f.close()
-        GAN_data  = np.array(GAN_data )
-    
-        for msclass in range(n_out):
-            for dataNum in range(GAN_data.shape[0]):
-                X, Y, Z = dataGeneration(SE, se, label=msclass, GAN=True)
-                X_save[msclass] += X; Y_save[msclass] += Y; Z_save[msclass] += Z
-    
-    # In[] down sampling
-
+    # initiate
     def ms_sampling():
+        sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
+        
         datasetX = []; datasetY = []; datasetZ = []
 #    X_save2 = []; Y_save2 = []; Z_save2 = [];
         for classnum in range(n_out):
@@ -424,225 +394,198 @@ for q in project_list:
         
         # lable로 최소 아픔 thr 를 결정해보자 
         msclass = 1 # pain
-        ixsave = []
-        valsave = []
-        
-        for SE in range(N):
-            for se in range(5):      
-                # pain Group에 들어갈 수 있는 모든 경우의 수 
-                if (SE in formalin_painGroup and se in [1,3]) or (SE in pslGroup and se in [1,2]) \
-                or (SE in capsaicinGroup and se in [1]): 
-                    
-                    tmp = pointSave[SE][se]
-                    for BIN in range(len(tmp)):
-                        valsave.append(tmp[BIN])
-                        ixsave.append([SE,se,BIN])
-        
-        axiss = []; [axiss.append([]) for u in range(4)]
-        for painThr in np.arange(0, 1.01, 0.05):
-            painIx = np.array(valsave) > painThr
-            
-            originalCnt = 0; seletedCnt = 0 # 전체 중에 몇 프로 인지
-            originalCnt2 = 0; seletedCnt2 = 0 # 쥐가 다 들어가긴 했는지 - 1로 맞추길 권장함
-            seletedCnt3 = [] # 한 쥐가 얼마나 중복되서 들어가는지
-            
-            for SE2 in pslGroup:
-                originalCnt += np.sum(np.array(ixsave)[:,0] == SE2)
-                seletedCnt += np.sum(np.array(ixsave)[painIx][:,0] == SE2)
-                originalCnt2 += np.sum(np.array(ixsave)[:,0] == SE2) > 0
-                seletedCnt2 += np.sum(np.array(ixsave)[painIx][:,0] == SE2) > 0
-                seletedCnt3.append(np.sum(np.array(ixsave)[painIx][:,0] == SE2))
-            
-            axiss[0].append(painThr)
-            axiss[1].append(seletedCnt/originalCnt)
-            axiss[2].append(seletedCnt2/originalCnt2)
-            axiss[3].append(np.mean(seletedCnt3))
-            
-#            print(painThr, seletedCnt2/originalCnt2)
-            
-        if False:
-            plt.figure()
-            plt.plot(axiss[0], axiss[1])
-            plt.plot(axiss[0], axiss[2])
-            plt.figure()
-            plt.plot(axiss[0], axiss[3])
-        
-        painThr = mspainThr # 어림 짐작
-        painIx = np.array(valsave) > painThr
-        painIx2 = np.array(painIx)
-        
-        # painThr를 위한 시각화 체크
-        if False:
-            axiss = []; [axiss.append([]) for u in range(3)]
-            for painThr in np.arange(0,1,0.05):
-                mspain = 0
-                msnonpain = 0
-                for SE in pslGroup:
-                    for se in range(3):
-                        pain_assume = np.sum(pointSave[SE][se] > painThr)
-                        if se == 0:
-                            mspain += pain_assume
-                        elif se in [1,2]:
-                            msnonpain += pain_assume
-                            plt.figure()
-                            plt.title(str(SE) + '_' + str(se))
-                            plt.plot(np.array(pointSave[SE][se]))
-                            
-                axiss[0].append(painThr)
-                axiss[1].append(mspain)
-                axiss[2].append(msnonpain)
-            
-            plt.figure()
-            plt.plot(axiss[0], axiss[1])
-            plt.plot(axiss[0], axiss[2])
-                        
-        
-#        duplicatedNum = duplicatedNum # round(len(formalin_painGroup)/len(pslGroup))
-        print('duplicatedNum', duplicatedNum)
-        
-        for SE2 in range(N):
-            for se in range(5):
-                selfix = ((np.array(ixsave)[:,0] == SE2) * (np.array(ixsave)[:,1] == se))
-                selfout = selfix == False
-                
-                if np.mean(selfix) == 0.0:
-                    continue
-                
-                for k in  np.argsort(np.array(valsave) * (selfix * painIx))[::-1][:duplicatedNum]:
-                    selfout[k] = True
-                
-                painIx2 = painIx2 * selfout
-    
         X_tmp = []; Y_tmp = []; Z_tmp = []
-        painindex_class1 = np.array(ixsave)[painIx2]
-        print('painindex_class1')
-        print(painindex_class1)
-        for i in painindex_class1:
-            SE = i[0]; se = i[1]; BINS = i[2]
-            
-            startat = int(BINS*bins)
-            mannual_signal = signalss[SE][se][startat:startat+497,:]
-            X, Y, Z = dataGeneration(SE, se, label = msclass, Mannual=True, mannual_signal=mannual_signal)
-            X_tmp += X; Y_tmp += Y; Z_tmp += Z
-            
-        datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
-        
-        # 그룹별 사용 현황 print
-        fe = 0
-        fl = 0
-        p3 = 0
-        p10 = 0
-        c = 0
-#        t = len(painindex_class1)
-        for j in painindex_class1:
-            SE = j[0]; se = j[1]
-        
-            if (SE in formalin_painGroup and se in [1]):
-                fe += 1
-            elif (SE in formalin_painGroup and se in [3]):
-                fl += 1
-            elif (SE in pslGroup and se in [1]):
-                p3 += 1
-            elif (SE in pslGroup and se in [2]):
-                p10 += 1
-            elif (SE in capsaicinGroup and se in [1]):
-                c += 1
-                
-        print('fe', fe, '/', len(formalin_painGroup))
-        print('fl', fl, '/', len(formalin_painGroup))
-        print('p3', p3, '/', len(pslGroup))
-        print('p10', p10, '/', len(pslGroup))
-        print('c', c, '/', len(capsaicinGroup))
-                
-#                
-#            (SE in pslGroup and se in [1,2]) \
-#             (SE in capsaicinGroup and se in [1]): 
-#            
-#            for foramlinGroup
-#            painindex_class1
-        
-        
-#        datasetX[msclass] = np.concatenate((np.array(X_tmp),np.array(X_tmp)), axis=0)
-#        datasetY[msclass] = np.concatenate((np.array(Y_tmp),np.array(Y_tmp)), axis=0)
-#        datasetZ[msclass] = np.concatenate((np.array(Z_tmp),np.array(Z_tmp)), axis=0)
-        
-        sampleNum = round(len(datasetX[msclass]) * classratio); print('sampleNum', sampleNum)
-        
-        # nonpain        
-        msclass = 0
-        ixsave = []
-        valsave = []
-        
         for SE in range(N):
-            for se in range(5):
-                c1 = SE in formalin_painGroup and se in [0,2,4] # baseline, interphase, recorver
-                c2 = SE in capsaicinGroup and se in [0,2]
-                c3 = SE in pslGroup and se in [0]
-                c4 = SE in shamGroup and se in [0,1,2]
-                
-                if SE in nonpainGroup or c1 or c2 or c3 or c4:# 1, 26은 특별히 제외함. 
-                    tmp = pointSave[SE][se]
-                    for BIN in range(len(tmp)):
-                        valsave.append(tmp[BIN])
-                        ixsave.append([SE,se,BIN])
-                        
-        for painThr in np.arange(0, 1.01, 0.0005):
-#            print('painThr', painThr)
-            painIx = np.array(valsave) > painThr
-            painIx2 = np.array(painIx)
-            
-            for SE2 in range(N):
-                for se in range(5):
-                    selfix = ((np.array(ixsave)[:,0] == SE2) * (np.array(ixsave)[:,1] == se))
-                    selfout = selfix == False
-                    
-                    if np.mean(selfix) == 0.0:
-                        continue
-                    
-                    for k in  np.argsort(np.array(valsave) * (selfix * painIx))[::-1][:duplicatedNum]:
-                        selfout[k] = True
-                    
-                    painIx2 = painIx2 * selfout
-            
-            nonpain_sampleNum = np.sum(painIx2)
-#            print(painThr, nonpain_sampleNum)
-#            print(painThr, 'nonpain_sampleNum * 42', nonpain_sampleNum * 42)
+            if SE in trainingset:
+                for se in range(5):      
+                    # pain Group에 들어갈 수 있는 모든 경우의 수 
+                    c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup
+                    c2 = se in [1]
 
-            if nonpain_sampleNum * 42 < sampleNum:
-                print('nonpain thr at', painThr, '#', nonpain_sampleNum * 42)
+                    if c1 and c2: # 
+                        mssignal = np.mean(signalss[SE][se], axis=1)
+                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                        
+                        for u in msbins:
+                            mannual_signal = mssignal[u:u+full_sequence]
+                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                            X, Y, Z, _ = dataGeneration(SE, se, label=msclass, \
+                                           Mannual=True, mannual_signal=mannual_signal)
+                            X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
+                    
+        datasetX[msclass] = np.array(X_tmp)
+        datasetY[msclass] = np.array(Y_tmp)
+        datasetZ[msclass] = np.array(Z_tmp)
+        sampleNum[msclass] = len(datasetX[msclass]); print('pain_sampleNum', sampleNum[msclass])
+        
+        # nonpain      
+        for activityThr in np.arange(1.4,3,0.005):
+            msclass = 0 # nonpain
+            X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
+            for SE in range(N):
+                if SE in trainingset:
+                    for se in range(5):      
+                        # pain Group에 들어갈 수 있는 모든 경우의 수 
+                        c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup and se in [0,2,4]
+                        c2 = SE in capsaicinGroup and se in [0,2]
+                        c3 = SE in pslGroup and se in [0]
+                        c4 = SE in shamGroup and se in [0,1,2]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
+                        
+                        if c1 or c2 or c3 or c4 or c5:
+                            mssignal = np.mean(signalss[SE][se], axis=1)
+                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                            
+                            for u in msbins:
+                                mannual_signal = mssignal[u:u+full_sequence]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal)
+                                
+                                X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
+                        
+            datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
+            
+            msix1 = (np.array(T_tmp) > activityThr) # 임의 
+                  
+            datasetX[msclass] = np.array(datasetX[msclass])[msix1]
+            datasetY[msclass] = np.array(datasetY[msclass])[msix1] 
+            datasetZ[msclass] = np.array(datasetZ[msclass])[msix1]
+#            print('after filtering, total pain samples #', len(datasetX[msclass]))
+#            sampleNum[1] = round(len(datasetX[1]))
+#            lowactivityNum[1] = len(datasetX[1])
+            
+            
+            
+            sampleNum[msclass] = len(datasetX[msclass])
+            
+            print(activityThr, 'nonpain_sampleNum', sampleNum[msclass], '수동 최적화.. 확인 !')
+            
+            if sampleNum[msclass] < sampleNum[1]:
                 break
-            
-        X_tmp = []; Y_tmp = []; Z_tmp = []
-        painindex_class0 = np.array(ixsave)[painIx2]
-        print('painindex_class0')
-        print(painindex_class0)
-        for i in painindex_class0:
-            SE = i[0]; se = i[1]; BINS = i[2]
-            
-            startat = int(BINS*bins)
-            mannual_signal = signalss[SE][se][startat:startat+497,:]
-            X, Y, Z = dataGeneration(SE, se, label = msclass, Mannual=True, mannual_signal=mannual_signal)
-            X_tmp += X; Y_tmp += Y; Z_tmp += Z
-            
-        datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
-#        painIx2_class0 = np.array(painIx2)
-        
-        # pain duplicate
-        
-        
+    
         return datasetX, datasetY, datasetZ
     
+    def ms_sampling_continue():
+        sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
+        
+        datasetX = []; datasetY = []; datasetZ = []
+        for classnum in range(n_out):
+            datasetX.append([]); datasetY.append([]); datasetZ.append([])
+            
+        # activity가 낮은 pain sample 제거
+        # continue의 경우 복잡해 지니깐, 최종 숫자로만 생각하자.
+            
+#        thr = 0.2 # 옥석 thr
+#        mstmp = -np.inf
+        for thr in np.arange(0,1,0.0025):
+            msclass = 1 # for pain
+            X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
+            for SE in trainingset:
+                if SE in trainingset:
+                    loadpath5 = savepath + 'result\\' + continueSW + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
+                    with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                        PSL_result_save = pickle.load(f)
+                    
+                    for se in range(len(PSL_result_save[SE])):
+                        c1 = SE in pslGroup and se in [1,2] # pain 조건
+                        c2 = [SE, se] in longlist
+                        if c1 and c2:
+                            for BIN in range(len(PSL_result_save[SE][se])):
+                                tmp = np.array(PSL_result_save[SE][se][BIN])[:,:,1]
+                                
+                                roiix = np.array(range(tmp.shape[0]))[np.mean(tmp,axis=1) > thr]
+                                timix = np.array(range(tmp.shape[1]))[np.mean(tmp,axis=0) > thr]
+                                 
+                                mannual_signal = np.array(signalss[SE][se])[0+(BIN*10):full_sequence+(BIN*10)]
+                                mannual_signal = np.mean(mannual_signal[:,[roiix]], axis = 2)
+                                
+                                if not(len(timix) == 0):
+                                    X, Y, Z, t4_save = \
+                                    dataGeneration(SE, se, label=msclass, Mannual=True, \
+                                                   mannual_signal=mannual_signal, passframesave=timix*bins)
+                                    X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save
+     
+            datasetX[msclass] = np.array(X_tmp)
+            datasetY[msclass] = np.array(Y_tmp)
+            datasetZ[msclass] = np.array(Z_tmp)
+            sampleNum[msclass] = len(datasetX[msclass]); 
+        
+            print(sampleNum[msclass], thr)
+        
+            if thr == 0:
+                print('pain_sampleNum', sampleNum[msclass], 'thr', thr)
+#                mstmp = sampleNum[msclass]
+                
+            if sampleNum[msclass] < lowactivityNum[1]*0.9:
+                break
+                
+        print('pain_sampleNum', sampleNum[msclass], 'thr', thr)
+                    
+        print('nonpain thr를 계산합니다.')
+        for nonpainthr in np.arange(0,1,0.0025):
+            msclass = 0 # nonpain
+            X_tmp = []; Y_tmp = []; Z_tmp = []
+            for SE in trainingset:
+                if SE in trainingset:
+                    loadpath5 = savepath + 'result\\' + continueSW + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
+                    with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                        PSL_result_save = pickle.load(f)
+                    for se in range(len(PSL_result_save[SE])):      
+                        # pain Group에 들어갈 수 있는 모든 경우의 수 
+                        c1 = SE in pslGroup and se in [0]
+                        c2 = [SE, se] in longlist
+                        c3 = SE in shamGroup and se in [0,1,2]
+                        c4 = SE in highGroup and se in [0]
+                        
+                        if (c1 or c3 or c4) and c2:
+                            for BIN in range(len(PSL_result_save[SE][se])):
+                                tmp = np.array(PSL_result_save[SE][se][BIN])[:,:,1]
+                            
+                                roiix = np.array(range(tmp.shape[0]))[np.mean(tmp,axis=1) > nonpainthr]
+                                timix = np.array(range(tmp.shape[1]))[np.mean(tmp,axis=0) > nonpainthr]
+                                
+                                mannual_signal = np.array(signalss[SE][se])[0+(BIN*10):full_sequence+(BIN*10)]
+                                mannual_signal = np.mean(mannual_signal[:,[roiix]], axis = 2)
+                                
+                                if not(len(timix) == 0):
+                                    X, Y, Z, _ = \
+                                    dataGeneration(SE, se, label=msclass, Mannual=True, \
+                                                   mannual_signal=mannual_signal, passframesave=timix*bins)
+                                    X_tmp += X; Y_tmp += Y; Z_tmp += Z
+                        
+                        
+            datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
+            sampleNum[msclass] = len(datasetX[msclass]);
+            
+            print(nonpainthr, sampleNum[0])
+                
+            if sampleNum[0] < sampleNum[1]:
+                break
+        
+        print('nonpain_sampleNum', sampleNum[msclass], 'nonpainthr', nonpainthr)
+        
+        msclass = np.argmax(sampleNum)
+        print('higher # class is...', msclass)
+        np.random.seed(seed2)
+        print('random seed', seed2)
+        shuffleix = list(range(len(datasetX[msclass])))
+        shuffleix = np.array(random.sample(shuffleix, sampleNum[np.argmin(sampleNum)]))
+   
+        datasetX[msclass] = np.array(datasetX[msclass])[shuffleix]
+        datasetY[msclass] = np.array(datasetY[msclass])[shuffleix]
+        datasetZ[msclass] = np.array(datasetZ[msclass])[shuffleix]
+  
+        return datasetX, datasetY, datasetZ, t4_save
     
- 
     X_save2, Y_save2, Z_save2 = ms_sampling()
+#    if continueSW != None:
+#        X_save2, Y_save2, Z_save2, t4_save = ms_sampling_continue()
 #    painindex_classs = np.concatenate((painindex_class0, painindex_class1), axis=0)
     #  datasetX = X_save; datasetY = Y_save; datasetZ = Z_save
     
     for i in range(n_out):
         print('class', str(i),'sampling 이후', np.array(X_save2[i]).shape[0])
-        
-    # In[]
-
 
     X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
     for i in range(1,n_out):
@@ -681,14 +624,7 @@ for q in project_list:
         idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
 
         #init = initializers.glorot_normal(seed=None)
-        
-        try:
-            model.reset_states()
-            print('올라와있는 model이 있었기 때문에, 초기화 하였습니다.')
-        except:
-            pass 
-            # print('reset할 기존 model 없음')
-        
+
         init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
         
         input1 = []; [input1.append([]) for i in range(msunit)] # 최초 input layer
@@ -713,7 +649,10 @@ for q in project_list:
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         return model, idcode
     
-    model, idcode = keras_setup()    
+    model, idcode = keras_setup()   
+    
+    initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
+    model.save_weights(initial_weightsave)
     
     if False: # 시각화 
         # 20190903, VS code로 옮긴뒤로 에러나는 중, 해결필요
@@ -733,40 +672,53 @@ for q in project_list:
         
     print('acc_thr', acc_thr, '여기까지 학습합니다.')
     print('maxepoch', maxepoch)
-
-    # 학습 순서 무작위 배치, seed none으로 설정함.
-
-    trainingset = list(grouped_total_list)
-    etc = []
-    for SE in trainingset:
-        c1 = SE in lowGroup + restrictionGroup # 둘 빼 고 
-        c2 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
-        if c1 or c2:
+    
+    # training set 재설정
+    trainingset = trainingset; etc = []
+    forlist = list(trainingset)
+    for SE in forlist:
+        c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
+        if c1 and SE in trainingset:
             trainingset.remove(SE)
-        if c2:
             etc.append(SE)
+            
+        c2 = np.array(msset)[:,0]
+        if SE in c2:
+            for u in np.array(msset)[np.where(np.array(msset)[:,0] == SE)[0][0],:][1:]:
+                trainingset.remove(u)
+                etc.append(u)
+            
     mouselist = list(trainingset)
     mouselist.sort()
-    mouselist.append(etc[0])
-
+    
+    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
+        mouselist = list(np.sort(np.array(mouselist))[::-1])
+    
+    if not(len(etc) == 0):
+        mouselist.append(etc[0])
+    
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    wanted = pslGroup + shamGroup # mouselist # mouselist #highGroup + midleGroup + [etc[0]] # 작동할것을 여기에 넣어 
+    wanted = mouselist
+#    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
-    print('wanted', wanted)
+    print('mouselist', mouselist)
+    print('etc', etc)
     for i in wanted:
         try:
             mannual.append(np.where(np.array(mouselist)==i)[0][0])
         except:
-            print(i, 'is excluded, etc group을 확인하세요.')
+            print(i, 'is excluded.', 'etc group에서 확인')
             
-    np.random.seed(seed+1)
-    shuffleix = list(range(len(mannual)))
-    np.random.shuffle(shuffleix)
-    print('shuffleix', shuffleix)
-    mannual = np.array(mannual)[shuffleix]
-    #print('etc ix', np.where(np.array(mouselist)== etc)[0])
-    # 구지 mannual을 두고 다시 indexing 하는 이유는, 인지하기 편하기 때문임. 딱히 안써도 됨
+    print('wanted', np.array(mouselist)[mannual])
+            
+#    np.random.seed(seed2)
+#    shuffleix = list(range(len(mannual)))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+#    np.random.shuffle(shuffleix)
+#    print('shuffleix', shuffleix)
+#    mannual = np.array(mannual)[shuffleix]
+#    print('etc ix', np.where(np.array(mouselist)== etc)[0])
+#     구지 mannual을 두고 다시 indexing 하는 이유는, 인지하기 편하기 때문임. 딱히 안써도 됨
     
     # save_hyper_parameters 기록남기기
     save_hyper_parameters = []
@@ -783,6 +735,8 @@ for q in project_list:
     save_hyper_parameters.append(['seed', seed])
 #    save_hyper_parameters.append(['classratio', classratio])
     save_hyper_parameters.append(['mouselist', mouselist])
+    save_hyper_parameters.append(['full_sequence', full_sequence])
+    
     
     
     savename4 = RESULT_SAVE_PATH + 'model/' + '00_model_save_hyper_parameters.csv'
@@ -795,15 +749,15 @@ for q in project_list:
             csvwriter.writerow(save_hyper_parameters[row])
         csvfile.close()
         
-    # validation 개선용
-    valsave = []; ixsave= []
-    for SE in range(N):
-        if SE in grouped_total_list and SE not in (restrictionGroup + lowGroup):
-            for se in range(3):
-                tmp = pointSave[SE][se]
-                for BIN in range(len(tmp)):
-                    valsave.append(tmp[BIN])
-                    ixsave.append([SE,se,BIN])
+#    # validation 개선용
+#    valsave = []; ixsave= []
+#    for SE in range(N):
+#        if SE in grouped_total_list and SE not in (restrictionGroup + lowGroup):
+#            for se in range(3):
+#                tmp = pointSave[SE][se]
+#                for BIN in range(len(tmp)):
+#                    valsave.append(tmp[BIN])
+#                    ixsave.append([SE,se,BIN])
     
     
     # In[]
@@ -875,75 +829,92 @@ for q in project_list:
                 # 학습된 모델도 없고, 최근에 진행중인것도 없으니 학습 시작합니다.    
                 if not(recent_model):
                     print('mouse #', [mouselist[sett]], '학습된', state, 'model 없음. 새로시작합니다.')
-                    model, idcode = keras_setup() # 시작과 함께 weight reset 됩니다.
-
+                    model.load_weights(initial_weightsave)
+                    dt = datetime.now()
+                    idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
+                        
+                    # 나중에 idcode는 없애던지.. 해야될듯 
+                    
                     df2 = [idcode]
                     csvfile = open(loadname, 'w', newline='')
                     csvwriter = csv.writer(csvfile)
                     csvwriter.writerow(df2)         
                     csvfile.close() 
 
-#                     validation set을 사용할경우 준비합니다.
-                    if validation_sw and state == 'exp': # control은 validation을 볼 필요가없다.
-                        init = True
-                        totalROI = signalss[mouselist[sett]][0].shape[1]#; painIndex = 1
-                        X_all = []; [X_all.append([]) for i in range(msunit)]
-                        for se in range(3):
-                            label = 0
-                            if mouselist[sett] in pslGroup and se in [1,2]:
-                                label = 1
-
-                            SEindex = np.array(ixsave)[:,0] == mouselist[sett]
-                            seindex = np.array(ixsave)[:,1] == se
-                            valsave2 = np.array(valsave)
-                            valsave2[(SEindex * seindex) == False] = np.nan
-                            msbins = [np.array(ixsave)[np.nanargmax(valsave2),2]]
-          
-                            for BINS in msbins:
-                                for ROI in range(totalROI):
-                                    startat = int(BINS*bins) # bins = 10
-                                    mannual_signal = signalss[mouselist[sett]][se][startat:startat+497,:]
-                                
-                                    unknown_data, Y_val, Z = \
-                                    dataGeneration(mouselist[sett], se, roiNum=ROI, label = label, Mannual=True, mannual_signal=mannual_signal)
-                                    Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
-                                    Z = np.concatenate((Z, tmpROI), axis = 1) # Z에 SE, se + ROI 정보까지 저장
-    
-                                    unknown_data_toarray = array_recover(unknown_data)
-    
-                                    if init:
-                                        for k in range(msunit):
-                                            X_all[k] = np.array(unknown_data_toarray[k])    
-                                        Z_all = np.array(Z); Y_all = np.array(Y_val)
-                                        init = False
-    
-                                    elif not(init):
-                                        for k in range(msunit):
-                                            X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-                                        Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
-                                            
-                                        # Z는 안쓰는데,, 걍 복붙이라 남아있는듯? 
-                        valid = tuple([X_all, Y_all])
-
-                    # training set을 준비합니다. cross validation split 
-                    
                     X_training = []; [X_training.append([]) for i in range(msunit)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
                     X_valid = []; [X_valid.append([]) for i in range(msunit)]
                     Y_training_list = []
                     Y_training_control_list = []
 #                    Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
+
+                    delist = np.where(indexer[:,0]==mouselist[sett])[0]
                     
-                    delist = np.where(indexer[:,0]==mouselist[sett])[0] # index는 각 data의 [SE, se]를 저장하고 있음
+                    if mouselist[sett] in np.array(msset)[:,0]:
+                        for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+                            delist = np.concatenate((delist, np.where(indexer[:,0]==u)[0]), axis=0)
+                    
                     for unit in range(msunit): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
                         X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
 #                        X_valid[unit] = np.array(X[unit])[delist]
                 
                     Y_training_list = np.delete(np.array(Y), delist, 0)
                     Y_training_control_list = np.delete(np.array(Y_control), delist, 0)
-                    Y_valid = np.array(Y)[delist]
+#                    Y_valid = np.array(Y)[delist]
                     
 #                    valid = tuple([X_valid, Y_valid])
                     
+                    # validation
+                    if validation_sw:
+                        X_tmp = []; Y_tmp = []
+                        
+                        testlist = []
+                        testlist = [mouselist[sett]]
+                        
+                        if mouselist[sett] in np.array(msset)[:,0]:
+                            for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+                                testlist.append(u)
+             
+                        if not(len(etc) == 0):
+                            if etc[0] == mouselist[sett]:
+                                print('test ssesion, etc group 입니다.') 
+                                testlist = list(etc)
+                        
+                        for test_mouseNum in testlist:
+                            sessionNum = 5
+                            if test_mouseNum in capsaicinGroup + pslGroup + shamGroup:
+                                sessionNum = 3
+                            
+                            # class
+                            msclass = 0
+                            formalin = highGroup + midleGroup + ketoGroup + yohimbineGroup
+                            if test_mouseNum in formalin + capsaicinGroup and se in [1]:
+                                msclass = 1
+                            elif test_mouseNum in pslGroup and se in [1,2]:
+                                msclass = 1
+
+                            for se in range(sessionNum):
+                                binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                                binNum = len(binning)
+                                
+                                if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                                    binNum = 1
+                                    binning = [0]
+                                    
+                                for i in range(binNum):         
+                                    signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                    signal_full_roi = np.mean(signalss_PSL_test, axis=1)
+                                    
+                                    mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
+                                    Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
+                                                   Mannual=True, mannual_signal=mannual_signal)
+                                    
+                                    X_tmp += Xtest; Y_tmp += Ytest
+                                    Xtest = array_recover(Xtest)
+                                    Ytest = np.array(Ytest); Y = np.reshape(Ytest, (Ytest.shape[0], n_out))
+                                    
+                        valid = tuple([Xtest, Ytest])
+                        Y_valid = np.array(Ytest)
+                                    
                     print('학습시작시간을 기록합니다.', df2)        
                     print('mouse #', [mouselist[sett]])
                     print('sample distributions.. ', np.round(np.mean(Y_training_list, axis = 0), 4))
@@ -976,7 +947,9 @@ for q in project_list:
 
                         if cnt > maxepoch/epochs:
                             seed += 1
-                            model, idcode = keras_setup()
+                            model.load_weights(initial_weightsave)
+                            dt = datetime.now()
+                            idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
                             current_acc = -np.inf; cnt = -1
                             print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
 
@@ -1008,10 +981,9 @@ for q in project_list:
 #                        # validation이 가치가없으므로 끔 
 #                        validation_sw = False
                         
-                        if validation_sw and state == 'exp':
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                            
+  
+                        if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
+                            #1
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                             hist_save_val_loss += list(np.array(hist.history['val_loss']))
@@ -1020,13 +992,18 @@ for q in project_list:
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                             
+                            #2
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                             hist_save_val_loss += list(np.array(hist.history['val_loss']))
                             hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
                             
-                        elif not(validation_sw) and state == 'exp': 
+                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
+                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                            
+                        elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
                             hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs) #, validation_data = valid)
+                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                         elif state == 'con':
                             hist = model.fit(tr_x, tr_y_shuffle_control, batch_size = batch_size, epochs = control_epochs)
 
@@ -1044,6 +1021,19 @@ for q in project_list:
                             cnt = np.inf
 
                     # 학습 model 최종 저장
+                    #5: 마지막으로 validation 찍음
+                    if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5) #, validation_data = valid)
+                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                        
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
+                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
+                        hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
+                    elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5+1) #, validation_data = valid)
+                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                    
                     model.save_weights(final_weightsave)   
                     print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
 
@@ -1086,12 +1076,16 @@ for q in project_list:
             # 모든 etc set에 대해서 test 하므로, 이 경우 test list는 모든 etc set이 된다. 
             
             testlist = []
-            if not(etc[0] == mouselist[sett]):
-                testlist = [mouselist[sett]]
-                print('test ssesion, mouse #', [mouselist[sett]], '입니다.')
-            elif etc[0] == mouselist[sett]:
-                print('test ssesion, etc group 입니다.') 
-                testlist = list(etc)
+            testlist = [mouselist[sett]]
+            
+            if mouselist[sett] in np.array(msset)[:,0]:
+                for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+                    testlist.append(u)
+ 
+            if not(len(etc) == 0):
+                if etc[0] == mouselist[sett]:
+                    print('test ssesion, etc group 입니다.') 
+                    testlist = list(etc)
             
             if state == 'exp':
                 final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
@@ -1107,95 +1101,10 @@ for q in project_list:
             except:
                 trained_fortest = False
                 print('trained_fortest', trained_fortest)
-            
-            # test version 1, 20191017 현재 version 2가 범용적이므로 v1 은 사용하지 않음.
-#            if testsw:
-#                for test_mouseNum in testlist:
-#                    print('mouse #', test_mouseNum, '에 대한 기존 test 유무를 확인합니다.')
-#                    #    test 되어있는지 확인.
-#
-#                    if state == 'exp':
-#                        savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-#                    elif state == 'con':
-#                        savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-#
-#                    tested = False
-#                    print(savename)
-#                    try:
-#                        csvfile = open(savename, 'r', newline='')
-#                        tested = True
-#                        print('tested', tested)
-#                    except:
-#                        tested = False
-#                        print('tested', tested)
-#
-#                    if not(tested) and trained_fortest: 
-#                        print('mouse #', test_mouseNum, 'test 진행')
-#                        totalROI = signalss[test_mouseNum][0].shape[1]; painIndex = 1
-#                        X_all = []; [X_all.append([]) for i in range(msunit)]
-#
-#                        for se in range(5):
-#                            for ROI in range(totalROI):
-#                                unknown_data, Y_val, Z = dataGeneration(test_mouseNum, se, label=1, roiNum = ROI)
-#                                Z = np.array(Z); tmpROI = np.zeros((Z.shape[0],1)); tmpROI[:,0] = ROI
-#                                Z = np.concatenate((Z, tmpROI), axis = 1)    
-#
-#                                unknown_data_toarray = array_recover(unknown_data)
-#
-#                                if se == 0 and ROI == 0:
-#                                    for k in range(msunit):
-#                                        X_all[k] = np.array(unknown_data_toarray[k])    
-#                                    Z_all = np.array(Z); Y_all = np.array(Y_val)
-#
-#                                elif not(se == 0 and ROI == 0):
-#                                    for k in range(msunit):
-#                                        X_all[k] = np.concatenate((X_all[k],unknown_data_toarray[k]), axis=0); 
-#                                    Z_all = np.concatenate((Z_all,Z), axis=0); Y_all = np.concatenate((Y_all, np.array(Y_val)), axis=0)
-#
-#                        prediction = model.predict(X_all)
-#
-#                        df1 = np.concatenate((Z_all,prediction), axis=1)
-#                        df2 = [['SE', 'se', 'nonpain', 'pain']]; se = 0 # 최종결과 (acc) 저장용
-#
-#                        # [SE, se, ROI, nonpain, pain]
-#                        for se in range(5):
-#                            predicted_pain = np.mean(df1[:,painIndex+3][np.where(df1[:,1]==se)[0]] > 0.5)
-#                            mspredict = [1-predicted_pain, predicted_pain] # 전통을 중시...
-#
-#                            df2.append([[test_mouseNum], se] + mspredict)
-#
-#                        for d in range(len(df2)):
-#                            print(df2[d])
-#
-#                        # 최종평가를 위한 저장 
-#                        # acc_experiment 저장
-#                        if state == 'exp':
-#                            savename = RESULT_SAVE_PATH + 'exp/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
-#                        elif state == 'con':
-#                            savename = RESULT_SAVE_PATH + 'control/' + 'biRNN_acc_' + str(test_mouseNum)  + '.csv'
-#
-#                        csvfile = open(savename, 'w', newline='')
-#                        csvwriter = csv.writer(csvfile)
-#                        for row in range(len(df2)):
-#                            csvwriter.writerow(df2[row])
-#                        csvfile.close()
-#
-#                        # raw 저장
-#                        if state == 'exp':
-#                            savename = RESULT_SAVE_PATH + 'exp_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-#                        elif state == 'con':
-#                            savename = RESULT_SAVE_PATH + 'control_raw/' + 'biRNN_raw_' + str(test_mouseNum) + '.csv'
-#
-#                        csvfile = open(savename, 'w', newline='')
-#                        csvwriter = csv.writer(csvfile)
-#                        for row in range(len(df1)):
-#                            csvwriter.writerow(df1[row])
-#                        csvfile.close()
-#                        
+        
             ####### test - binning 구문 입니다. ##########, test version 2
-            
             # model load는 cv set 시작에서 무조건 하도록 되어 있음.
-            if trained_fortest and testsw2:
+            if trained_fortest and testsw2:   
                 for test_mouseNum in testlist:
                     testbin = None
                     picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_' + str(test_mouseNum) + '.pickle'
@@ -1221,32 +1130,18 @@ for q in project_list:
                         
                         for se in range(sessionNum):
                             
-                            binning = list(range(0,(signalss[test_mouseNum][se].shape[0] - 497) +1, bins))
+                            binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
                             binNum = len(binning)
                             
-                            # dataGeneration _ modify
-                            
-                            binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-                            minimum_binning = len(binlist)
-                                    
-                            if binNum > 0 and binNum < mslong +1 -42  : # for 2 mins
-                                binNum2 = msshort-minimum_binning+1
-                                print(SE, se, 'msshort', binNum2)
-                            elif binNum >= mslong +1 -42: # for 4 mins
-                                binNum2 = mslong-minimum_binning+1
-                                print(SE, se, 'mslong', binNum2)
-                            elif binNum == 0:
-                                print(SE, se, '예상되지 않은 길이입니다. 체크')
-                                import sys
-                                sys.exit()
-                            else: # for 2 mins
-                                print(SE, se, '예상되지 않은 길이입니다. 체크')
-                                
-                            [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum2)]
+                            if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                                binNum = 1
+                                binning = [0]
+                                                           
+                            [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
                             
                             i = 54; ROI = 0
-                            for i in range(binNum2):         
-                                signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+497]
+                            for i in range(binNum):         
+                                signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
                                 ROInum = signalss_PSL_test.shape[1]
                                 
                                 [PSL_result_save[test_mouseNum][se][i].append([]) for k in range(ROInum)]
@@ -1273,7 +1168,7 @@ for q in project_list:
                                         X_ROI.append(X_tmp)
                                         
                                     X_array = array_recover(X_ROI)
-                                    print(test_mouseNum, se, 'BINS', i ,'/', binNum2, 'ROI', ROI)
+                                    print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'ROI', ROI)
                                     prediction = model.predict(X_array)
                                     PSL_result_save[test_mouseNum][se][i][ROI] = prediction
                     
@@ -1284,7 +1179,8 @@ for q in project_list:
                             print(picklesavename, '저장되었습니다.')
 
 
- 
+# In[]
+
 
 
 
