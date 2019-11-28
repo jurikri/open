@@ -7,14 +7,14 @@ Created on Fri Sep 27 10:52:09 2019
 
 from keras.optimizers import Adam
 from keras.models import Sequential
-from keras.layers import Flatten
+#from keras.layers import Flatten
 from keras.layers import Dense
 from keras.layers import LeakyReLU
 from keras.layers import Input
 from keras.models import Model
 from keras.layers import BatchNormalization
 from keras.layers import Reshape
-from keras.datasets import mnist
+#from keras.datasets import mnist
 from keras.layers.recurrent import LSTM
 from keras.layers.wrappers import Bidirectional
 
@@ -212,8 +212,10 @@ for sett in mouselist:
     epoch = 0
     axiss = []; [axiss.append([]) for i in range(2)]
     accsave = []; outcnt = 0
+    
+    # In[]
     for epoch in range(epochs):
-        
+      # In[]  
         # ---------------------
         #  Train Discriminator
         # ---------------------
@@ -249,14 +251,13 @@ for sett in mouselist:
             
             axiss[0].append(epoch)
             axiss[1].append(d_loss_real[1] * 100)
-    
+ # In[]   
         if epoch > 100 and np.mean(accsave[-100:]) < 0.6:
             break
                 
 #        if outcnt > 2:
 #            break
-
-
+ # In[] 
     ## Model 생성후, GAN data 생성, 저장
 
     generation_num = 1000
