@@ -275,8 +275,8 @@ print('sequenceSize', sequenceSize)
 epochs = 5 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 
-n_hidden = int(8 * 2) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 2) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8
 
 #duplicatedNum = 1
 #mspainThr = 0.27
@@ -305,8 +305,8 @@ if False and c1:
     trainingsw = False
     testsw2 = True
 
-acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 3000 # 5000
+acc_thr = 0.91 # 0.93 -> 0.94
+batch_size = 2000 # 5000
 ###############
 
 # constant 
@@ -317,7 +317,7 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1128_binfix5', 3, None])
+project_list.append(['1128_binfix5_1', 4, None])
 #project_list.append(['1126_binfix2_saline2', 4, None])
 #project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 #project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
