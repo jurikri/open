@@ -272,7 +272,7 @@ print('sequenceSize', sequenceSize)
 # hyperparameters #############
  
 # learning intensity
-epochs = 30 # epoch 종료를 결정할 최소 단위.
+epochs = 5 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 
 n_hidden = int(8 * 2) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
@@ -554,13 +554,14 @@ for q in project_list:
         c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
         if c1 and SE in trainingset:
             trainingset.remove(SE)
-            etc.append(SE)
+            
+            if not SE in np.array(msset).flatten():
+                etc.append(SE)
             
         c2 = np.array(msset)[:,0]
         if SE in c2:
             for u in np.array(msset)[np.where(np.array(msset)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
-                etc.append(u)
             
     mouselist = trainingset
     mouselist.sort()
@@ -572,7 +573,7 @@ for q in project_list:
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    wanted = shamGroup
+    wanted = mouselist
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -760,9 +761,16 @@ for q in project_list:
                             
                             for se in range(sessionNum):
                                 init = False
-                                if se in [0]:
+                                c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup and se in [0,2,4]
+                                c2 = SE in capsaicinGroup and se in [0,2]
+                                c3 = SE in pslGroup and se in [0]
+                                c4 = SE in shamGroup and se in [0,1,2]
+                                c5 = SE in salineGroup and se in [0,1,2,3,4]
+                                if c1 or c2 or c3 or c4 or c5:
                                     msclass = 0; init = True
-                                elif se in [1]:
+                                
+                                c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup and se in [1]   
+                                if c1:
                                     msclass = 1; init = True
                                     
                                 if init:
