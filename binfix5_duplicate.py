@@ -301,7 +301,7 @@ testsw2 = False
 
 # 집 컴퓨터, test 전용으로 수정
 c1 = savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'
-if False and c1:
+if True and c1:
     trainingsw = False
     testsw2 = True
 
@@ -573,7 +573,7 @@ for q in project_list:
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    wanted = mouselist
+    wanted = pslGroup + shamGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -758,6 +758,8 @@ for q in project_list:
                             sessionNum = 5
                             if test_mouseNum in capsaicinGroup + pslGroup + shamGroup:
                                 sessionNum = 3
+                            
+                            SE = test_mouseNum
                             
                             for se in range(sessionNum):
                                 init = False
