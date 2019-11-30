@@ -117,7 +117,7 @@ for SE in range(N):
             else:
                 print('error')                   
 
-msset = [[70,72],[71,84],[75,85],[76,86]]
+msset = [[70,72],[71,84],[75,85],[76,86], [79,88]]
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
 def array_recover(X_like):
     X_like_toarray = []; X_like = np.array(X_like)
@@ -573,7 +573,7 @@ for q in project_list:
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    wanted = pslGroup + shamGroup
+    wanted = mouselist
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
