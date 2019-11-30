@@ -561,7 +561,10 @@ for q in project_list:
         c2 = np.array(msset)[:,0]
         if SE in c2:
             for u in np.array(msset)[np.where(np.array(msset)[:,0] == SE)[0][0],:][1:]:
-                trainingset.remove(u)
+                try:
+                    trainingset.remove(u)
+                except:
+                    pass
             
     mouselist = trainingset
     mouselist.sort()
