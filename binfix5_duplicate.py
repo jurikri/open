@@ -390,16 +390,18 @@ for q in project_list:
                     c5 = SE in salineGroup and se in [0,1,2,3,4]
                     
                     if c1 or c2 or c3 or c4 or c5:
-                        mssignal = np.mean(signalss[SE][se], axis=1)
-                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
-                        
-                        for u in msbins:
-                            mannual_signal = mssignal[u:u+full_sequence]
-                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                            X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
-                                           Mannual=True, mannual_signal=mannual_signal)
+                        exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0
+                        if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
+                            mssignal = np.mean(signalss[SE][se], axis=1)
+                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
-                            X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
+                            for u in msbins:
+                                mannual_signal = mssignal[u:u+full_sequence]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal)
+                                
+                                X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
                     
         datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
         
