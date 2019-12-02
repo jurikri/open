@@ -383,7 +383,7 @@ for q in project_list:
             if SE in trainingset:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
-                    c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup and se in [0,2,4]
+                    c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + lidocaineGroup and se in [0,2,4]
                     c2 = SE in capsaicinGroup and se in [0,2]
                     c3 = SE in pslGroup and se in [0]
                     c4 = SE in shamGroup and se in [0,1,2]
