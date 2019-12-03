@@ -488,7 +488,7 @@ for q in project_list:
     # cross validation을 위해, training / test set split            
     # mouselist는 training set에 사용된 list임.
     # training set에 사용된 mouse의 마릿수 만큼 test set을 따로 만듦
-
+    
     inputsize = np.zeros(msunit, dtype=int) 
     for unit in range(msunit):
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
@@ -526,7 +526,7 @@ for q in project_list:
         return model, idcode
     
     model, idcode = keras_setup()   
-    
+        
     initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
     model.save_weights(initial_weightsave)
     
