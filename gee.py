@@ -232,8 +232,9 @@ min_mean_save = []
 ## pointSvae - 2차 학습 label 판단에 사용하기 위해 예측 평균값 저장
 #pointSave = []
 #[pointSave.append([]) for k in range(N)]
+skiplist = restrictionGroup + lowGroup + lidocainGroup
 for SE in range(N):
-    if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+    if not SE in grouped_total_list or SE in skiplist: # ETC 추가후 lidocine skip 삭제할것 (여러개)
 #        print(SE, 'skip')
         continue
 
@@ -344,7 +345,7 @@ biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
 
 ## 우선 평균값으로 채워넣고,
 for SE in range(N):
-    if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+    if not SE in grouped_total_list or SE in skiplist:
 #            print(SE, 'skip')
         continue
     
@@ -461,7 +462,7 @@ def relu_optimize(min_mean_save):
         biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
         biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
         for SE in range(N):
-            if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+            if not SE in grouped_total_list or SE in skiplist:
     #            print(SE, 'skip')
                 continue
             
@@ -530,7 +531,7 @@ def otimal_msduration(min_mean_save):
     
     ## 우선 평균값으로 채워넣고,
     for SE in range(N):
-        if not SE in grouped_total_list or SE in restrictionGroup or SE in lowGroup:
+        if not SE in grouped_total_list or SE in skiplist:
 #            print(SE, 'skip')
             continue
         
