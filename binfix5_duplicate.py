@@ -317,8 +317,9 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1128_binfix5_1', 4, None])
-project_list.append(['1128_binfix5_2', 5, None])
+#project_list.append(['1128_binfix5_1', 4, None])
+#project_list.append(['1128_binfix5_2', 5, None])
+project_list.append(['1128_binfix5_3', 6, None])
 #project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
 #project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
 #project_list.append(['1015_binfix_2', 2])
@@ -525,8 +526,7 @@ for q in project_list:
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         return model, idcode
     
-    model, idcode = keras_setup()   
-        
+    model, idcode = keras_setup()        
     initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
     model.save_weights(initial_weightsave)
     
@@ -570,7 +570,7 @@ for q in project_list:
     mouselist.sort()
     
 #    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
-#        mouselist = list(np.sort(np.array(mouselist))[::-1])
+#    mouselist = list(np.sort(np.array(mouselist))[::-1])
     
     if not(len(etc) == 0):
         mouselist.append(etc[0])
@@ -835,7 +835,9 @@ for q in project_list:
 
                         if cnt > maxepoch/epochs:
                             seed += 1
-                            model.load_weights(initial_weightsave)
+                            model, idcode = keras_setup()        
+                            initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
+                            model.save_weights(initial_weightsave)
                             dt = datetime.now()
                             idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
                             current_acc = -np.inf; cnt = -1
@@ -903,7 +905,7 @@ for q in project_list:
                         if state == 'con':
                             current_acc = np.inf
 
-                        if cnt > 4 and current_acc < 0.7:
+                        if cnt > 2 and current_acc < 0.7:
                             # 700 epochs 후에도 학습이 안되고 있다면 초기화
                             print('고장남.. 초기화')
                             cnt = np.inf
