@@ -323,6 +323,7 @@ project_list = []
 #project_list.append(['1128_binfix5_2', 5, None])
 #project_list.append(['1128_binfix5_3', 6, None])
 project_list.append(['1205_duplicated_add_1', 100, None])
+project_list.append(['1205_duplicated_add_2', 200, None])
 
 q = project_list[0]
 for q in project_list:
