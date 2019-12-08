@@ -322,8 +322,10 @@ project_list = []
 #project_list.append(['1128_binfix5_1', 4, None])
 #project_list.append(['1128_binfix5_2', 5, None])
 #project_list.append(['1128_binfix5_3', 6, None])
-project_list.append(['1205_duplicated_add_1', 100, None])
-project_list.append(['1205_duplicated_add_2', 200, None])
+#project_list.append(['1205_duplicated_add_1', 100, None])
+#project_list.append(['1205_duplicated_add_2', 200, None])
+project_list.append(['1207_recovery_except_1', 100, None])
+project_list.append(['1207_recovery_except_2', 200, None])
 
 q = project_list[0]
 for q in project_list:
@@ -383,7 +385,7 @@ for q in project_list:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
                     set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
-                    c1 = SE in set1 and se in [0,2,4]
+                    c1 = SE in set1 and se in [0,2]
                     c2 = SE in capsaicinGroup and se in [0,2]
                     c3 = SE in pslGroup and se in [0]
                     c4 = SE in shamGroup and se in [0,1,2]
@@ -755,7 +757,7 @@ for q in project_list:
                             for se in range(sessionNum):
                                 init = False
                                 set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
-                                c1 = SE in set1 in [0,2,4]
+                                c1 = SE in set1 in [0,2]
                                 c2 = SE in capsaicinGroup and se in [0,2]
                                 c3 = SE in pslGroup and se in [0]
                                 c4 = SE in shamGroup and se in [0,1,2]
