@@ -94,6 +94,8 @@ capsaicinGroup = msGroup['capsaicinGroup'] # capsaicin
 yohimbineGroup = msGroup['yohimbineGroup'] # 5% formalin + yohimbine
 pslGroup = msGroup['pslGroup'] # partial sciatic nerve injury model
 shamGroup = msGroup['shamGroup']
+adenosineGroup = msGroup['adenosineGroup']
+highGroup2 = msGroup['highGroup2']
 
 msset = msGroup['msset']
 del msGroup['msset']
@@ -319,14 +321,7 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-#project_list.append(['1128_binfix5_1', 4, None])
-#project_list.append(['1128_binfix5_2', 5, None])
-#project_list.append(['1128_binfix5_3', 6, None])
-#project_list.append(['1205_duplicated_add_1', 100, None])
-#project_list.append(['1205_duplicated_add_2', 200, None])
-project_list.append(['1207_recovery_except_1', 100, None])
-project_list.append(['1207_recovery_except_2', 200, None])
-project_list.append(['1207_recovery_except_3', 300, None])
+project_list.append(['1217_adenosine_1', 100, None])
 
 q = project_list[0]
 for q in project_list:
@@ -388,11 +383,12 @@ for q in project_list:
                     set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
                     c1 = SE in set1 and se in [0,2]
                     c2 = SE in capsaicinGroup and se in [0,2]
-                    c3 = SE in pslGroup and se in [0]
+                    c3 = SE in pslGroup + adenosineGroup and se in [0]
                     c4 = SE in shamGroup and se in [0,1,2]
                     c5 = SE in salineGroup and se in [0,1,2,3,4]
-                    
-                    if c1 or c2 or c3 or c4 or c5:
+                    c6 = SE in highGroup2 and se in [2]
+                                    
+                    if c1 or c2 or c3 or c4 or c5 or c6:
                         exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0
                         if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
                             mssignal = np.mean(signalss[SE][se], axis=1)
@@ -417,10 +413,9 @@ for q in project_list:
             if SE in trainingset:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
-                    c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup
-                    c2 = se in [1]
-
-                    if c1 and c2: # 
+                    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                    c1 = SE in set2 and se in [1]
+                    if c1: # 
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                         
@@ -577,7 +572,8 @@ for q in project_list:
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    wanted = mouselist
+    pslset = pslGroup + shamGroup + adenosineGroup
+    wanted = pslset
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -758,19 +754,19 @@ for q in project_list:
                             for se in range(sessionNum):
                                 init = False
                                 set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
-                                c1 = SE in set1 in [0,2]
+                                c1 = SE in set1 and se in [0,2]
                                 c2 = SE in capsaicinGroup and se in [0,2]
-                                c3 = SE in pslGroup and se in [0]
+                                c3 = SE in pslGroup + adenosineGroup and se in [0]
                                 c4 = SE in shamGroup and se in [0,1,2]
                                 c5 = SE in salineGroup and se in [0,1,2,3,4]
-                                
-                                if c1 or c2 or c3 or c4 or c5:
+                                c6 = SE in highGroup2 and se in [2]
+                                                
+                                if c1 or c2 or c3 or c4 or c5 or c6:
                                     msclass = 0; init = True
                                 
-                                c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup
-                                c2 = se in [1]
-            
-                                if c1 and c2: # 
+                                set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                                c1 = SE in set2 and se in [1]
+                                if c1: #
                                     msclass = 1; init = True
                                     
                                 if init:
