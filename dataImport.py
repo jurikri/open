@@ -19,9 +19,15 @@ lowGroup =          [31,32,33,35,36,37,38]  # 0.25%                  # exclude 3
 salineGroup =       [12,13,14,15,16,17,18,19,47,48,52,53,56,58] # control
 ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
-capsaicinGroup =    [60,61,62,64,65]
+capsaicinGroup =    [60,61,62,64,65,82,83]
 yohimbineGroup =    [63,66,67,68,69,74]
-pslGroup =          [70,71,72,73,75,76,77,78,79]
+pslGroup =          [70,71,72,75,76,77,78,79,80,84,85,86,87,88,93,94] # 73 제외, activitiy가 전반적으로 높음. cell 상태가 안좋기 때문에 제외하기로 함
+shamGroup =         [81,89,90,91,92,97]
+adenosineGroup =    [98]
+
+highGroup2 =        [95,96] # 학습용, late ,recovery 제외됨, base movement data 없음
+
+msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -31,9 +37,11 @@ msGroup['lowGroup'] = lowGroup
 msGroup['salineGroup'] = salineGroup
 msGroup['ketoGroup'] = ketoGroup
 msGroup['lidocaineGroup'] = lidocaineGroup
-msGroup['capsaicinGroup'] = capsaicinGroup
+msGroup['capsaicinGroup'] = capsaicinGroup                                                                                                                                                                                                                           
 msGroup['yohimbineGroup'] = yohimbineGroup
 msGroup['pslGroup'] = pslGroup
+msGroup['shamGroup'] = shamGroup
+msGroup['msset'] = msset
 
 import numpy as np
 import pandas as pd
@@ -50,12 +58,11 @@ while not(endsw):
     cnt += 1
     _, _, _, endsw = msfilepath.msfilepath1(cnt)
 
-N = cnt
+N = cnt; N2 = N
 print('totnal N', N)
 
 FPS = 4.3650966869   
-
-runlist = range(76, N)
+runlist = range(N)
    
 # In[] 
 
@@ -103,7 +110,8 @@ def smoothListGaussian(array1,window):
      return smoothed  
  
 def mssignal_save(list1):
-    newformat = [70, 71, 72, 73, 75, 76, 77, 78, 79]
+    newformat = list(range(70,N2))
+    newformat.remove(74)
     for N in list1:
         print(N, '시작합니다')
         if N not in newformat:
@@ -297,15 +305,33 @@ def msMovementExtraction(list1):
                 thr = 0.76
             if N == 45:
                 thr = 1
-            if N == 57 and i ==1:
+            if N == 57 and i == 1:
                 thr = 1.25
-            if N == 44 and i ==0:
+            if N == 44 and i == 0:
                 thr = 0.8
-            if N == 73 and i ==0:
+            if N == 73 and i == 0:
                 thr = 1
-            if N == 76 and i ==0:
+            if N == 76 and i == 0:
                 thr = 1
-                
+            if N == 83 and i == 1:
+                thr = 1.1
+            if N == 86 and i == 0:
+                thr = 1
+            if N == 87 and i == 2:
+                thr = 0.93
+            if N == 90 and i == 1:
+                thr = 0.65
+            if N == 91 and i == 0:
+                thr = 0.55
+            if N == 91 and i == 1:
+                thr = 0.565
+            if N == 97 and i == 0:
+                thr = 0.53
+            if N == 97 and i == 1:
+                thr = 0.63
+            if N == 97 and i == 2:
+                thr = 0.8
+                   
             aline = np.zeros(diffplot.shape[0]); aline[:] = thr
             
             if True:
@@ -345,8 +371,6 @@ msMovementExtraction(runlist)
 
 # In[] signal & behavior import
 signalss = list(); bahavss = list()
-
-# 20190903: 이부분이 시간을 많이 잡아먹는듯 한데, skip 기능을 만들어서 속도를 향상시킬 수 있을 것임.
 
 for SE in range(N):
     print(SE, N)
