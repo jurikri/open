@@ -95,6 +95,9 @@ yohimbineGroup = msGroup['yohimbineGroup'] # 5% formalin + yohimbine
 pslGroup = msGroup['pslGroup'] # partial sciatic nerve injury model
 shamGroup = msGroup['shamGroup']
 
+msset = msGroup['msset']
+del msGroup['msset']
+
 grouped_total_list = []
 keylist = list(msGroup.keys())
 for k in range(len(keylist)):
@@ -102,8 +105,7 @@ for k in range(len(keylist)):
 
 bins = 10 # 최소 time frame 간격     
 
-totaldataset = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + \
-salineGroup + pslGroup + shamGroup
+totaldataset = grouped_total_list
         
 shortlist = []; longlist = []
 for SE in range(N):
@@ -117,7 +119,7 @@ for SE in range(N):
             else:
                 print('error')                   
 
-msset = [[70,72],[71,84],[75,85],[76,86], [79,88]]
+#msset = [[70,72],[71,84],[75,85],[76,86], [79,88]]
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
 def array_recover(X_like):
     X_like_toarray = []; X_like = np.array(X_like)
@@ -153,14 +155,14 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
     if Mannual:
         signal_full = mannual_signal
         
-    elif not(Mannual):
-        signal_full = np.array(signalss_cut[SE][se])
+#    elif not(Mannual):
+#        signal_full = np.array(signalss_cut[SE][se])
         
     signal_full_roi = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
     
-    if GAN:
-        signal_full = np.array(GAN_data[SE][se])
-        signal_full_roi = np.mean(signal_full[:,s:e], axis=1)
+#    if GAN:
+#        signal_full = np.array(GAN_data[SE][se])
+#        signal_full_roi = np.mean(signal_full[:,s:e], axis=1)
     
     lastsave = np.zeros(msunit, dtype=int)
     lastsave2 = np.zeros(msunit, dtype=int) # 체크용
@@ -286,7 +288,7 @@ layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8
 # regularization
 l2_rate = 0.25 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
-dropout_rate2 = 0.10 # 나중에 0.1보다 줄여서 test 해보자
+dropout_rate2 = 0.10 # 
 
 #testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
@@ -319,13 +321,12 @@ project_list = []
  # proejct name, seed
 #project_list.append(['1128_binfix5_1', 4, None])
 #project_list.append(['1128_binfix5_2', 5, None])
-project_list.append(['1128_binfix5_3', 6, None])
-#project_list.append(['1118_direct_2_continue1', 3, '1118_direct_2'])
-#project_list.append(['1122_driect_cut_continue1', 4, '1122_driect_cut'])
-#project_list.append(['1015_binfix_2', 2])
-#project_list.append(['1029_adding_essential_1', 1])
-#project_list.append(['0903_seeding_4', 4])
-#project_list.append(['0903_seeding_5', 5])
+#project_list.append(['1128_binfix5_3', 6, None])
+#project_list.append(['1205_duplicated_add_1', 100, None])
+#project_list.append(['1205_duplicated_add_2', 200, None])
+project_list.append(['1207_recovery_except_1', 100, None])
+project_list.append(['1207_recovery_except_2', 200, None])
+project_list.append(['1207_recovery_except_3', 300, None])
 
 q = project_list[0]
 for q in project_list:
@@ -384,7 +385,8 @@ for q in project_list:
             if SE in trainingset:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
-                    c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + lidocaineGroup and se in [0,2,4]
+                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
+                    c1 = SE in set1 and se in [0,2]
                     c2 = SE in capsaicinGroup and se in [0,2]
                     c3 = SE in pslGroup and se in [0]
                     c4 = SE in shamGroup and se in [0,1,2]
@@ -408,7 +410,6 @@ for q in project_list:
         
         sampleNum[msclass] = len(datasetX[msclass])
         print('nonpain_sampleNum', sampleNum[msclass])
-        
         
         msclass = 1 # pain
         X_tmp = []; Y_tmp = []; Z_tmp = []
@@ -556,6 +557,7 @@ for q in project_list:
         c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
         if c1 and SE in trainingset:
             trainingset.remove(SE)
+            print('removed', SE)
             
             if not SE in np.array(msset).flatten():
                 etc.append(SE)
@@ -565,12 +567,11 @@ for q in project_list:
             for u in np.array(msset)[np.where(np.array(msset)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
 
-            
     mouselist = trainingset
     mouselist.sort()
     
 #    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
-#    mouselist = list(np.sort(np.array(mouselist))[::-1])
+#    mouselist = list(np.sort(np.array(mouselist))[::-1]) # runlist reverse
     
     if not(len(etc) == 0):
         mouselist.append(etc[0])
@@ -627,17 +628,6 @@ for q in project_list:
             csvwriter.writerow(save_hyper_parameters[row])
         csvfile.close()
         
-#    # validation 개선용
-#    valsave = []; ixsave= []
-#    for SE in range(N):
-#        if SE in grouped_total_list and SE not in (restrictionGroup + lowGroup):
-#            for se in range(3):
-#                tmp = pointSave[SE][se]
-#                for BIN in range(len(tmp)):
-#                    valsave.append(tmp[BIN])
-#                    ixsave.append([SE,se,BIN])
-    
-    
     # In[]
 
     sett = 0; ix = 0; state = 'exp' # for test
@@ -724,7 +714,8 @@ for q in project_list:
                     Y_training_list = []
                     Y_training_control_list = []
 #                    Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
-
+                    
+                    # cross validation을 위해 test set을 제거함
                     delist = np.where(indexer[:,0]==mouselist[sett])[0]
                     
                     if mouselist[sett] in np.array(msset)[:,0]:
@@ -741,7 +732,7 @@ for q in project_list:
                     
 #                    valid = tuple([X_valid, Y_valid])
                     
-                    # validation
+                    # validation을 위해 test set을 따로 뺌
                     if validation_sw:
                         X_tmp = []; Y_tmp = []
                         
@@ -766,16 +757,20 @@ for q in project_list:
                             
                             for se in range(sessionNum):
                                 init = False
-                                c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup and se in [0,2,4]
+                                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
+                                c1 = SE in set1 in [0,2]
                                 c2 = SE in capsaicinGroup and se in [0,2]
                                 c3 = SE in pslGroup and se in [0]
                                 c4 = SE in shamGroup and se in [0,1,2]
                                 c5 = SE in salineGroup and se in [0,1,2,3,4]
+                                
                                 if c1 or c2 or c3 or c4 or c5:
                                     msclass = 0; init = True
                                 
-                                c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup and se in [1]   
-                                if c1:
+                                c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup
+                                c2 = se in [1]
+            
+                                if c1 and c2: # 
                                     msclass = 1; init = True
                                     
                                 if init:
