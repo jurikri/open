@@ -100,6 +100,9 @@ highGroup2 = msGroup['highGroup2']
 msset = msGroup['msset']
 del msGroup['msset']
 
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup
+pslset = pslGroup + shamGroup + adenosineGroup
+
 grouped_total_list = []
 keylist = list(msGroup.keys())
 for k in range(len(keylist)):
@@ -322,6 +325,8 @@ classratio = 1 # class under sampling ratio
 project_list = []
  # proejct name, seed
 project_list.append(['1217_adenosine_1', 100, None])
+project_list.append(['1217_adenosine_2', 200, None])
+project_list.append(['1217_adenosine_3', 500, None])
 
 q = project_list[0]
 for q in project_list:
@@ -572,7 +577,7 @@ for q in project_list:
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    pslset = pslGroup + shamGroup + adenosineGroup
+    
     wanted = pslset
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
@@ -746,7 +751,7 @@ for q in project_list:
                         
                         for test_mouseNum in testlist:
                             sessionNum = 5
-                            if test_mouseNum in capsaicinGroup + pslGroup + shamGroup:
+                            if test_mouseNum in se3set:
                                 sessionNum = 3
                             
                             SE = test_mouseNum
@@ -1006,7 +1011,7 @@ for q in project_list:
                         
                         
                         sessionNum = 5
-                        if test_mouseNum in capsaicinGroup or test_mouseNum in pslGroup or test_mouseNum in shamGroup:
+                        if test_mouseNum in se3set:
                             sessionNum = 3
                         
                         for se in range(sessionNum):
