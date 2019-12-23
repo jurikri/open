@@ -1,19 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Nov 18 13:22:18 2019
-
-@author: msbak
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 31 12:27:10 2019
-
-@author: msbak
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Created on Sat Apr 20 20:58:38 2019
 
 @author: msbak
