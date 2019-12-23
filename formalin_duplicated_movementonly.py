@@ -83,7 +83,30 @@ shamGroup = msGroup['shamGroup']
 adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 
-movement_syn = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전
+def downsampling(msssignal, wanted_size):
+    downratio = msssignal.shape[0]/wanted_size
+    downsignal = np.zeros(wanted_size)
+    downsignal[:] = np.nan
+    for frame in range(wanted_size):
+        s = int(round(frame*downratio))
+        e = int(round(frame*downratio+downratio))
+        downsignal[frame] = np.mean(msssignal[s:e])
+        
+    return np.array(downsignal)
+
+movement_syn = []
+[movement_syn.append([]) for u in range(N)]
+
+for SE in range(N):
+    [movement_syn[SE].append([]) for u in range(5)]
+    for se in range(5):
+        movement_syn[SE][se] = downsampling(bahavss[SE][se], signalss[SE][se].shape[0])
+    
+#        print(np.mean(movement_syn[SE][se]))
+##plt.plot(movement_syn[1][1])
+#import sys
+#sys.exit()    
+#
 
 msset = msGroup['msset']
 del msGroup['msset']
@@ -337,10 +360,10 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1217_adenosine_1', 100, None])
-project_list.append(['1217_adenosine_2', 200, None])
-project_list.append(['1217_adenosine_3', 500, None])
-project_list.append(['1217_adenosine_4', 600, None])
+project_list.append(['1223_formalin_movement_1', 100, None])
+project_list.append(['1223_formalin_movement_2', 200, None])
+#project_list.append(['1217_adenosine_3', 500, None])
+#project_list.append(['1217_adenosine_4', 600, None])
 
 q = project_list[0]
 for q in project_list:
