@@ -126,6 +126,9 @@ msset = msGroup['msset']
 del msGroup['msset']
 skiplist = restrictionGroup + lowGroup + lidocainGroup
 
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup
+pslset = pslGroup + shamGroup + adenosineGroup
+
 painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup']
 nonpainGroup = msGroup['salineGroup'] 
 
@@ -133,20 +136,6 @@ grouped_total_list = []
 keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
-
-# excluded
-#highGroup.remove(1)
-
-# mouselist는 training에 사용됩니다.
-#mouselist = []
-#mouselist += msGroup['highGroup']
-#mouselist += msGroup['ketoGroup']
-#mouselist += msGroup['midleGroup']
-#mouselist += msGroup['salineGroup']
-#mouselist += msGroup['yohimbineGroup']
-#mouselist += [msGroup['lidocaineGroup'][0]]
-#etc = msGroup['lidocaineGroup'][0]
-#mouselist.sort()
 
 # 최종 평가 함수 
 def accuracy_cal(pain, non_pain, fsw=False):
@@ -215,6 +204,106 @@ def pain_nonpain_sepreate(target, painGroup, nonpainGroup):
     
     return pain, nonpain_within, nonpain_between
 
+def ms_batch_ind(target):
+    target = np.array(target)
+    out = np.zeros((N,5)); out[:] = np.nan
+    
+    # 일단 다 넣고
+    for SE in mouseGroup:
+        out[SE,:] = target[SE,:]
+    
+    # 첫번째가 아니면 baseline을 nan으로 교체 
+    for SE in mouseGroup:
+        if SE in np.array(msset)[:,1:].flatten():
+            out[SE,0] = np.nan
+            
+    return out
+
+def msloss2_psl(biRNN_2):
+#    biRNN_22 = ms_batchmean(biRNN_2) # 중복 데이터 처리.. 평균을 내든 뺴든 ...
+    biRNN_22 = ms_batch_ind(biRNN_2) # 단일쥐에서 평균내지 않을 때
+
+    a1 = biRNN_22[pslGroup,0].flatten()
+    a1 = a1[np.isnan(a1) == False]
+    a2 = biRNN_22[shamGroup,:].flatten()
+    a2 = a2[np.isnan(a2) == False]
+    a3 = biRNN_22[adenosineGroup,0].flatten()
+    a3 = a3[np.isnan(a3) == False]
+    nonpain = np.concatenate((a1,a2,a3))
+
+    
+    b1 = biRNN_22[pslGroup,1:3].flatten()
+    b1 = b1[np.isnan(b1) == False]
+    b2 = biRNN_22[adenosineGroup,1:3].flatten()
+    b2 = b2[np.isnan(b2) == False]
+    pain = np.concatenate((b1,b2))
+    
+    accuracy, roc_auc, fig = accuracy_cal(pain, nonpain, fsw=False)
+    pvalue = stats.ttest_ind(a2, pain)[1]*100
+    
+    return accuracy-pvalue
+
+def mstest2_psl():
+    # test 2: timewindow
+    mssave = []; forlist = list(range(1, 300)) # 앞뒤가 nan이 찍히는 모든 범위로 설정 할 것 
+    print('test2: timewindow 최적화를 시작합니다.')
+    for mssec in forlist:
+#        print(mssec)
+        biRNN_2 = np.zeros((N,5)); biRNN_2[:] = np.nan
+        skipsw = False
+        msduration = int(round((((mssec*FPS)-82)/10)+1))
+#        print(msduration)
+        for SE in range(N):
+            for se in range(3):
+                c1 = SE in pslset and [SE, se] in longlist
+                
+                if c1:
+#                    print(SE,se)
+                    min_mean_mean = np.array(min_mean_save[SE][se])
+                    
+                    if min_mean_mean.shape[0] - msduration <= 0 or msduration < 1:
+                        skipsw = True
+                        break
+                    
+                    meansave = []
+                    for msbin in range(min_mean_mean.shape[0] - msduration):
+                        meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
+                        
+                    maxix = np.argmax(meansave)
+                    biRNN_2[SE,se] = np.mean(min_mean_mean[maxix: maxix+msduration], axis=0)
+        
+        if not(skipsw):
+            msacc = msloss2_psl(biRNN_2)
+            mssave.append(msacc)
+        elif skipsw:
+            mssave.append(np.nan)
+#    plt.plot(mssave)
+                          
+    mssec = forlist[np.nanargmax(mssave)]
+#    mssec = 60 # mannual (sec)
+    msduration = int(round((((mssec*FPS)-82)/10)+1))
+    print('optimized time window, mssec', mssec)
+    biRNN_2 = np.zeros((N,5)); biRNN_2[:] = np.nan
+    for SE in range(N):
+        for se in range(3):
+            c1 = SE in pslset and [SE, se] in longlist
+            if c1:
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                
+                if min_mean_mean.shape[0] - msduration <= 0 or msduration < 1:
+                    skipsw = True
+                    break
+                
+                meansave = []
+                for msbin in range(min_mean_mean.shape[0] - msduration):
+                    meansave.append(np.mean(min_mean_mean[msbin: msbin+msduration]))
+                    
+                maxix = np.argmax(meansave)
+                biRNN_2[SE,se] = np.mean(min_mean_mean[maxix: maxix+msduration], axis=0)
+                msacc = msloss2_psl(biRNN_2)
+                
+    return biRNN_2, msacc
+
 # 제외된 mouse 확인용, mouseGroup
 mouseGroup = []
 for i in list(msGroup.keys()):
@@ -224,18 +313,6 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 # load 할 model 경로(들) 입력
 # index, project
 project_list = []
-# index, proejct
-#model_name.append(['1128_binfix5_1', 5])
-#model_name.append(['1128_binfix5_2', 5])
-#model_name.append(['1126_binfix2_saline', 3])
-#model_name.append(['1205_duplicated_add_1', 100])
-#model_name.append(['1205_duplicated_add_2', 200])
-#model_name.append(['1207_recovery_except_1', 100])
-#model_name.append(['1207_recovery_except_2', 200])
-#model_name.append(['1207_recovery_except_3', 300])
-
-#model_name.append(['1217_adenosine_1', 100, None])
-
 project_list.append(['1217_adenosine_1', 100, None])
 project_list.append(['1217_adenosine_2', 200, None])
 project_list.append(['1217_adenosine_3', 500, None])
@@ -250,7 +327,7 @@ for SE in range(N):
     if SE in mouseGroup:
         if not SE in skiplist:
             sessionNum = 5
-            if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
+            if SE in se3set:
                 sessionNum = 3
             
             for se in range(sessionNum):
@@ -262,149 +339,132 @@ for SE in range(N):
                 else:
                     print('error')
 
-# In min_mean_save에 모든 data 저장
-min_mean_save = []
-[min_mean_save.append([]) for k in range(N)]
 
-## pointSvae - 2차 학습 label 판단에 사용하기 위해 예측 평균값 저장
-#pointSave = []
-#[pointSave.append([]) for k in range(N)]
-for SE in range(N):
-    if not SE in grouped_total_list or SE in skiplist: # ETC 추가후 lidocine skip 삭제할것 (여러개)
-#        print(SE, 'skip')
-        continue
+# In[]
+################
+                    
+roiRatio = 0.5                    
 
-    sessionNum = 5
-    if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
-        sessionNum = 3
+for roiRatio in [0.5]:
+
+    # In min_mean_save에 모든 data 저장
+    min_mean_save = []
+    [min_mean_save.append([]) for k in range(N)]
     
-    [min_mean_save[SE].append([]) for k in range(sessionNum)]
-#    [pointSave[SE].append([]) for k in range(sessionNum)]
-    msreport = True
-    for se in range(sessionNum):
-        current_value = []
-        for i in range(len(model_name)): # repeat model 만큼 반복 후 평균냄
-            ssw = False
-            
-            loadpath5 = savepath + 'result\\' + model_name[i][0] + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
-          
-            if os.path.isfile(loadpath5):
-                ssw = True
-            else: # 구형과 호환을 위해 2주소 설정
-                loadpath5 = savepath + 'result\\' + model_name[i][0] + '\\exp_raw\\' + \
-                model_name[i][0] + '_PSL_result_' + str(SE) + '.pickle'
+    ## pointSvae - 2차 학습 label 판단에 사용하기 위해 예측 평균값 저장
+    #pointSave = []
+    #[pointSave.append([]) for k in range(N)]
+    for SE in range(N):
+        if not SE in grouped_total_list or SE in skiplist: # ETC 추가후 lidocine skip 삭제할것 (여러개)
+    #        print(SE, 'skip')
+            continue
+    
+        sessionNum = 5
+        if SE in se3set:
+            sessionNum = 3
+        
+        [min_mean_save[SE].append([]) for k in range(sessionNum)]
+    #    [pointSave[SE].append([]) for k in range(sessionNum)]
+        msreport = True
+        for se in range(sessionNum):
+            current_value = []
+            for i in range(len(model_name)): # repeat model 만큼 반복 후 평균냄
+                ssw = False
+                
+                loadpath5 = savepath + 'result\\' + model_name[i][0] + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
+              
                 if os.path.isfile(loadpath5):
                     ssw = True
-                else:
-                    if msreport:
-                        msreport = False
-                        print(SE, 'skip')
-            
-            if ssw:
-                with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
-                    PSL_result_save = pickle.load(f)
-            
-            # ##################################
-                PSL_result_save2 = PSL_result_save[SE][se] # [BINS][ROI][bins] # BINS , full length 넘어갈때, # bins는 full length 안에서
-                current_BINS = []
-                BINnum = len(PSL_result_save2)
-                if BINnum != 0:
-                    for BINS in range(len(PSL_result_save2)):
-                        current_ROI = []
-                        for ROI in range(len(PSL_result_save2[BINS])):
-                            
-                            current_ROI.append(np.argmax(PSL_result_save2[BINS][ROI], axis=1) == 1)
-#                            current_ROI.append(PSL_result_save2[BINS][ROI][:,1])
-        
-                        current_BINS.append(np.mean(np.array(current_ROI), axis=0)) # ROI 평균
-                    current_value.append(current_BINS)
-                    
-#        # add-hoc, 길이통일, 추후 삭제되어야 함
-#        lensave = []
-#        for u in range(len(current_value)):
-#            tmp = len(current_value)
-#            for k in range(len(current_value[u])): 
-#                if type(current_value[u][k]) != np.ndarray:
-#                    if np.isnan(current_value[u][k]):
-#                        tmp = k
-#                        break
-#            lensave.append(tmp)
-#                    
-#        current_value2 = []
-#        for u in range(len(current_value)):
-#            current_value2.append(np.array(current_value[u][:np.min(lensave)])[0,:])
-#            # # 2진화 
-        if len(current_value) > 0:
-            current_value = np.mean(np.array(current_value), axis=0) # 모든 반복 project에 대해서 평균처리함
-  
-            binNum = current_value.shape[0] # [BINS]
-            mslength = current_value.shape[1]
-            
-            # 시계열 형태로 표현용 
-            empty_board = np.zeros((binNum, mslength + (binNum-1)))
-            empty_board[:,:] = np.nan
-    #       
-#            [pointSave[SE][se].append([]) for u in range(binNum)]
-            for BIN in range(binNum):
-                plotsave = current_value[BIN,:]
-                empty_board[BIN, BIN:BIN+mslength] = plotsave
+                else: # 구형과 호환을 위해 2주소 설정
+                    loadpath5 = savepath + 'result\\' + model_name[i][0] + '\\exp_raw\\' + \
+                    model_name[i][0] + '_PSL_result_' + str(SE) + '.pickle'
+                    if os.path.isfile(loadpath5):
+                        ssw = True
+                    else:
+                        if msreport:
+                            msreport = False
+#                            print(SE, 'skip')
                 
-#                print(BIN, np.mean(plotsave))
+                if ssw:
+                    with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                        PSL_result_save = pickle.load(f)
                 
+                # ##################################
+                    PSL_result_save2 = PSL_result_save[SE][se] # [BINS][ROI][bins] # BINS , full length 넘어갈때, # bins는 full length 안에서
+                    current_BINS = []
+                    BINnum = len(PSL_result_save2)
+                    if BINnum != 0:
+                        for BINS in range(len(PSL_result_save2)):
+                            current_ROI = []
+                            for ROI in range(len(PSL_result_save2[BINS])):
+                                
+                                current_ROI.append(np.argmax(PSL_result_save2[BINS][ROI], axis=1) == 1)
+    #                            current_ROI.append(PSL_result_save2[BINS][ROI][:,1])
+                                
+                            roiRank = np.mean(np.array(current_ROI), axis=1) #[ROI, bins]
+                            current_ROI_rank = np.array(current_ROI)[np.argsort(roiRank)[::-1][:int(round(roiRank.shape[0]*roiRatio))], :]
+                            current_BINS.append(np.mean(np.array(current_ROI_rank), axis=0)) # ROI 평균
+                        current_value.append(current_BINS)
+                        
+            if len(current_value) > 0:
+                current_value = np.mean(np.array(current_value), axis=0) # 모든 반복 project에 대해서 평균처리함
+      
+                binNum = current_value.shape[0] # [BINS]
+                mslength = current_value.shape[1]
                 
-                
-#                pointSave[SE][se][BIN] = np.mean(plotsave)
-
-            empty_board = np.nanmean(empty_board, axis=0)
-            min_mean_save[SE][se] = empty_board
-            
-#            if SE == 72:
-#                plt.figure()
-#                plt.plot(empty_board)
-#                plt.ylim(0,1)
-            
-        elif len(current_value) == 0:
-            min_mean_save[SE][se] = np.nan
-
-if False:
-    savename2 = '1122_driect_cut'
-    with open(savename2 + '_pointSave.pickle', 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(pointSave, f, pickle.HIGHEST_PROTOCOL)
-        print(savename2 + '_pointSave.pickle 저장되었습니다.')
-        
-min_mean_save = min_mean_save
-#    exceptlist = [[70, 0], [71, 0], [72, 0]] # 2분 촬영 psl은 제외 한다.
-#    minimal_size = 497
-          
-biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
-biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
-
-## 우선 평균값으로 채워넣고,
-for SE in range(N):
-    if not SE in grouped_total_list or SE in skiplist:
-#            print(SE, 'skip')
-        continue
+                # 시계열 형태로 표현용 
+                empty_board = np.zeros((binNum, mslength + (binNum-1)))
+                empty_board[:,:] = np.nan
+        #       
+    #            [pointSave[SE][se].append([]) for u in range(binNum)]
+                for BIN in range(binNum):
+                    plotsave = current_value[BIN,:]
+                    empty_board[BIN, BIN:BIN+mslength] = plotsave
     
-    sessionNum = 5
-    if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
-        sessionNum = 3
+                empty_board = np.nanmean(empty_board, axis=0)
+                min_mean_save[SE][se] = empty_board
+                
+            elif len(current_value) == 0:
+                min_mean_save[SE][se] = np.nan
+    
+      
+    min_mean_save = min_mean_save
+    biRNN_2 = np.zeros((N,5)); movement_497_2 = np.zeros((N,5)); t4_497_2 = np.zeros((N,5))
+    biRNN_2[:] = np.nan; movement_497_2[:] = np.nan; t4_497_2[:] = np.nan
+    
+    ## 우선 평균값으로 채워넣고,
+    for SE in range(N):
+        if not SE in grouped_total_list or SE in skiplist:
+    #            print(SE, 'skip')
+            continue
         
-    for se in range(sessionNum):
-        min_mean_mean = np.array(min_mean_save[SE][se])
-        if not np.isnan(np.nanmean(min_mean_mean)):
-            biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
+        sessionNum = 5
+        if SE in se3set:
+            sessionNum = 3
             
-#                startat = 10*maxix
-            movement_497_2[SE,se] = np.mean(bahavss[SE][se])
-            
-            meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
-            t4_497_2[SE,se] = np.mean(meansignal,axis=0)
-            
-Aprism_biRNN2_pslOnly = msGrouping_pslOnly(biRNN_2)
-             
+        for se in range(sessionNum):
+            min_mean_mean = np.array(min_mean_save[SE][se])
+            if not np.isnan(np.nanmean(min_mean_mean)):
+                biRNN_2[SE,se] = np.mean(min_mean_mean, axis=0)
+                
+    #                startat = 10*maxix
+                movement_497_2[SE,se] = np.mean(bahavss[SE][se])
+                
+                meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
+                t4_497_2[SE,se] = np.mean(meansignal,axis=0)
+                
+    #Aprism_biRNN2_pslOnly = msGrouping_pslOnly(biRNN_2)
+      
+    biRNN_2, msacc = mstest2_psl()
+    Aprism_biRNN2_pslOnly = msGrouping_pslOnly(biRNN_2)
+
+    print(roiRatio, msacc)
+
+
         
-# In[]
-        
+# In[] 구
+
+  
 # maxix 적용전
 def msfilter(target, msfilter):
     msfilter = msfilter
@@ -1138,14 +1198,29 @@ plt.plot(base[:-1], cumulative)
 
 
 
-# In[]
-mslength = np.zeros((N,5))
-for SE in range(N):
-    for se in range(5):
-        try:
-            mslength[SE,se] = min_mean_save[SE][se].shape[0]
-        except:
-            pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
