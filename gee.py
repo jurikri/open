@@ -33,21 +33,12 @@ def mslinear_regression(x,y):
 
     return m, b # bx+a
 
-def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sample만 뽑힘
-    target = np.array(msmatrix)
-    target_short = np.array(target)
+def msGrouping_nonexclude(formalin, psl): # base 예외처리 없음, goruping된 sample만 뽑힘
+    short = np.array(formalin); long = np.array(psl)
     
-    short_length = min_mean_save[shortlist[0][0]][shortlist[0][1]].shape[0]
-    
+    control = []; [control.append([]) for u in range(2)]
     for u in longlist:
         SE = u[0]; se = u[1]
-        min_mean_mean = np.array(min_mean_save[SE][se])
-        target_short[SE,se] = np.mean(min_mean_mean[:short_length])
-    
-    control = []; control.append([]); control.append([])
-    for u in longlist:
-        SE = u[0]; se = u[1]
-        
         c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + lidocainGroup and se in [0,2,4]
         c2 = SE in capsaicinGroup and se in [0,2]
         c3 = SE in pslGroup and se in [0]
@@ -55,20 +46,29 @@ def msGrouping_nonexclude(msmatrix): # base 예외처리 없음, goruping된 sam
         c5 = SE in salineGroup and se in [0,1,2,3,4]
         
         if c1 or c2 or c5:
-            control[0].append(target[SE,se]) # not psl
+            control[0].append(long[SE,se]) # not psl
             
         if c3 or c4:
-            control[1].append(target[SE,se]) # psl
-            
-            
+            control[1].append(long[SE,se]) # psl
 
-    df3 = pd.DataFrame(target_short[highGroup]) 
-    df3 = pd.concat([df3, pd.DataFrame(target_short[midleGroup]), \
-                     pd.DataFrame(target_short[salineGroup]), \
-                     pd.DataFrame(target_short[ketoGroup]), pd.DataFrame(target_short[lidocainGroup]), \
-                     pd.DataFrame(target_short[yohimbineGroup]), pd.DataFrame(target_short[capsaicinGroup][:,0:3]), \
+    df3 = pd.DataFrame(short[highGroup]) 
+    df3 = pd.concat([df3, pd.DataFrame(short[midleGroup]), \
+                     pd.DataFrame(short[salineGroup]), \
+                     pd.DataFrame(short[ketoGroup]), pd.DataFrame(short[lidocainGroup]), \
+                     pd.DataFrame(short[yohimbineGroup]), pd.DataFrame(short[capsaicinGroup][:,0:3]), \
                      pd.DataFrame(control[0]), pd.DataFrame(control[1]), \
-                     pd.DataFrame(target[pslGroup][:,1:3]), pd.DataFrame(target[shamGroup][:,1:3].flatten())], ignore_index=True, axis = 1)
+                     pd.DataFrame(long[pslGroup][:,1:3]), pd.DataFrame(long[shamGroup][:,1:3].flatten())], ignore_index=True, axis = 1)
+        
+    df3 = np.array(df3)
+    
+    return df3
+
+def msGrouping_pslOnly(psl): # psl만 처리
+    psldata = np.array(psl)
+    
+    df3 = pd.DataFrame(psldata[shamGroup,0:3]) 
+    df3 = pd.concat([df3, pd.DataFrame(psldata[pslGroup,0:3]), \
+                     pd.DataFrame(psldata[adenosineGroup,0:3])], ignore_index=True, axis = 1)
         
     df3 = np.array(df3)
     
@@ -119,8 +119,12 @@ capsaicinGroup = msGroup['capsaicinGroup']
 yohimbineGroup = msGroup['yohimbineGroup']
 pslGroup = msGroup['pslGroup']
 shamGroup = msGroup['shamGroup']
+adenosineGroup = msGroup['adenosineGroup']
+highGroup2 = msGroup['highGroup2']
 
 msset = msGroup['msset']
+del msGroup['msset']
+skiplist = restrictionGroup + lowGroup + lidocainGroup
 
 painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup']
 nonpainGroup = msGroup['salineGroup'] 
@@ -218,31 +222,45 @@ for i in list(msGroup.keys()):
 print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 
 # load 할 model 경로(들) 입력
-model_name = []
+# index, project
+project_list = []
 # index, proejct
-model_name.append(['1128_binfix5_1', 5])
-model_name.append(['1128_binfix5_2', 5])
+#model_name.append(['1128_binfix5_1', 5])
+#model_name.append(['1128_binfix5_2', 5])
 #model_name.append(['1126_binfix2_saline', 3])
+#model_name.append(['1205_duplicated_add_1', 100])
+#model_name.append(['1205_duplicated_add_2', 200])
+#model_name.append(['1207_recovery_except_1', 100])
+#model_name.append(['1207_recovery_except_2', 200])
+#model_name.append(['1207_recovery_except_3', 300])
 
+#model_name.append(['1217_adenosine_1', 100, None])
 
+project_list.append(['1217_adenosine_1', 100, None])
+project_list.append(['1217_adenosine_2', 200, None])
+project_list.append(['1217_adenosine_3', 500, None])
+project_list.append(['1217_adenosine_4', 600, None])
+
+model_name = project_list 
 # In short, long test 1차 by signalss
 #msshort = 42; mslong = 97; 
 bins = 10
 shortlist = []; longlist = []
 for SE in range(N):
     if SE in mouseGroup:
-        sessionNum = 5
-        if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
-            sessionNum = 3
-        
-        for se in range(sessionNum):
-            length = np.array(signalss[SE][se]).shape[0]
-            if length > 180*FPS:
-                longlist.append([SE,se])
-            elif length < 180*FPS:
-                shortlist.append([SE,se])
-            else:
-                print('error')
+        if not SE in skiplist:
+            sessionNum = 5
+            if SE in capsaicinGroup or SE in pslGroup or SE in shamGroup:
+                sessionNum = 3
+            
+            for se in range(sessionNum):
+                length = np.array(signalss[SE][se]).shape[0]
+                if length > 180*FPS:
+                    longlist.append([SE,se])
+                elif length < 180*FPS:
+                    shortlist.append([SE,se])
+                else:
+                    print('error')
 
 # In min_mean_save에 모든 data 저장
 min_mean_save = []
@@ -251,7 +269,6 @@ min_mean_save = []
 ## pointSvae - 2차 학습 label 판단에 사용하기 위해 예측 평균값 저장
 #pointSave = []
 #[pointSave.append([]) for k in range(N)]
-skiplist = restrictionGroup + lowGroup + lidocainGroup
 for SE in range(N):
     if not SE in grouped_total_list or SE in skiplist: # ETC 추가후 lidocine skip 삭제할것 (여러개)
 #        print(SE, 'skip')
@@ -382,6 +399,8 @@ for SE in range(N):
             
             meansignal = np.mean(np.array(signalss[SE][se]),axis=1)
             t4_497_2[SE,se] = np.mean(meansignal,axis=0)
+            
+Aprism_biRNN2_pslOnly = msGrouping_pslOnly(biRNN_2)
              
         
 # In[]
@@ -871,6 +890,68 @@ def otimal_msduration(min_mean_save):
  
     return biRNN_2, t4_497_2, movement_497_2
 
+# In[]
+
+# 현재 사용중인 test 분석방식은 peak time window
+# 즉 특정 x time window 동안의 값을 평균내 모든 값들 중 최대값을 그 session의 value로 사용하여 평가함.
+# 계산은 control group도 동일하게 적용된느 것은 맞지만, x를 최적화 할때 평가결과를 가지고 결정하는 문제가 있다.
+# 이 계산이 bias가 아님을 증명하기 위해, time window x가 특별한 값이 아니고, 대충 아무거나 써도 마찬가지의 결과를 냄을
+# x에 따른 acc를 보여줌으로써 어필해야 한다. -> x는 일반화 가능성이 높다. = 매우 특정한 값이 아니다.   
+    
+
+#biRNN_2, t4_497_2, movement_497_2 = otimal_msduration(min_mean_save) # 2 mins, or 4 mins
+
+# 예외규정: 70, 72는 동일 생쥐의 반복 측정이기 때문에 평균처리한다.
+#biRNN_22 = ms_batchmean(biRNN_2)
+#t4_497_22 = ms_batchmean(t4_497_2)
+#movement_497_22 = ms_batchmean(movement_497_2)
+
+# test 3: relu
+def mstest3(): # 시간 상관없이 전체 평균을 relu로 처리함. long list 전용임.
+    biRNN_2 = np.zeros((N,5)); biRNN_2[:] = np.nan
+    othr = relu_optimize(min_mean_save)
+    print('optimized threshold', othr)
+    for SE in range(N):
+        for se in range(5):       
+            if [SE, se] in longlist:
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                min_mean_mean[min_mean_mean < othr] = 0
+                biRNN_2[SE,se] = np.mean(np.array(min_mean_mean))
+                
+    return othr, biRNN_2
+            
+optiThr, biRNN_2_psl = mstest3(); biRNN_2_psl = ms_batch_ind(biRNN_2_psl)
+
+def mstest4(): # shortlist 전용, 단순 평균
+    biRNN_2 = np.zeros((N,5)); biRNN_2[:] = np.nan
+    short_length = min_mean_save[shortlist[0][0]][shortlist[0][1]].shape[0]
+    for SE in range(N):
+        for se in range(5):       
+            if [SE, se] in shortlist:
+                min_mean_mean = np.array(min_mean_save[SE][se])
+                biRNN_2[SE,se] = np.mean(np.array(min_mean_mean))
+                
+            for u in longlist:
+                SE1 = u[0]; se1 = u[1]
+                min_mean_mean = np.array(min_mean_save[SE1][se1])
+                biRNN_2[SE1,se1] = np.mean(min_mean_mean[:short_length])
+                
+    return biRNN_2
+            
+biRNN_2_formalin = mstest4(); biRNN_2_formalin = ms_batch_ind(biRNN_2_formalin)
+
+Aprism_biRNN = msGrouping_nonexclude(biRNN_2_formalin, biRNN_2_psl)
+
+#
+#t4_497_22 = ms_batch_ind(t4_497_2)
+#movement_497_22 = ms_batch_ind(movement_497_2)
+#
+#
+#
+##Aprism_total = msGrouping_nonexclude(t4_497_22)
+##Aprism_movement = msGrouping_nonexclude(movement)           
+#
+#report(biRNN = biRNN_22)
 # In[] 시계열 시각화, 저장
 
 RESULT_SAVE_PATH = savepath + '\\psl_visualization\\'
@@ -898,7 +979,9 @@ for SE in range(N):
             min_mean_mean = np.array(min_mean_save[SE][se])
             
             plt.figure()
-            plt.plot(min_mean_mean, label = 'bRNN')    
+            plt.plot(min_mean_mean, label = 'bRNN') 
+            thrline = np.zeros(min_mean_mean.shape[0]); thrline[:] = optiThr
+            plt.plot(thrline, label = 'relu_threshold')
             plt.ylim(0,1)
             
             plt.ylabel('Normalized index')
@@ -915,34 +998,6 @@ for SE in range(N):
         
         
         # time window 맞춰서 t4, movement 추가. optimal window 시각화
-        
-
-# In[]
-
-# 현재 사용중인 test 분석방식은 peak time window
-# 즉 특정 x time window 동안의 값을 평균내 모든 값들 중 최대값을 그 session의 value로 사용하여 평가함.
-# 계산은 control group도 동일하게 적용된느 것은 맞지만, x를 최적화 할때 평가결과를 가지고 결정하는 문제가 있다.
-# 이 계산이 bias가 아님을 증명하기 위해, time window x가 특별한 값이 아니고, 대충 아무거나 써도 마찬가지의 결과를 냄을
-# x에 따른 acc를 보여줌으로써 어필해야 한다. -> x는 일반화 가능성이 높다. = 매우 특정한 값이 아니다.   
-    
-
-biRNN_2, t4_497_2, movement_497_2 = otimal_msduration(min_mean_save) # 2 mins, or 4 mins
-
-# 예외규정: 70, 72는 동일 생쥐의 반복 측정이기 때문에 평균처리한다.
-#biRNN_22 = ms_batchmean(biRNN_2)
-#t4_497_22 = ms_batchmean(t4_497_2)
-#movement_497_22 = ms_batchmean(movement_497_2)
-
-biRNN_22 = ms_batch_ind(biRNN_2)
-t4_497_22 = ms_batch_ind(t4_497_2)
-movement_497_22 =ms_batch_ind(movement_497_2)
-
-Aprism_biRNN = msGrouping_nonexclude(biRNN_22)
-
-#Aprism_total = msGrouping_nonexclude(t4_497_22)
-#Aprism_movement = msGrouping_nonexclude(movement)           
-
-report(biRNN = biRNN_22)
 
 
 ############################################################# 
