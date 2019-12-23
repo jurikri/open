@@ -1,19 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Nov 18 13:22:18 2019
-
-@author: msbak
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 31 12:27:10 2019
-
-@author: msbak
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Created on Sat Apr 20 20:58:38 2019
 
 @author: msbak
@@ -327,6 +313,7 @@ project_list = []
 project_list.append(['1217_adenosine_1', 100, None])
 project_list.append(['1217_adenosine_2', 200, None])
 project_list.append(['1217_adenosine_3', 500, None])
+project_list.append(['1217_adenosine_4', 600, None])
 
 q = project_list[0]
 for q in project_list:
@@ -1005,6 +992,7 @@ for q in project_list:
                     if testbin:
                         PSL_result_save = []
                         [PSL_result_save.append([]) for i in range(N)]
+                        
                         for SE2 in range(N):
                             [PSL_result_save[SE2].append([]) for i in range(5)]
                         # PSL_result_save변수에 무조건 동일한 공간을 만들도록 설정함. pre allocation 개념
@@ -1062,6 +1050,85 @@ for q in project_list:
                         
                         with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
                             pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
+                            print(picklesavename, '저장되었습니다.')
+# In[]    
+            if trained_fortest and testsw2:
+#                import sys
+#                print('stop')
+#                sys.exit()
+                
+                for test_mouseNum in testlist:
+                    testbin = None
+                    picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_mean_' + str(test_mouseNum) + '.pickle'
+                    try:
+                        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+                            tmp = pickle.load(f)
+                            testbin = False
+                            print('PSL_result_mean_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
+                    except:
+                        testbin = True
+                    
+                    if testbin:
+                        PSL_result_save_mean = []
+                        [PSL_result_save_mean.append([]) for i in range(N)]
+                        
+                        for SE2 in range(N):
+                            [PSL_result_save_mean[SE2].append([]) for i in range(5)]
+                        # PSL_result_save변수에 무조건 동일한 공간을 만들도록 설정함. pre allocation 개념
+
+                        sessionNum = 5
+                        if test_mouseNum in se3set:
+                            sessionNum = 3
+                        
+                        for se in range(sessionNum):    
+                            binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                            binNum = len(binning)
+                            
+                            if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                                binNum = 1
+                                binning = [0]
+                                                           
+                            [PSL_result_save_mean[test_mouseNum][se].append([]) for i in range(binNum)]
+                            
+                            i = 54; ROI = 0; msreport = []
+                            for i in range(binNum):         
+                                signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                ROInum = signalss_PSL_test.shape[1]
+                                
+#                                [PSL_result_save_mean[test_mouseNum][se][i].append([]) for k in range(ROInum)]
+#                                for ROI in range(ROInum):
+                                signal_full_roi = np.mean(signalss_PSL_test, axis=1)
+                            
+                                lastsave = np.zeros(msunit, dtype=int)
+                                X_ROI = []
+                                
+                                binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
+            
+                                for frame in binlist:   
+                                    X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
+                                        
+                                    for unit in range(msunit):
+                                        if frame <= full_sequence - sequenceSize[unit]:
+                                            X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
+                                            lastsave[unit] = frame
+                                            
+                                        else:
+                                            X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+                            #                print(frame, unit, lastsave[unit])
+                            
+                                    X_ROI.append(X_tmp)
+                                    
+                                X_array = array_recover(X_ROI)
+#                                print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'mean signal')
+                                prediction = model.predict(X_array)
+                                PSL_result_save_mean[test_mouseNum][se][i] = prediction
+                                msreport.append(np.mean(prediction[:,1]))
+                                
+                            print(test_mouseNum, se, np.mean(msreport))
+     
+                    
+                        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                            pickle.dump(PSL_result_save_mean, f, pickle.HIGHEST_PROTOCOL)
                             print(picklesavename, '저장되었습니다.')
 
 
