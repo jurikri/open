@@ -63,7 +63,7 @@ with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
 FPS = msdata_load['FPS']
 N = msdata_load['N']
 bahavss = msdata_load['bahavss']   # 움직임 정보
-behavss2 = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전 
+#behavss2 = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전 
 movement = msdata_load['movement'] # 움직인정보를 평균내서 N x 5 matrix에 저장
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
@@ -83,6 +83,31 @@ shamGroup = msGroup['shamGroup']
 adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 
+def downsampling(msssignal, wanted_size):
+    downratio = msssignal.shape[0]/wanted_size
+    downsignal = np.zeros(wanted_size)
+    downsignal[:] = np.nan
+    for frame in range(wanted_size):
+        s = int(round(frame*downratio))
+        e = int(round(frame*downratio+downratio))
+        downsignal[frame] = np.mean(msssignal[s:e])
+        
+    return np.array(downsignal)
+
+movement_syn = []
+[movement_syn.append([]) for u in range(N)]
+
+for SE in range(N):
+    [movement_syn[SE].append([]) for u in range(5)]
+    for se in range(5):
+        movement_syn[SE][se] = downsampling(bahavss[SE][se], signalss[SE][se].shape[0])
+    
+#        print(np.mean(movement_syn[SE][se]))
+##plt.plot(movement_syn[1][1])
+#import sys
+#sys.exit()    
+#
+
 msset = msGroup['msset']
 del msGroup['msset']
 
@@ -94,7 +119,7 @@ keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
 
-bins = 10 # 최소 time frame 간격     
+bins = 10 # 최소 time frame 간격
 
 totaldataset = grouped_total_list
         
@@ -114,7 +139,7 @@ for SE in range(N):
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
 def array_recover(X_like):
     X_like_toarray = []; X_like = np.array(X_like)
-    for input_dim in range(msunit):
+    for input_dim in range(msunit *fn):
         tmp = np.zeros((X_like.shape[0],X_like[0,input_dim].shape[0]))
         for row in range(X_like.shape[0]):
             tmp[row,:] = X_like[row,input_dim]
@@ -128,15 +153,15 @@ def array_recover(X_like):
 
 # data 생성
 SE = 70; se = 1; label = 1; roiNum=None; GAN=False; Mannual=False; mannual_signal=None; passframesave=np.array([])
-def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=False, mannual_signal=None, passframesave=np.array([])):    
+def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=False, \
+                   mannual_signal=None, mannual_signal2=None, passframesave=np.array([])):    
     X = []; Y = []; Z = []
-
     if label == 0:
         label = [1, 0] # nonpain
     elif label == 1:
         label = [0, 1] # pain
-    elif label == 2:
-        label = [0, 0] # nonpain low
+#    elif label == 2:
+#        label = [0, 0] # nonpain low
  
     if not(roiNum==None):
         s = roiNum; e = roiNum+1
@@ -145,11 +170,16 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
     
     if Mannual:
         signal_full = mannual_signal
+        mannual_signal2 = mannual_signal2
         
 #    elif not(Mannual):
 #        signal_full = np.array(signalss_cut[SE][se])
         
-    signal_full_roi = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
+    signal1 = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
+    signal2 = np.mean(mannual_signal2[:,s:e], axis=1)
+    
+#    del signal1
+#    signal1 = np.array(signal2)  # signal1을 movement로 intercept # movement를 signal1로 작업할 떄만 사용
     
 #    if GAN:
 #        signal_full = np.array(GAN_data[SE][se])
@@ -165,21 +195,40 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
 
     t4_save = []
     for frame in binlist:   
-        X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
+        X_tmp = []; [X_tmp.append([]) for k in range(msunit * fn)] 
 
         for unit in range(msunit):
             if frame <= full_sequence - sequenceSize[unit]:
-                X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
+                X_tmp[unit] = (signal1[frame : frame + sequenceSize[unit]])
                 lastsave[unit] = frame
                 
                 if unit == 0:
-                    t4_save.append(np.mean(signal_full_roi[frame : frame + sequenceSize[unit]]))
+                    t4_save.append(np.mean(signal1[frame : frame + sequenceSize[unit]]))
                 
             else:
-                X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+                X_tmp[unit] = (signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
 #                print(frame, unit, lastsave[unit])
                 if unit == 0:
-                    t4_save.append(np.mean(signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))
+                    t4_save.append(np.mean(signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))
+                    
+        if fn > 1:
+            branchNum = 1
+            signal2 = np.array(signal2)
+            for unit in range(msunit):
+                if frame <= full_sequence - sequenceSize[unit]:
+                    X_tmp[unit+msunit*branchNum] = (signal2[frame : frame + sequenceSize[unit]])
+                    lastsave[unit] = frame
+                    
+                    if unit == 0:
+                        t4_save.append(np.mean(signal2[frame : frame + sequenceSize[unit]]))
+                    
+                else:
+                    X_tmp[unit+msunit*branchNum]  = (signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+    #                print(frame, unit, lastsave[unit])
+                    if unit == 0:
+                        t4_save.append(np.mean(signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))   
+                    
+    ############
                 
         if False: # 시각화로 체크 위치만
             msimg = np.zeros((msunit*10, full_sequence))
@@ -267,6 +316,7 @@ print('sequenceSize', sequenceSize)
 # learning intensity
 epochs = 5 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
+fn = 1
 
 n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
 layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8
@@ -310,10 +360,10 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1217_adenosine_1', 100, None])
-project_list.append(['1217_adenosine_2', 200, None])
-project_list.append(['1217_adenosine_3', 500, None])
-project_list.append(['1217_adenosine_4', 600, None])
+#project_list.append(['1223_formalin_movement_1', 100, None])
+#project_list.append(['1223_formalin_movement_2', 200, None])
+project_list.append(['1226_adenosine_1', 100, None])
+project_list.append(['1226_adenosine_1', 200, None])
 
 q = project_list[0]
 for q in project_list:
@@ -384,13 +434,18 @@ for q in project_list:
                         exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0
                         if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
                             mssignal = np.mean(signalss[SE][se], axis=1)
+                            mssignal2 = np.array(movement_syn[SE][se])
                             msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
                             for u in msbins:
                                 mannual_signal = mssignal[u:u+full_sequence]
                                 mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                
+                                mannual_signal2 = mssignal2[u:u+full_sequence]
+                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+
                                 X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
-                                               Mannual=True, mannual_signal=mannual_signal)
+                                               Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
                                 
                                 X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
                     
@@ -409,13 +464,18 @@ for q in project_list:
                     c1 = SE in set2 and se in [1]
                     if c1: # 
                         mssignal = np.mean(signalss[SE][se], axis=1)
+                        mssignal2 = np.array(movement_syn[SE][se])
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                         
                         for u in msbins:
                             mannual_signal = mssignal[u:u+full_sequence]
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                            
+                            mannual_signal2 = mssignal2[u:u+full_sequence]
+                            mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+
                             X, Y, Z, _ = dataGeneration(SE, se, label=msclass, \
-                                           Mannual=True, mannual_signal=mannual_signal)
+                                           Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
                             X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
                     
         datasetX[msclass] = np.array(X_tmp)
@@ -478,8 +538,8 @@ for q in project_list:
     # mouselist는 training set에 사용된 list임.
     # training set에 사용된 mouse의 마릿수 만큼 test set을 따로 만듦
     
-    inputsize = np.zeros(msunit, dtype=int) 
-    for unit in range(msunit):
+    inputsize = np.zeros(msunit *fn, dtype=int) 
+    for unit in range(msunit *fn):
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
         
     def keras_setup():
@@ -492,10 +552,10 @@ for q in project_list:
 
         init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
         
-        input1 = []; [input1.append([]) for i in range(msunit)] # 최초 input layer
-        input2 = []; [input2.append([]) for i in range(msunit)] # input1을 받아서 끝까지 이어지는 변수
+        input1 = []; [input1.append([]) for i in range(msunit *fn)] # 최초 input layer
+        input2 = []; [input2.append([]) for i in range(msunit *fn)] # input1을 받아서 끝까지 이어지는 변수
         
-        for unit in range(msunit):
+        for unit in range(msunit *fn):
             input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in)) # 각 병렬 layer shape에 따라 input 받음
             input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
             input2[unit] = Dense(layer_1, kernel_initializer = init, activation='relu')(input2[unit]) # fully conneted layers, relu
@@ -697,8 +757,8 @@ for q in project_list:
                     csvwriter.writerow(df2)         
                     csvfile.close() 
 
-                    X_training = []; [X_training.append([]) for i in range(msunit)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
-                    X_valid = []; [X_valid.append([]) for i in range(msunit)]
+                    X_training = []; [X_training.append([]) for i in range(msunit *fn)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
+                    X_valid = []; [X_valid.append([]) for i in range(msunit *fn)]
                     Y_training_list = []
                     Y_training_control_list = []
 #                    Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
@@ -710,7 +770,7 @@ for q in project_list:
                         for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
                             delist = np.concatenate((delist, np.where(indexer[:,0]==u)[0]), axis=0)
                     
-                    for unit in range(msunit): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
+                    for unit in range(msunit *fn): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
                         X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
 #                        X_valid[unit] = np.array(X[unit])[delist]
                 
@@ -757,8 +817,8 @@ for q in project_list:
                                     msclass = 0; init = True
                                 
                                 set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                                c1 = SE in set2 and se in [1]
-                                if c1: #
+                                c7 = SE in set2 and se in [1]
+                                if c7: #
                                     msclass = 1; init = True
                                     
                                 if init:
@@ -772,10 +832,13 @@ for q in project_list:
                                     for i in range(binNum):         
                                         signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
                                         signal_full_roi = np.mean(signalss_PSL_test, axis=1)
-                                        
                                         mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
+                                        
+                                        signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                        mannual_signal2 = np.reshape(signal2, (signal2.shape[0], 1))
+
                                         Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
-                                                       Mannual=True, mannual_signal=mannual_signal)
+                                                       Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
                                         
                                         X_tmp += Xtest; Y_tmp += Ytest
                                     
@@ -800,7 +863,7 @@ for q in project_list:
                     tr_y_shuffle_control = Y_training_control_list[shuffleix]
 
                     tr_x = []
-                    for unit in range(msunit):
+                    for unit in range(msunit *fn):
                         tr_x.append(X_training[unit][shuffleix])
 
 
@@ -1020,28 +1083,16 @@ for q in project_list:
                                 
                                 [PSL_result_save[test_mouseNum][se][i].append([]) for k in range(ROInum)]
                                 for ROI in range(ROInum):
-                                    signal_full_roi = np.mean(signalss_PSL_test[:,ROI:ROI+1], axis=1)
-                                
-                                    lastsave = np.zeros(msunit, dtype=int)
-                                    X_ROI = []
+                                    mannual_signal = signalss_PSL_test[:,ROI]
+                                    mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                                     
-                                    binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
+                                    mannual_signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence] # 반복이지만.. 편의상
+                                    mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
                 
-                                    for frame in binlist:   
-                                        X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
-                                            
-                                        for unit in range(msunit):
-                                            if frame <= full_sequence - sequenceSize[unit]:
-                                                X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
-                                                lastsave[unit] = frame
-                                                
-                                            else:
-                                                X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
-                                #                print(frame, unit, lastsave[unit])
-                                
-                                        X_ROI.append(X_tmp)
+                                    X, _, _, _ = dataGeneration(test_mouseNum, se, label=0, \
+                                           Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
                                         
-                                    X_array = array_recover(X_ROI)
+                                    X_array = array_recover(X)
                                     print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'ROI', ROI)
                                     prediction = model.predict(X_array)
                                     PSL_result_save[test_mouseNum][se][i][ROI] = prediction
@@ -1051,12 +1102,8 @@ for q in project_list:
                         with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
                             pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
                             print(picklesavename, '저장되었습니다.')
-# In[]    
+# In[]      # mean signal 처리
             if trained_fortest and testsw2:
-#                import sys
-#                print('stop')
-#                sys.exit()
-                
                 for test_mouseNum in testlist:
                     testbin = None
                     picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_mean_' + str(test_mouseNum) + '.pickle'
@@ -1067,7 +1114,8 @@ for q in project_list:
                             print('PSL_result_mean_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
                     except:
                         testbin = True
-                    
+                        
+#                    testbin = True # 수정 될대까지 오버라이트
                     if testbin:
                         PSL_result_save_mean = []
                         [PSL_result_save_mean.append([]) for i in range(N)]
@@ -1093,32 +1141,17 @@ for q in project_list:
                             i = 54; ROI = 0; msreport = []
                             for i in range(binNum):         
                                 signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                ROInum = signalss_PSL_test.shape[1]
                                 
-#                                [PSL_result_save_mean[test_mouseNum][se][i].append([]) for k in range(ROInum)]
-#                                for ROI in range(ROInum):
-                                signal_full_roi = np.mean(signalss_PSL_test, axis=1)
-                            
-                                lastsave = np.zeros(msunit, dtype=int)
-                                X_ROI = []
+                                mannual_signal = np.mean(signalss_PSL_test, axis=1)
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                                 
-                                binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-            
-                                for frame in binlist:   
-                                    X_tmp = []; [X_tmp.append([]) for k in range(msunit)] 
-                                        
-                                    for unit in range(msunit):
-                                        if frame <= full_sequence - sequenceSize[unit]:
-                                            X_tmp[unit] = (signal_full_roi[frame : frame + sequenceSize[unit]])
-                                            lastsave[unit] = frame
-                                            
-                                        else:
-                                            X_tmp[unit] = (signal_full_roi[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
-                            #                print(frame, unit, lastsave[unit])
+                                mannual_signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence] # 반복이지만.. 편의상
+                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
                             
-                                    X_ROI.append(X_tmp)
+                                X, _, _, _ = dataGeneration(test_mouseNum, se, label=0, \
+                                           Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
                                     
-                                X_array = array_recover(X_ROI)
+                                X_array = array_recover(X)
 #                                print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'mean signal')
                                 prediction = model.predict(X_array)
                                 PSL_result_save_mean[test_mouseNum][se][i] = prediction
