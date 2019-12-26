@@ -63,7 +63,7 @@ with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
 FPS = msdata_load['FPS']
 N = msdata_load['N']
 bahavss = msdata_load['bahavss']   # 움직임 정보
-behavss2 = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전 
+#behavss2 = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전 
 movement = msdata_load['movement'] # 움직인정보를 평균내서 N x 5 matrix에 저장
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
@@ -119,7 +119,7 @@ keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
 
-bins = 10 # 최소 time frame 간격     
+bins = 10 # 최소 time frame 간격
 
 totaldataset = grouped_total_list
         
@@ -160,8 +160,8 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
         label = [1, 0] # nonpain
     elif label == 1:
         label = [0, 1] # pain
-    elif label == 2:
-        label = [0, 0] # nonpain low
+#    elif label == 2:
+#        label = [0, 0] # nonpain low
  
     if not(roiNum==None):
         s = roiNum; e = roiNum+1
@@ -178,8 +178,8 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
     signal1 = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
     signal2 = np.mean(mannual_signal2[:,s:e], axis=1)
     
-    del signal1
-    signal1 = np.array(signal2)  # signal1을 movement로 intercept 
+#    del signal1
+#    signal1 = np.array(signal2)  # signal1을 movement로 intercept # movement를 signal1로 작업할 떄만 사용
     
 #    if GAN:
 #        signal_full = np.array(GAN_data[SE][se])
@@ -360,10 +360,10 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-project_list.append(['1223_formalin_movement_1', 100, None])
-project_list.append(['1223_formalin_movement_2', 200, None])
-#project_list.append(['1217_adenosine_3', 500, None])
-#project_list.append(['1217_adenosine_4', 600, None])
+#project_list.append(['1223_formalin_movement_1', 100, None])
+#project_list.append(['1223_formalin_movement_2', 200, None])
+project_list.append(['1226_adenosine_1', 100, None])
+project_list.append(['1226_adenosine_2', 200, None])
 
 q = project_list[0]
 for q in project_list:
@@ -817,8 +817,8 @@ for q in project_list:
                                     msclass = 0; init = True
                                 
                                 set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                                c1 = SE in set2 and se in [1]
-                                if c1: #
+                                c7 = SE in set2 and se in [1]
+                                if c7: #
                                     msclass = 1; init = True
                                     
                                 if init:
@@ -1115,8 +1115,7 @@ for q in project_list:
                     except:
                         testbin = True
                         
-                    testbin = True # 수정 될대까지 오버라이트
-                    
+#                    testbin = True # 수정 될대까지 오버라이트
                     if testbin:
                         PSL_result_save_mean = []
                         [PSL_result_save_mean.append([]) for i in range(N)]
