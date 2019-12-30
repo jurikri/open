@@ -64,7 +64,7 @@ FPS = msdata_load['FPS']
 N = msdata_load['N']
 bahavss = msdata_load['bahavss']   # 움직임 정보
 #behavss2 = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전 
-movement = msdata_load['movement'] # 움직인정보를 평균내서 N x 5 matrix에 저장
+#movement = msdata_load['movement'] # 움직인정보를 평균내서 N x 5 matrix에 저장
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
 signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
@@ -422,15 +422,14 @@ for q in project_list:
             if SE in trainingset:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
-                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
+                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
                     c1 = SE in set1 and se in [0,2]
                     c2 = SE in capsaicinGroup and se in [0,2]
                     c3 = SE in pslGroup + adenosineGroup and se in [0]
                     c4 = SE in shamGroup and se in [0,1,2]
                     c5 = SE in salineGroup and se in [0,1,2,3,4]
-                    c6 = SE in highGroup2 and se in [2]
                                     
-                    if c1 or c2 or c3 or c4 or c5 or c6:
+                    if c1 or c2 or c3 or c4 or c5:
                         exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0
                         if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
                             mssignal = np.mean(signalss[SE][se], axis=1)
@@ -625,7 +624,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = pslset
+    wanted = mouselist
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -805,15 +804,14 @@ for q in project_list:
                             
                             for se in range(sessionNum):
                                 init = False
-                                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup     
+                                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2    
                                 c1 = SE in set1 and se in [0,2]
                                 c2 = SE in capsaicinGroup and se in [0,2]
                                 c3 = SE in pslGroup + adenosineGroup and se in [0]
                                 c4 = SE in shamGroup and se in [0,1,2]
                                 c5 = SE in salineGroup and se in [0,1,2,3,4]
-                                c6 = SE in highGroup2 and se in [2]
                                                 
-                                if c1 or c2 or c3 or c4 or c5 or c6:
+                                if c1 or c2 or c3 or c4 or c5:
                                     msclass = 0; init = True
                                 
                                 set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
