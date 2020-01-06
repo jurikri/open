@@ -33,31 +33,14 @@ def mslinear_regression(x,y):
 
     return m, b # bx+a
 
-def msGrouping_nonexclude(formalin, psl): # base 예외처리 없음, goruping된 sample만 뽑힘
-    short = np.array(formalin); long = np.array(psl)
-    
-    control = []; [control.append([]) for u in range(2)]
-    for u in longlist:
-        SE = u[0]; se = u[1]
-        c1 = SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + lidocainGroup and se in [0,2,4]
-        c2 = SE in capsaicinGroup and se in [0,2]
-        c3 = SE in pslGroup and se in [0]
-        c4 = SE in shamGroup and se in [0] # sham session은 제외되어야함. 
-        c5 = SE in salineGroup and se in [0,1,2,3,4]
-        
-        if c1 or c2 or c5:
-            control[0].append(long[SE,se]) # not psl
-            
-        if c3 or c4:
-            control[1].append(long[SE,se]) # psl
-
-    df3 = pd.DataFrame(short[highGroup]) 
-    df3 = pd.concat([df3, pd.DataFrame(short[midleGroup]), \
-                     pd.DataFrame(short[salineGroup]), \
-                     pd.DataFrame(short[ketoGroup]), pd.DataFrame(short[lidocainGroup]), \
-                     pd.DataFrame(short[yohimbineGroup]), pd.DataFrame(short[capsaicinGroup][:,0:3]), \
-                     pd.DataFrame(control[0]), pd.DataFrame(control[1]), \
-                     pd.DataFrame(long[pslGroup][:,1:3]), pd.DataFrame(long[shamGroup][:,1:3].flatten())], ignore_index=True, axis = 1)
+shortlist = []; longlist = []
+def msGrouping_nonexclude(msdata): # base 예외처리 없음, goruping된 sample만 뽑힘
+    df3 = pd.DataFrame(msdata[highGroup + highGroup2]) 
+    df3 = pd.concat([df3, pd.DataFrame(msdata[midleGroup]), \
+                     pd.DataFrame(msdata[salineGroup]), \
+                     pd.DataFrame(msdata[ketoGroup]), pd.DataFrame(msdata[lidocainGroup]), \
+                     pd.DataFrame(msdata[yohimbineGroup]), pd.DataFrame(msdata[capsaicinGroup][:,0:3])] \
+                     , ignore_index=True, axis=1)
         
     df3 = np.array(df3)
     
@@ -103,7 +86,7 @@ bahavss = msdata_load['bahavss']
 behavss2 = msdata_load['behavss2']
 #baseindex = msdata_load['baseindex']
 #basess = msdata_load['basess']
-movement = msdata_load['movement']
+#movement = msdata_load['movement']
 msGroup = msdata_load['msGroup']
 msdir = msdata_load['msdir']
 signalss = msdata_load['signalss']
@@ -223,25 +206,23 @@ def msloss2_psl(biRNN_2):
 #    biRNN_22 = ms_batchmean(biRNN_2) # 중복 데이터 처리.. 평균을 내든 뺴든 ...
     biRNN_22 = ms_batch_ind(biRNN_2) # 단일쥐에서 평균내지 않을 때
 
-    a1 = biRNN_22[pslGroup,0].flatten()
+    a1 = biRNN_22[shamGroup,0].flatten()
     a1 = a1[np.isnan(a1) == False]
-    a2 = biRNN_22[shamGroup,:].flatten()
+    a2 = biRNN_22[shamGroup,1].flatten()
     a2 = a2[np.isnan(a2) == False]
-    a3 = biRNN_22[adenosineGroup,0].flatten()
+    a3 = biRNN_22[shamGroup,2].flatten()
     a3 = a3[np.isnan(a3) == False]
-    nonpain = np.concatenate((a1,a2,a3))
-
     
-    b1 = biRNN_22[pslGroup,1:3].flatten()
-    b1 = b1[np.isnan(b1) == False]
-    b2 = biRNN_22[adenosineGroup,1:3].flatten()
+    b2 = biRNN_22[pslGroup,1].flatten()
     b2 = b2[np.isnan(b2) == False]
-    pain = np.concatenate((b1,b2))
+    b3 = biRNN_22[pslGroup,2].flatten()
+    b3 = b3[np.isnan(b3) == False]
+#    pain = np.concatenate((b1,b2))
     
-    accuracy, roc_auc, fig = accuracy_cal(pain, nonpain, fsw=False)
-    pvalue = stats.ttest_ind(a2, pain)[1]*100
+#    accuracy, roc_auc, fig = accuracy_cal(pain, nonpain, fsw=False)
+    pvalue = stats.ttest_ind(a2, b2)[1] + stats.ttest_ind(a3, b3)[1]
     
-    return accuracy-pvalue
+    return -pvalue
 
 def mstest2_psl():
     # test 2: timewindow
@@ -280,7 +261,7 @@ def mstest2_psl():
 #    plt.plot(mssave)
                           
     mssec = forlist[np.nanargmax(mssave)]
-#    mssec = 60 # mannual (sec)
+    mssec = 60 # mannual (sec)
     msduration = int(round((((mssec*FPS)-82)/10)+1))
     print('optimized time window, mssec', mssec)
     biRNN_2 = np.zeros((N,5)); biRNN_2[:] = np.nan
@@ -313,10 +294,18 @@ print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
 # load 할 model 경로(들) 입력
 # index, project
 project_list = []
-project_list.append(['1217_adenosine_1', 100, None])
-project_list.append(['1217_adenosine_2', 200, None])
-project_list.append(['1217_adenosine_3', 500, None])
-project_list.append(['1217_adenosine_4', 600, None])
+#project_list.append(['1217_adenosine_1', 100, None])
+#project_list.append(['1217_adenosine_2', 200, None])
+#project_list.append(['1217_adenosine_3', 500, None])
+#project_list.append(['1217_adenosine_4', 600, None])
+
+#project_list.append(['1223_formalin_movement_1', 100, None])
+#project_list.append(['1223_formalin_movement_2', 200, None])
+
+project_list.append(['1226_adenosine_1', 100, None])
+project_list.append(['1226_adenosine_2', 200, None])
+project_list.append(['1226_adenosine_3', 300, None])
+project_list.append(['1226_adenosine_4', 400, None])
 
 model_name = project_list 
 # In short, long test 1차 by signalss
@@ -339,15 +328,12 @@ for SE in range(N):
                 else:
                     print('error')
 
+# In[] non-psl
 
-# In[]
+# In
 ################
                     
-roiRatio = 0.5                    
-
-for roiRatio in [0.5]:
-
-    # In min_mean_save에 모든 data 저장
+for roiRatio in [1]: # 0.5    # In min_mean_save에 모든 data 저장
     min_mean_save = []
     [min_mean_save.append([]) for k in range(N)]
     
@@ -399,11 +385,12 @@ for roiRatio in [0.5]:
                             for ROI in range(len(PSL_result_save2[BINS])):
                                 
                                 current_ROI.append(np.argmax(PSL_result_save2[BINS][ROI], axis=1) == 1)
+                                # class 1에 대하여 binarization
     #                            current_ROI.append(PSL_result_save2[BINS][ROI][:,1])
                                 
                             roiRank = np.mean(np.array(current_ROI), axis=1) #[ROI, bins]
                             current_ROI_rank = np.array(current_ROI)[np.argsort(roiRank)[::-1][:int(round(roiRank.shape[0]*roiRatio))], :]
-                            current_BINS.append(np.mean(np.array(current_ROI_rank), axis=0)) # ROI 평균
+                            current_BINS.append(np.mean(np.array(current_ROI_rank ), axis=0)) # ROI 평균
                         current_value.append(current_BINS)
                         
             if len(current_value) > 0:
@@ -454,16 +441,42 @@ for roiRatio in [0.5]:
                 t4_497_2[SE,se] = np.mean(meansignal,axis=0)
                 
     #Aprism_biRNN2_pslOnly = msGrouping_pslOnly(biRNN_2)
-      
+    
+    biRNN_22 = np.zeros((N,5)); biRNN_22[:] = np.nan
+    for SE in range(N):
+        if SE in np.array(msset)[:,0]:
+            biRNN_22[SE,:] = np.nanmean(biRNN_2[np.array(msset)[np.where(np.array(msset)[:,0]==SE)[0][0],:],:],axis=0)
+        elif SE not in np.array(msset).flatten(): 
+            biRNN_22[SE,:] = biRNN_2[SE,:]
+
     biRNN_2, msacc = mstest2_psl()
-    Aprism_biRNN2_pslOnly = msGrouping_pslOnly(biRNN_2)
+    
+    Aprism_biRNN2_pslOnly = msGrouping_pslOnly(biRNN_22)
 
     print(roiRatio, msacc)
 
+# In[]
+
+biRNN_2_total = np.zeros((N,5)); biRNN_2_total[:] = np.nan
+for SE in range(N):
+    if SE in grouped_total_list and not SE in skiplist:
+        sessionNum = range(5)
+        if SE in se3set:
+            sessionNum = range(3)
+                
+        for se in sessionNum:
+            min_mean_mean = np.array(min_mean_save[SE][se])
+            
+            if [SE, se] in shortlist:
+                biRNN_2_total[SE,se] = np.mean(min_mean_mean)
+        
+Aprism_nonpsl = msGrouping_nonexclude(biRNN_2_total)
 
         
-# In[] 구
+import sys
+sys.exit()
 
+# In[]
   
 # maxix 적용전
 def msfilter(target, msfilter):
