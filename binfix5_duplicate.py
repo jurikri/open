@@ -362,8 +362,13 @@ project_list = []
  # proejct name, seed
 #project_list.append(['1223_formalin_movement_1', 100, None])
 #project_list.append(['1223_formalin_movement_2', 200, None])
-project_list.append(['1226_adenosine_1', 100, None])
-project_list.append(['1226_adenosine_2', 200, None])
+#project_list.append(['1226_adenosine_1', 100, None])
+#project_list.append(['1226_adenosine_2', 200, None])
+#project_list.append(['1226_adenosine_3', 300, None])
+#project_list.append(['1226_adenosine_4', 400, None])
+#project_list.append(['1226_adenosine_5', 500, None])
+project_list.append(['0107_first_1', 100, None])
+
 
 q = project_list[0]
 for q in project_list:
@@ -385,7 +390,7 @@ for q in project_list:
         os.mkdir(RESULT_SAVE_PATH + 'exp/')
     
     if not os.path.exists(RESULT_SAVE_PATH + 'exp_raw/'):
-        os.mkdir(RESULT_SAVE_PATH + 'exp_raw/')
+        os.mkdir(RESULT_SAVE_PATH + 'exp_raw/') 
     
     if not os.path.exists(RESULT_SAVE_PATH + 'control/'):
         os.mkdir(RESULT_SAVE_PATH + 'control/')
