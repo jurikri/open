@@ -348,7 +348,7 @@ if True and c1:
     trainingsw = False
     testsw2 = True
 
-acc_thr = 0.91 # 0.93 -> 0.94
+acc_thr = 0.95 # 0.93 -> 0.94
 batch_size = 2000 # 5000
 ###############
 
@@ -367,8 +367,12 @@ project_list = []
 #project_list.append(['1226_adenosine_3', 300, None])
 #project_list.append(['1226_adenosine_4', 400, None])
 #project_list.append(['1226_adenosine_5', 500, None])
+ 
 project_list.append(['0107_first_1', 100, None])
-
+project_list.append(['0107_first_2', 200, None])
+project_list.append(['0107_first_3', 300, None])
+project_list.append(['0107_first_4', 400, None])
+project_list.append(['0107_first_5', 500, None])
 
 q = project_list[0]
 for q in project_list:
@@ -390,7 +394,7 @@ for q in project_list:
         os.mkdir(RESULT_SAVE_PATH + 'exp/')
     
     if not os.path.exists(RESULT_SAVE_PATH + 'exp_raw/'):
-        os.mkdir(RESULT_SAVE_PATH + 'exp_raw/') 
+        os.mkdir(RESULT_SAVE_PATH + 'exp_raw/')
     
     if not os.path.exists(RESULT_SAVE_PATH + 'control/'):
         os.mkdir(RESULT_SAVE_PATH + 'control/')
@@ -629,7 +633,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = mouselist
+    wanted = pslset + capsaicinGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -641,6 +645,7 @@ for q in project_list:
         except:
             print(i, 'is excluded.', 'etc group에서 확인')
             
+    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
     print('wanted', np.array(mouselist)[mannual])
             
 #    np.random.seed(seed2)
@@ -961,17 +966,17 @@ for q in project_list:
 
                     # 학습 model 최종 저장
                     #5: 마지막으로 validation 찍음
-                    if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
-                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5) #, validation_data = valid)
-                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                        
-                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
-                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
-                        hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
-                    elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
-                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5+1) #, validation_data = valid)
-                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+#                    if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
+#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5) #, validation_data = valid)
+#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+#                        
+#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
+#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+#                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
+#                        hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
+#                    elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
+#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5+1) #, validation_data = valid)
+#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                     
                     model.save_weights(final_weightsave)   
                     print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
