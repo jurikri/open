@@ -326,7 +326,7 @@ if True and c1:
     testsw2 = True
 
 acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 100 # 5000
+batch_size = 3000 # 5000
 ###############
 
 # constant 
