@@ -294,8 +294,8 @@ epochs = 100 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 1.5) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 1.5) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8
 
 parallel = len(list(range(0, full_sequence-np.min(sequenceSize), bins)))
 #duplicatedNum = 1
@@ -320,13 +320,15 @@ testsw2 = False
 #    import tensorflow as tf
 
 # 집 컴퓨터, test 전용으로 수정
-c1 = savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'
-if True and c1:
-    trainingsw = False
-    testsw2 = True
-
 acc_thr = 0.95 # 0.93 -> 0.94
 batch_size = 3000 # 5000
+
+c1 = savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'
+if True and c1:
+    trainingsw = True
+    testsw2 = False
+    batch_size = 200
+
 ###############
 
 # constant 
