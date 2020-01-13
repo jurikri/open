@@ -94,19 +94,40 @@ def downsampling(msssignal, wanted_size):
         
     return np.array(downsignal)
 
+# In[]
+
 movement_syn = []
 [movement_syn.append([]) for u in range(N)]
-
+#bahavss[0][1].shape[0]/120 = downsize_movement
+downsize_signals = signalss[0][1].shape[0]/120
 for SE in range(N):
     [movement_syn[SE].append([]) for u in range(5)]
     for se in range(5):
-        movement_syn[SE][se] = downsampling(bahavss[SE][se], signalss[SE][se].shape[0])
+        downsize = int(round(signalss[SE][se].shape[0]/downsize_signals))
+        movement_syn[SE][se] = downsampling(bahavss[SE][se], downsize)
+
+for SE in range(N):
+#    print('downsizing', SE)
+    for se in range(5):
+        signaltmp = []
+        downsize = int(round(signalss[SE][se].shape[0]/downsize_signals))
+        for roi in range(signalss[SE][se].shape[1]):
+            signaltmp.append(downsampling(signalss[SE][se][:,roi], downsize))
+#        print(SE, se, downsize, signaltmp[se].shape[0])
+        signalss[SE][se] = np.transpose(np.array(signaltmp))
+        
+print('dwonsize check', signalss[4][1].shape)
+
+
+#plt.plot(signalss[10][1])
     
 #        print(np.mean(movement_syn[SE][se]))
 ##plt.plot(movement_syn[1][1])
 #import sys
 #sys.exit()    
 #
+
+# In[]
 
 msset = msGroup['msset']
 del msGroup['msset']
@@ -119,21 +140,35 @@ keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
 
-bins = 10 # 최소 time frame 간격
+bins = 5 # 최소 time frame 간격
 
 totaldataset = grouped_total_list
-        
-shortlist = []; longlist = []
+
+# 최소길이 찾기
+mslength = np.zeros((N,5)); mslength[:] = np.nan
 for SE in range(N):
     if SE in totaldataset:
         for se in range(5):
-            length = np.array(signalss[SE][se]).shape[0]
-            if length > 180*FPS:
-                longlist.append([SE,se])
-            elif length < 180*FPS:
-                shortlist.append([SE,se])
-            else:
-                print('error')                   
+#            if [SE, se] in longlist:
+            signal = np.array(signalss[SE][se])
+            mslength[SE,se] = signal.shape[0]
+
+full_sequence = int(np.nanmin(mslength))
+print('full_sequence', full_sequence, 'frames')
+
+# In[]
+        
+#shortlist = []; longlist = []
+#for SE in range(N):
+#    if SE in totaldataset:
+#        for se in range(5):
+#            length = np.array(signalss[SE][se]).shape[0]
+#            if length > 180*FPS:
+#                longlist.append([SE,se])
+#            elif length < 180*FPS:
+#                shortlist.append([SE,se])
+#            else:
+#                print('error')                   
 
 #msset = [[70,72],[71,84],[75,85],[76,86], [79,88]]
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
@@ -232,77 +267,15 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
                         t4_save.append(np.mean(signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))   
                     
     ############
-                
-        if False: # 시각화로 체크 위치만
-            msimg = np.zeros((msunit*10, full_sequence))
-            
-            for unit in range(msunit):
-                if frame <= full_sequence - sequenceSize[unit]:
-                    msimg[unit*10:(unit+1)*10, frame : frame + sequenceSize[unit]] = 1
-                    lastsave2[unit] = frame
-                    
-                else:
-                    msimg[unit*10:(unit+1)*10, lastsave2[unit] : lastsave2[unit] + sequenceSize[unit]] = 1
-                    
-            plt.figure()
-            plt.imshow(msimg)
-            
-         # signal 자체를 시각화로 체크 
-         # frame은 계속 돌려야 하기 때문에, if문을 개별적으로 설정함
-        if False:
-            if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
-                plt.figure(frame, figsize=(8,3))
-                
-            for unit in range(msunit):
-                if frame <= full_sequence - sequenceSize[unit]:
-                    lastsave2[unit] = frame 
-                    start = frame
-                    end = frame + sequenceSize[unit]
-                    
-                else: 
-                    start = lastsave2[unit]
-                    end = lastsave2[unit] + sequenceSize[unit]
-                    
-                if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
-                    if unit == 0:
-                        ax1 = plt.subplot(msunit, 1, unit+1)
-                        tmp = np.mean(signalss[SE][se], axis=1)
-                        tmp[:start] = np.nan; tmp[end:] = np.nan
-                        ax1.plot(tmp)
-                        ax1.axes.get_xaxis().set_visible(False)
-                        ax1.axes.get_yaxis().set_visible(False) 
-                    else:
-                        ax2 = plt.subplot(msunit, 1, unit+1, sharex = ax1)
-                        tmp = np.mean(signalss[SE][se], axis=1)
-                        tmp[:start] = np.nan; tmp[end:] = np.nan
-                        ax2.plot(tmp)
-                        ax2.axes.get_xaxis().set_visible(False)
-                        ax2.axes.get_yaxis().set_visible(False)
-                        
-                    plt.savefig(str(frame) + '.png')
-                    
-
         X.append(X_tmp)
         Y.append(label)
         Z.append([SE,se])
 
     return X, Y, Z, t4_save
 
-# 최소길이 찾기
-mslength = np.zeros((N,5)); mslength[:] = np.nan
-for SE in range(N):
-    if SE in totaldataset:
-        for se in range(5):
-#            if [SE, se] in longlist:
-            signal = np.array(signalss[SE][se])
-            mslength[SE,se] = signal.shape[0]
-
-full_sequence = int(np.nanmin(mslength))
-print('full_sequence', full_sequence, 'frames')
-
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
 
-msunit = 8 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+msunit = 4 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
 sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
@@ -321,8 +294,8 @@ epochs = 5 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 1) # fully conneted laye node 갯수 # 8
 
 parallel = len(list(range(0, full_sequence-np.min(sequenceSize), bins)))
 #duplicatedNum = 1
@@ -353,7 +326,7 @@ if True and c1:
     testsw2 = True
 
 acc_thr = 0.95 # 0.93 -> 0.94
-batch_size = 2000 # 5000
+batch_size = 100 # 5000
 ###############
 
 # constant 
@@ -554,7 +527,7 @@ for q in project_list:
     
     inputsize = np.zeros(msunit *fn, dtype=int) 
     for unit in range(msunit *fn):
-        inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
+        inputsize[unit] = X[0][unit,0].shape[0] # size 정보는 계속사용하므로, 따로 남겨놓는다.
         
     def keras_setup():
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
@@ -594,7 +567,7 @@ for q in project_list:
 
         combined = keras.layers.concatenate([model[0].output, model[1].output])
         z = Dense(layer_1, kernel_initializer = init, activation='relu')(combined)
-        z = Dense(layer_1, kernel_initializer = init, activation='sigmoid')(z)
+        z = Dense(2, kernel_initializer = init, activation='sigmoid')(z)
         z = Activation('softmax')(z)
         
         input_tmp = []
@@ -608,7 +581,7 @@ for q in project_list:
                             metrics=['accuracy']) # optimizer
         
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
-        return model, idcode
+        return model_merge, idcode
     
     model, idcode = keras_setup()        
     initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
@@ -794,10 +767,10 @@ for q in project_list:
                     csvwriter.writerow(df2)         
                     csvfile.close() 
 
-                    X_training = []; [X_training.append([]) for i in range(msunit *fn)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
-                    X_valid = []; [X_valid.append([]) for i in range(msunit *fn)]
-                    Y_training_list = []
-                    Y_training_control_list = []
+#                    X_training = []; # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
+#                    X_valid = []; [X_valid.append([]) for i in range(msunit *fn)]
+#                    Y_training_list = []
+#                    Y_training_control_list = []
 #                    Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
                     
                     # cross validation을 위해 test set을 제거함
@@ -807,84 +780,15 @@ for q in project_list:
                         for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
                             delist = np.concatenate((delist, np.where(indexer[:,0]==u)[0]), axis=0)
                     
-                    for unit in range(msunit *fn): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
-                        X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
-#                        X_valid[unit] = np.array(X[unit])[delist]
-                
+                    X_training = np.delete(np.array(X), delist, 0)
+                    X_valid = np.array(X)[delist]
                     Y_training_list = np.delete(np.array(Y), delist, 0)
 #                    Y_training_control_list = np.delete(np.array(Y_control), delist, 0)
 #                    Y_valid = np.array(Y)[delist]
                     
 #                    valid = tuple([X_valid, Y_valid])
                     
-                    # validation을 위해 test set을 따로 뺌
-                    validation_sw = False # 임시 종료
-                    if validation_sw:
-                        X_tmp = []; Y_tmp = []
-                        
-                        testlist = []
-                        testlist = [mouselist[sett]]
-                        
-                        if mouselist[sett] in np.array(msset)[:,0]:
-                            for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
-                                testlist.append(u)
-             
-                        if not(len(etc) == 0):
-                            if etc[0] == mouselist[sett]:
-                                print('test ssesion, etc group 입니다.') 
-                                testlist = list(etc)
-                        
-                        for test_mouseNum in testlist:
-                            sessionNum = 5
-                            if test_mouseNum in se3set:
-                                sessionNum = 3
-                            
-                            SE = test_mouseNum
-                            
-                            for se in range(sessionNum):
-                                init = False
-                                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2    
-                                c1 = SE in set1 and se in [0,2]
-                                c2 = SE in capsaicinGroup and se in [0,2]
-                                c3 = SE in pslGroup + adenosineGroup and se in [0]
-                                c4 = SE in shamGroup and se in [0,1,2]
-                                c5 = SE in salineGroup and se in [0,1,2,3,4]
-                                                
-                                if c1 or c2 or c3 or c4 or c5:
-                                    msclass = 0; init = True
-                                
-                                set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                                c7 = SE in set2 and se in [1]
-                                if c7: #
-                                    msclass = 1; init = True
-                                    
-                                if init:
-                                    binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
-                                    binNum = len(binning)
-                                    
-                                    if signalss[test_mouseNum][se].shape[0] == full_sequence:
-                                        binNum = 1
-                                        binning = [0]
-                                        
-                                    for i in range(binNum):         
-                                        signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                        signal_full_roi = np.mean(signalss_PSL_test, axis=1)
-                                        mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
-                                        
-                                        signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                        mannual_signal2 = np.reshape(signal2, (signal2.shape[0], 1))
-
-                                        Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
-                                                       Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
-                                        
-                                        X_tmp += Xtest; Y_tmp += Ytest
-                                    
-                        Y_valid = np.array(Y_tmp)                
-                        if Y_valid.shape[0] != 0:      
-                            Xtest = array_recover(X_tmp); 
-                            Y_tmp = np.array(Y_tmp); Y_tmp = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
-                                        
-                            valid = tuple([Xtest, Y_tmp])
+                
                                     
                     print('학습시작시간을 기록합니다.', df2)        
                     print('mouse #', [mouselist[sett]])
@@ -892,16 +796,24 @@ for q in project_list:
                     
                     # bias 방지를 위해 동일하게 shuffle 
                     np.random.seed(seed)
-                    shuffleix = list(range(X_training[0].shape[0]))
+                    shuffleix = list(range(X_training.shape[0]))
                     np.random.shuffle(shuffleix) 
 #                    print(shuffleix)
    
-                    tr_y_shuffle = Y_training_list[shuffleix]
-                    tr_y_shuffle_control = Y_training_control_list[shuffleix]
+                    tr_y = Y_training_list[shuffleix]
+                    tr_x = X_training[shuffleix]; tr_x2 = []
+                    for binss_merge in range(tr_x[0].shape[0]):
+                        xtmp = []
+                        for sample in range(tr_x.shape[0]):
+                            xtmp2 = np.array(tr_x[sample][binss_merge,0])
+                            xtmp.append(np.reshape(xtmp2, (xtmp2.shape[0],1)))
+                        tr_x2.append(xtmp)
+                    
+#                    tr_y_shuffle_control = Y_training_control_list[shuffleix]
 
-                    tr_x = []
-                    for unit in range(msunit *fn):
-                        tr_x.append(X_training[unit][shuffleix])
+#                    tr_x = []
+#                    for unit in range(msunit *fn):
+#                        tr_x.append(X_training[unit][shuffleix])
 
 
                     # 특정 training acc를 만족할때까지 epoch를 epochs단위로 지속합니다.
@@ -954,10 +866,18 @@ for q in project_list:
 #                        # validation이 가치가없으므로 끔 
 #                        validation_sw = False
                         
-  
+#                        for sample in range(len(tr_x2)):
+#                            for par in range(tr_x2[sample].shape[0]):
+#                                if not(tr_x2[sample][par].shape[0] == inputsize[np.mod(par,8)]):
+#                                    print(sample,par)
+                        
+                        hist = model.fit(tr_x2, tr_y, batch_size = batch_size, epochs = epochs)
+                        
+                        
+
                         if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
                             #1
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs)
+                            hist = model.fit(tr_x2, tr_y, batch_size = batch_size, epochs = epochs)
 #                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
                             hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
 #                            hist_save_val_loss += list(np.array(hist.history['val_loss']))
