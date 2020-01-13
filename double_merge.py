@@ -294,8 +294,8 @@ epochs = 100 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 1) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 1.5) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 1.5) # fully conneted laye node 갯수 # 8
 
 parallel = len(list(range(0, full_sequence-np.min(sequenceSize), bins)))
 #duplicatedNum = 1
@@ -330,7 +330,7 @@ batch_size = 3000 # 5000
 ###############
 
 # constant 
-maxepoch = 600
+maxepoch = 5000
 n_in =  1 # number of features
 n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
@@ -648,7 +648,7 @@ for q in project_list:
         except:
             print(i, 'is excluded.', 'etc group에서 확인')
             
-    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
+#    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
     print('wanted', np.array(mouselist)[mannual])
             
 #    np.random.seed(seed2)
