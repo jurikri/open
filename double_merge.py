@@ -275,7 +275,7 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
 
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
 
-msunit = 4 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+msunit = 6 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
 sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
@@ -290,7 +290,7 @@ print('sequenceSize', sequenceSize)
 # hyperparameters #############
  
 # learning intensity
-epochs = 5 # epoch 종료를 결정할 최소 단위.
+epochs = 100 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
@@ -448,8 +448,10 @@ for q in project_list:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
                     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                    c1 = SE in set2 and se in [1]
-                    if c1: # 
+                    c11 = SE in set2 and se in [1]
+                    c12 = SE in pslGroup + adenosineGroup and se in [1,2]
+                    
+                    if c11 or c12: # 
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         mssignal2 = np.array(movement_syn[SE][se])
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
@@ -783,10 +785,9 @@ for q in project_list:
                     X_training = np.delete(np.array(X), delist, 0)
                     X_valid = np.array(X)[delist]
                     Y_training_list = np.delete(np.array(Y), delist, 0)
-#                    Y_training_control_list = np.delete(np.array(Y_control), delist, 0)
-#                    Y_valid = np.array(Y)[delist]
+                    Y_valid = np.array(Y)[delist]
                     
-#                    valid = tuple([X_valid, Y_valid])
+                    
                     
                 
                                     
@@ -808,12 +809,16 @@ for q in project_list:
                             xtmp2 = np.array(tr_x[sample][binss_merge,0])
                             xtmp.append(np.reshape(xtmp2, (xtmp2.shape[0],1)))
                         tr_x2.append(xtmp)
-                    
-#                    tr_y_shuffle_control = Y_training_control_list[shuffleix]
-
-#                    tr_x = []
-#                    for unit in range(msunit *fn):
-#                        tr_x.append(X_training[unit][shuffleix])
+                        
+                    X_valid2 = []
+                    for binss_merge in range(X_valid[0].shape[0]):
+                        xtmp = []
+                        for sample in range(X_valid.shape[0]):
+                            xtmp2 = np.array(X_valid[sample][binss_merge,0])
+                            xtmp.append(np.reshape(xtmp2, (xtmp2.shape[0],1)))
+                        X_valid2.append(xtmp)
+                        
+                    valid = tuple([X_valid2, Y_valid])
 
 
                     # 특정 training acc를 만족할때까지 epoch를 epochs단위로 지속합니다.
@@ -862,44 +867,12 @@ for q in project_list:
                             f.close()    
                             mscsv = np.array(mscsv)
                             control_epochs = mscsv.shape[1]
-                        
-#                        # validation이 가치가없으므로 끔 
-#                        validation_sw = False
-                        
-#                        for sample in range(len(tr_x2)):
-#                            for par in range(tr_x2[sample].shape[0]):
-#                                if not(tr_x2[sample][par].shape[0] == inputsize[np.mod(par,8)]):
-#                                    print(sample,par)
-                        
-                        hist = model.fit(tr_x2, tr_y, batch_size = batch_size, epochs = epochs)
-                        
-                        
 
-                        if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
-                            #1
-                            hist = model.fit(tr_x2, tr_y, batch_size = batch_size, epochs = epochs)
-#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                            hist_save_val_loss += list(np.array(hist.history['val_loss']))
-#                            hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
-                            
-#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
-#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                            
-#                            #2
-#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
-#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                            hist_save_val_loss += list(np.array(hist.history['val_loss']))
-#                            hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
-#                            
-#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
-#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                            
-                        elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs) #, validation_data = valid)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                        elif state == 'con':
-                            hist = model.fit(tr_x, tr_y_shuffle_control, batch_size = batch_size, epochs = control_epochs)
+                        hist = model.fit(tr_x2, tr_y, batch_size = batch_size, epochs = epochs, validation_data = valid)
+                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
+                        hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
+
 
                         model.save_weights(current_weightsave)
                         
@@ -913,20 +886,6 @@ for q in project_list:
                             # 700 epochs 후에도 학습이 안되고 있다면 초기화
                             print('고장남.. 초기화')
                             cnt = np.inf
-
-                    # 학습 model 최종 저장
-                    #5: 마지막으로 validation 찍음
-#                    if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
-#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5) #, validation_data = valid)
-#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                        
-#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
-#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
-#                        hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
-#                    elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
-#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5+1) #, validation_data = valid)
-#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
                     
                     model.save_weights(final_weightsave)   
                     print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
