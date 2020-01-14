@@ -353,7 +353,7 @@ project_list = []
 #project_list.append(['0107_first_4', 400, None])
 #project_list.append(['0107_first_5', 500, None])
 
-project_list.append(['0113_double_merge', 100, None])
+project_list.append(['0114_double_merge', 100, None])
 
 q = project_list[0]
 for q in project_list:
@@ -412,7 +412,7 @@ for q in project_list:
             if SE in trainingset:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
-                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2 
                     c1 = SE in set1 and se in [0,2]
                     c2 = SE in capsaicinGroup and se in [0,2]
                     c3 = SE in pslGroup + adenosineGroup and se in [0]
@@ -451,7 +451,7 @@ for q in project_list:
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
                     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
                     c11 = SE in set2 and se in [1]
-                    c12 = SE in pslGroup + adenosineGroup and se in [1,2]
+                    c12 = SE in pslGroup and se in [1,2]
                     
                     if c11 or c12: # 
                         mssignal = np.mean(signalss[SE][se], axis=1)
@@ -638,7 +638,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = pslset + capsaicinGroup
+    wanted = pslset
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -650,7 +650,7 @@ for q in project_list:
         except:
             print(i, 'is excluded.', 'etc group에서 확인')
             
-#    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
+    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
     print('wanted', np.array(mouselist)[mannual])
             
 #    np.random.seed(seed2)
