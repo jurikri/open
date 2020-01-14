@@ -650,7 +650,7 @@ for q in project_list:
         except:
             print(i, 'is excluded.', 'etc group에서 확인')
             
-    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
+#    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
     print('wanted', np.array(mouselist)[mannual])
             
 #    np.random.seed(seed2)
@@ -881,13 +881,13 @@ for q in project_list:
                         # 종료조건: 
                         current_acc = np.min(hist_save_acc[-int(epochs*0.2):]) 
                         
-                        if state == 'con':
-                            current_acc = np.inf
+#                        if state == 'con':
+#                            current_acc = np.inf
 
-                        if cnt > 2 and current_acc < 0.7:
-                            # 700 epochs 후에도 학습이 안되고 있다면 초기화
-                            print('고장남.. 초기화')
-                            cnt = np.inf
+#                        if cnt > 2 and current_acc < 0.7:
+#                            # 700 epochs 후에도 학습이 안되고 있다면 초기화
+#                            print('고장남.. 초기화')
+#                            cnt = np.inf
                     
                     model.save_weights(final_weightsave)   
                     print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
