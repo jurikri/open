@@ -83,6 +83,12 @@ shamGroup = msGroup['shamGroup']
 adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 
+try:
+    CFAgroup = msGroup['CFAgroup']
+except:
+    CFAgroup = [106, 107, 108, 109]
+# In[]
+
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
     downsignal = np.zeros(wanted_size)
@@ -94,6 +100,7 @@ def downsampling(msssignal, wanted_size):
         
     return np.array(downsignal)
 
+# 절대값으로 resizing 하면안됨. session 마다 size가 다름을 고려해야함. 수정요망 . 
 movement_syn = []
 [movement_syn.append([]) for u in range(N)]
 
@@ -295,6 +302,7 @@ for SE in range(N):
             mslength[SE,se] = signal.shape[0]
 
 full_sequence = int(np.nanmin(mslength))
+full_sequence = int(round(FPS*60)) # 20200115 test용, 최소 크기를 1분으로 고정
 print('full_sequence', full_sequence, 'frames')
 
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
@@ -345,10 +353,10 @@ testsw2 = False
 # 집 컴퓨터, test 전용으로 수정
 c1 = savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'
 if True and c1:
-    trainingsw = False
+    trainingsw = True
     testsw2 = True
 
-acc_thr = 0.95 # 0.93 -> 0.94
+acc_thr = 0.91 # 0.93 -> 0.94
 batch_size = 2000 # 5000
 ###############
 
@@ -366,13 +374,14 @@ project_list = []
 #project_list.append(['1226_adenosine_2', 200, None])
 #project_list.append(['1226_adenosine_3', 300, None])
 #project_list.append(['1226_adenosine_4', 400, None])
-#project_list.append(['1226_adenosine_5', 500, None])
- 
-project_list.append(['0107_first_1', 100, None])
-project_list.append(['0107_first_2', 200, None])
-project_list.append(['0107_first_3', 300, None])
-project_list.append(['0107_first_4', 400, None])
-project_list.append(['0107_first_5', 500, None])
+##project_list.append(['1226_adenosine_5', 500, None])
+#project_list.append(['0107_first_1', 100, None])
+#project_list.append(['0107_first_2', 200, None])
+#project_list.append(['0107_first_3', 300, None])
+#project_list.append(['0107_first_4', 400, None])
+#project_list.append(['0107_first_5', 500, None])
+
+project_list.append(['0115_CFA_1', 100, None])
 
 q = project_list[0]
 for q in project_list:
@@ -394,7 +403,7 @@ for q in project_list:
         os.mkdir(RESULT_SAVE_PATH + 'exp/')
     
     if not os.path.exists(RESULT_SAVE_PATH + 'exp_raw/'):
-        os.mkdir(RESULT_SAVE_PATH + 'exp_raw/')
+        os.mkdir(RESULT_SAVE_PATH + 'exp_raw/') 
     
     if not os.path.exists(RESULT_SAVE_PATH + 'control/'):
         os.mkdir(RESULT_SAVE_PATH + 'control/')
@@ -437,8 +446,9 @@ for q in project_list:
                     c3 = SE in pslGroup + adenosineGroup and se in [0]
                     c4 = SE in shamGroup and se in [0,1,2]
                     c5 = SE in salineGroup and se in [0,1,2,3,4]
+                    c6 = SE in CFAgroup and se in [0]
                                     
-                    if c1 or c2 or c3 or c4 or c5:
+                    if c1 or c2 or c3 or c4 or c5 or c6:
                         exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0
                         if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
                             mssignal = np.mean(signalss[SE][se], axis=1)
@@ -469,8 +479,9 @@ for q in project_list:
                 for se in range(5):      
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
                     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                    c1 = SE in set2 and se in [1]
-                    if c1: # 
+                    c11 = SE in set2 and se in [1]
+                    c12 = SE in CFAgroup and se in [1,2]
+                    if c11 or c12: # 
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         mssignal2 = np.array(movement_syn[SE][se])
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
@@ -573,7 +584,7 @@ for q in project_list:
         merge_1 = Dense(layer_1, kernel_initializer = init, activation='relu')(added) # fully conneted layers, relu
         merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
         merge_2 = Dense(n_out, kernel_initializer = init, activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
-        merge_3 = Dense(n_out, input_dim=n_out, kernel_regularizer=regularizers.l2(l2_rate))(merge_2) # regularization
+        merge_3 = Dense(n_out, input_dim=n_out)(merge_2) # regularization 삭제
         merge_4 = Activation('softmax')(merge_3) # activation as softmax function
         
         model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
@@ -645,7 +656,6 @@ for q in project_list:
         except:
             print(i, 'is excluded.', 'etc group에서 확인')
             
-    mannual = list(np.sort(np.array(mannual))[::-1]) # runlist reverse
     print('wanted', np.array(mouselist)[mannual])
             
 #    np.random.seed(seed2)
@@ -814,19 +824,23 @@ for q in project_list:
                             
                             for se in range(sessionNum):
                                 init = False
-                                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2    
+                                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2    
                                 c1 = SE in set1 and se in [0,2]
                                 c2 = SE in capsaicinGroup and se in [0,2]
                                 c3 = SE in pslGroup + adenosineGroup and se in [0]
                                 c4 = SE in shamGroup and se in [0,1,2]
                                 c5 = SE in salineGroup and se in [0,1,2,3,4]
+                                c6 = SE in CFAgroup and se in [0]
                                                 
-                                if c1 or c2 or c3 or c4 or c5:
+                                if c1 or c2 or c3 or c4 or c5 or c6:
                                     msclass = 0; init = True
                                 
                                 set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                                c7 = SE in set2 and se in [1]
-                                if c7: #
+                                c11 = SE in set2 and se in [1]
+                                c12 = SE in CFAgroup and se in [1,2]
+                                c21 = SE in pslGroup + adenosineGroup and se in [1,2]
+                                
+                                if c11 or c12 or c21: #
                                     msclass = 1; init = True
                                     
                                 if init:
@@ -925,59 +939,16 @@ for q in project_list:
 #                        # validation이 가치가없으므로 끔 
 #                        validation_sw = False
                         
-  
-                        if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
-                            #1
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                            hist_save_val_loss += list(np.array(hist.history['val_loss']))
-                            hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
-                            
-#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
-#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                            
-#                            #2
-#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
-#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                            hist_save_val_loss += list(np.array(hist.history['val_loss']))
-#                            hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
-#                            
-#                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = int(epochs/2)-1)
-#                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                            
-                        elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
-                            hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs) #, validation_data = valid)
-                            hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                        elif state == 'con':
-                            hist = model.fit(tr_x, tr_y_shuffle_control, batch_size = batch_size, epochs = control_epochs)
-
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
+                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
+                        hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
+                             
                         model.save_weights(current_weightsave)
                         
                         # 종료조건: 
                         current_acc = np.min(hist_save_acc[-int(epochs*0.2):]) 
-                        
-                        if state == 'con':
-                            current_acc = np.inf
-
-                        if cnt > 2 and current_acc < 0.7:
-                            # 700 epochs 후에도 학습이 안되고 있다면 초기화
-                            print('고장남.. 초기화')
-                            cnt = np.inf
-
-                    # 학습 model 최종 저장
-                    #5: 마지막으로 validation 찍음
-#                    if validation_sw and Y_valid.shape[0] != 0 and state == 'exp':
-#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5) #, validation_data = valid)
-#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                        
-#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 1, validation_data = valid)
-#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-#                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
-#                        hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
-#                    elif (not(validation_sw) or Y_valid.shape[0] == 0) and state == 'exp': 
-#                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = 5+1) #, validation_data = valid)
-#                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                    
+                                
                     model.save_weights(final_weightsave)   
                     print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
 
