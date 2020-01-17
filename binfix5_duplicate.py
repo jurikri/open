@@ -82,11 +82,14 @@ pslGroup = msGroup['pslGroup'] # partial sciatic nerve injury model
 shamGroup = msGroup['shamGroup']
 adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
+CFAgroup = msGroup['CFAgroup']
 
-try:
-    CFAgroup = msGroup['CFAgroup']
-except:
-    CFAgroup = [106, 107, 108, 109]
+msset = msGroup['msset']
+del msGroup['msset']
+
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup
+pslset = pslGroup + shamGroup + adenosineGroup
+
 # In[]
 
 def downsampling(msssignal, wanted_size):
@@ -114,12 +117,6 @@ for SE in range(N):
 #import sys
 #sys.exit()    
 #
-
-msset = msGroup['msset']
-del msGroup['msset']
-
-se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup
-pslset = pslGroup + shamGroup + adenosineGroup
 
 grouped_total_list = []
 keylist = list(msGroup.keys())
@@ -302,7 +299,7 @@ for SE in range(N):
             mslength[SE,se] = signal.shape[0]
 
 full_sequence = int(np.nanmin(mslength))
-full_sequence = int(round(FPS*60)) # 20200115 test용, 최소 크기를 1분으로 고정
+#full_sequence = int(round(FPS*60)) # 20200115 test용, 최소 크기를 1분으로 고정
 print('full_sequence', full_sequence, 'frames')
 
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
@@ -326,8 +323,8 @@ epochs = 5 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8
 
 #duplicatedNum = 1
 #mspainThr = 0.27
@@ -335,7 +332,7 @@ layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.25 # regularization 상수
+l2_rate = 0.2 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
@@ -357,11 +354,11 @@ if True and c1:
     testsw2 = True
 
 acc_thr = 0.91 # 0.93 -> 0.94
-batch_size = 2000 # 5000
+batch_size = 2**10 # 5000
 ###############
 
 # constant 
-maxepoch = 600
+maxepoch = 30
 n_in =  1 # number of features
 n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
@@ -381,7 +378,7 @@ project_list = []
 #project_list.append(['0107_first_4', 400, None])
 #project_list.append(['0107_first_5', 500, None])
 
-project_list.append(['0115_CFA_1', 100, None])
+project_list.append(['0116_CFA_l2_1', 200, None])
 
 q = project_list[0]
 for q in project_list:
@@ -480,8 +477,8 @@ for q in project_list:
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
                     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
                     c11 = SE in set2 and se in [1]
-                    c12 = SE in CFAgroup and se in [1,2]
-                    if c11 or c12: # 
+#                    c12 = SE in CFAgroup and se in [1,2]
+                    if c11: # 
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         mssignal2 = np.array(movement_syn[SE][se])
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
@@ -562,7 +559,7 @@ for q in project_list:
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
         
     def keras_setup():
-        #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         
         dt = datetime.now()
         idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
@@ -577,13 +574,16 @@ for q in project_list:
         for unit in range(msunit *fn):
             input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in)) # 각 병렬 layer shape에 따라 input 받음
             input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
-            input2[unit] = Dense(layer_1, kernel_initializer = init, activation='relu')(input2[unit]) # fully conneted layers, relu
+            input2[unit] = Dense(layer_1, kernel_initializer = init, \
+                  activation='relu')(input2[unit]) # fully conneted layers, relu
             input2[unit] = Dropout(dropout_rate1)(input2[unit]) # dropout
         
         added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
-        merge_1 = Dense(layer_1, kernel_initializer = init, activation='relu')(added) # fully conneted layers, relu
+        merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate),\
+                        activation='relu')(added) # fully conneted layers, relu
         merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
-        merge_2 = Dense(n_out, kernel_initializer = init, activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
+        merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
+                        activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
         merge_3 = Dense(n_out, input_dim=n_out)(merge_2) # regularization 삭제
         merge_4 = Activation('softmax')(merge_3) # activation as softmax function
         
@@ -644,7 +644,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = pslset + capsaicinGroup
+    wanted = [0] + pslset + capsaicinGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
