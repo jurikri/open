@@ -319,7 +319,7 @@ print('sequenceSize', sequenceSize)
 # hyperparameters #############
  
 # learning intensity
-epochs = 5 # epoch 종료를 결정할 최소 단위.
+epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
@@ -332,7 +332,7 @@ layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.2 # regularization 상수
+l2_rate = 0.3 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
@@ -353,7 +353,7 @@ if True and c1:
     trainingsw = True
     testsw2 = True
 
-acc_thr = 0.91 # 0.93 -> 0.94
+acc_thr = 0.90 # 0.93 -> 0.94
 batch_size = 2**10 # 5000
 ###############
 
@@ -644,7 +644,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = [0] + pslset + capsaicinGroup
+    wanted = [0,2] + pslset + capsaicinGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -898,8 +898,8 @@ for q in project_list:
                                 
                     
                     while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-                        print('stop 조건을 표시합니다')
-                        print('current_acc', current_acc, current_acc < acc_thr)
+#                        print('stop 조건을 표시합니다')
+#                        print('current_acc', current_acc, current_acc < acc_thr)
 
                         if cnt > maxepoch/epochs:
                             seed += 1
@@ -911,7 +911,7 @@ for q in project_list:
                             current_acc = -np.inf; cnt = -1
                             print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
 
-                        cnt += 1; print('cnt', cnt, 'current_acc', current_acc)
+                        cnt += 1; # print('cnt', cnt, 'current_acc', current_acc)
 
                         if state == 'exp':
                             current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
@@ -947,7 +947,7 @@ for q in project_list:
                         model.save_weights(current_weightsave)
                         
                         # 종료조건: 
-                        current_acc = np.min(hist_save_acc[-int(epochs*0.2):]) 
+                        current_acc = hist_save_acc[-1] 
                                 
                     model.save_weights(final_weightsave)   
                     print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
