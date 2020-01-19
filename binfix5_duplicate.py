@@ -103,6 +103,13 @@ def downsampling(msssignal, wanted_size):
         
     return np.array(downsignal)
 
+t4 = np.zeros((N,5)); movement = np.zeros((N,5))
+for SE in range(N):
+    for se in range(5):
+        t4[SE,se] = np.mean(signalss[SE][se])
+        movement[SE,se] = np.mean(bahavss[SE][se]>0) # binaryzation or not
+        # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
+
 # 절대값으로 resizing 하면안됨. session 마다 size가 다름을 고려해야함. 수정요망 . 
 movement_syn = []
 [movement_syn.append([]) for u in range(N)]
@@ -111,6 +118,8 @@ for SE in range(N):
     [movement_syn[SE].append([]) for u in range(5)]
     for se in range(5):
         movement_syn[SE][se] = downsampling(bahavss[SE][se], signalss[SE][se].shape[0])
+        
+
     
 #        print(np.mean(movement_syn[SE][se]))
 ##plt.plot(movement_syn[1][1])
@@ -350,7 +359,7 @@ testsw2 = False
 # 집 컴퓨터, test 전용으로 수정
 c1 = savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'
 if True and c1:
-    trainingsw = True
+    trainingsw = False
     testsw2 = True
 
 acc_thr = 0.90 # 0.93 -> 0.94
@@ -379,6 +388,7 @@ project_list = []
 #project_list.append(['0107_first_5', 500, None])
 
 project_list.append(['0116_CFA_l2_1', 200, None])
+project_list.append(['0116_CFA_l2_2', 300, None])
 
 q = project_list[0]
 for q in project_list:
@@ -477,6 +487,12 @@ for q in project_list:
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
                     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
                     c11 = SE in set2 and se in [1]
+                    
+                    painmove = 0.15 < movement[SE,se]
+                    if not(painmove):
+                        print(SE, se, 'movemnt부족, pain session에서 제외.')
+                        continue
+                    
 #                    c12 = SE in CFAgroup and se in [1,2]
                     if c11: # 
                         mssignal = np.mean(signalss[SE][se], axis=1)
@@ -644,7 +660,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = [0,2] + pslset + capsaicinGroup
+    wanted = pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
