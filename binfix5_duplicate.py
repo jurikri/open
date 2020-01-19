@@ -487,14 +487,12 @@ for q in project_list:
                     # pain Group에 들어갈 수 있는 모든 경우의 수 
                     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
                     c11 = SE in set2 and se in [1]
-                    
-                    painmove = 0.15 < movement[SE,se]
-                    if not(painmove):
-                        print(SE, se, 'movemnt부족, pain session에서 제외.')
-                        continue
-                    
-#                    c12 = SE in CFAgroup and se in [1,2]
+
                     if c11: # 
+                        if not(0.15 < movement[SE,se]):
+                            print(SE, se, 'movement 부족, pain session에서 제외.')
+                            continue
+                    
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         mssignal2 = np.array(movement_syn[SE][se])
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
