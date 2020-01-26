@@ -92,7 +92,9 @@ highGroup2 = msGroup['highGroup2']
 CFAgroup = msGroup['CFAgroup']
 
 msset = msGroup['msset']
-del msGroup['msset']
+msset2 = msGroup['msset2']
+del msGroup['msset']; del msGroup['msset2']
+msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset)], ignore_index=True, axis=0))
 
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup
 pslset = pslGroup + shamGroup + adenosineGroup
@@ -384,21 +386,12 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-#project_list.append(['1223_formalin_movement_1', 100, None])
-#project_list.append(['1223_formalin_movement_2', 200, None])
-#project_list.append(['1226_adenosine_1', 100, None])
-#project_list.append(['1226_adenosine_2', 200, None])
-#project_list.append(['1226_adenosine_3', 300, None])
-#project_list.append(['1226_adenosine_4', 400, None])
-##project_list.append(['1226_adenosine_5', 500, None])
-#project_list.append(['0107_first_1', 100, None])
-#project_list.append(['0107_first_2', 200, None])
-#project_list.append(['0107_first_3', 300, None])
-#project_list.append(['0107_first_4', 400, None])
-#project_list.append(['0107_first_5', 500, None])
 
-project_list.append(['control_test1_segment', 200, None])
-
+project_list.append(['control_test_segment_adenosine_set1', 100, None])
+project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#project_list.append(['control_test3_segment', 300, None])
+#project_list.append(['control_test3_segment', 400, None])
+#project_list.append(['control_test3_segment', 500, None])
 
 q = project_list[0]
 for q in project_list:
@@ -643,6 +636,8 @@ for q in project_list:
     print('acc_thr', acc_thr, '여기까지 학습합니다.')
     print('maxepoch', maxepoch)
     
+    
+    
     # training set 재설정
     trainingset = trainingset; etc = []
     forlist = list(trainingset)
@@ -652,12 +647,9 @@ for q in project_list:
             trainingset.remove(SE)
             print('removed', SE)
             
-            if not SE in np.array(msset).flatten():
-                etc.append(SE)
-            
-        c2 = np.array(msset)[:,0]
+        c2 = msset_total[:,0]
         if SE in c2:
-            for u in np.array(msset)[np.where(np.array(msset)[:,0] == SE)[0][0],:][1:]:
+            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
 
     mouselist = trainingset
