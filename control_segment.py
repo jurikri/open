@@ -94,7 +94,7 @@ CFAgroup = msGroup['CFAgroup']
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
 del msGroup['msset']; del msGroup['msset2']
-msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset)], ignore_index=True, axis=0))
+msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup
 pslset = pslGroup + shamGroup + adenosineGroup
