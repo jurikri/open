@@ -389,6 +389,7 @@ project_list = []
 
 project_list.append(['control_test_segment_adenosine_set1', 100, None])
 project_list.append(['control_test_segment_adenosine_set2', 200, None])
+project_list.append(['control_test_segment_adenosine_set3', 300, None])
 #project_list.append(['control_test3_segment', 300, None])
 #project_list.append(['control_test3_segment', 400, None])
 #project_list.append(['control_test3_segment', 500, None])
@@ -804,8 +805,9 @@ for q in project_list:
                     # cross validation을 위해 test set을 제거함
                     delist = np.where(indexer[:,0]==mouselist[sett])[0]
                     
-                    if mouselist[sett] in np.array(msset)[:,0]:
-                        for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+                    if mouselist[sett] in np.array(msset_total)[:,0]:
+                        for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
+                            print(mouselist[sett], 'cv', u)
                             delist = np.concatenate((delist, np.where(indexer[:,0]==u)[0]), axis=0)
                     
                     for unit in range(msunit *fn): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
@@ -825,8 +827,8 @@ for q in project_list:
                         testlist = []
                         testlist = [mouselist[sett]]
                         
-                        if mouselist[sett] in np.array(msset)[:,0]:
-                            for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+                        if mouselist[sett] in np.array(msset_total)[:,0]:
+                            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
                                 testlist.append(u)
              
                         if not(len(etc) == 0):
@@ -1012,8 +1014,8 @@ for q in project_list:
             testlist = []
             testlist = [mouselist[sett]]
             
-            if mouselist[sett] in np.array(msset)[:,0]:
-                for u in np.array(msset)[np.where(np.array(msset)[:,0] == mouselist[sett])[0][0],:][1:]:
+            if mouselist[sett] in np.array(msset_total)[:,0]:
+                for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
                     testlist.append(u)
  
             if not(len(etc) == 0):
