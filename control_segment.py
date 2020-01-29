@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime # 시관 관리 
 import csv
 import random
+import time
 #import tensorflow as tf
 #from tensorflow.keras import regularizers
 
@@ -390,6 +391,8 @@ project_list = []
 project_list.append(['control_test_segment_adenosine_set1', 100, None])
 project_list.append(['control_test_segment_adenosine_set2', 200, None])
 project_list.append(['control_test_segment_adenosine_set3', 300, None])
+project_list.append(['control_test_segment_adenosine_set4', 400, None])
+project_list.append(['control_test_segment_adenosine_set5', 500, None])
 #project_list.append(['control_test3_segment', 300, None])
 #project_list.append(['control_test3_segment', 400, None])
 #project_list.append(['control_test3_segment', 500, None])
@@ -460,7 +463,8 @@ for q in project_list:
                     c6 = SE in CFAgroup and se in [0]
                                     
                     if c1 or c2 or c3 or c4 or c5 or c6:
-                        exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0
+                        # msset 만 baseline을 제외시킴, total set 아님 
+                        exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
                         if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
                             mssignal = np.mean(signalss[SE][se], axis=1)
                             mssignal2 = np.array(movement_syn[SE][se])
@@ -617,6 +621,7 @@ for q in project_list:
     model, idcode = keras_setup()        
     initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
     model.save_weights(initial_weightsave)
+    print(model.summary())
     
     if False: # 시각화 
         # 20190903, VS code로 옮긴뒤로 에러나는 중, 해결필요
@@ -717,453 +722,294 @@ for q in project_list:
         
     # In[]
 
-    sett = 0; ix = 0; state = 'exp' # for test
-    for state in statelist:
-        for ix, sett in enumerate(mannual):
-            # training 구문입니다.
-            exist_model = False; recent_model = False
+    sett = 0; ix = 0
+    for ix, sett in enumerate(mannual):
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
+        print('final_weightsave', final_weightsave)
+        
+        exist_model = os.path.isfile(final_weightsave)
+        print('training을 위한 model 존재 유무', exist_model)
 
-            # training된 model이 있는지 검사
-            if state == 'exp':
-                final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
-        #        print('exp')
-            elif state == 'con':
-                final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final_control.h5'
-        #        print('con')
+        if not(exist_model) and trainingsw: # trainingsw
+            print('mouse #', [mouselist[sett]], '학습된 model 없음. 새로시작합니다.')
+            model.load_weights(initial_weightsave) # model reset for start 
 
-            print('final_weightsave', final_weightsave)
-
-            try:
-                model.load_weights(final_weightsave) 
-                exist_model = True
-                print('exist_model', exist_model)
-            except:
-                exist_model = False
-                print('exist_model', exist_model, 'load 안됨')
-
-            # 없다면, 2시간 이내에 training이 시작되었는지 검사
-            if not(exist_model) and trainingsw:
-                if state == 'exp':
-                    loadname = RESULT_SAVE_PATH + 'tmp/' + str([mouselist[sett]]) + '_log.csv'
-                elif state == 'con':
-                    loadname = RESULT_SAVE_PATH + 'tmp/' + str([mouselist[sett]]) + '_log_control.csv'
-
-                try:
-                    mscsv = []       
-                    f = open(loadname, 'r', encoding='utf-8')
-                    rdr = csv.reader(f)
-                    for line in rdr:
-                        mscsv.append(line)
-                    f.close()    
-                    mscsv = np.array(mscsv)
-
-                    dt = datetime.now()
-                    idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
-
-                    sameday = int(idcode) == int(float(mscsv[0][0]))
-                    hour_diff = ((idcode - int(idcode)) - (float(mscsv[0][0]) - int(float(mscsv[0][0])))) * 100
-                    if sameday:
-                        print('mouse #', [mouselist[sett]], '은', hour_diff, '시간전에 학습을 시작했습니다.')
-                        if hour_diff < 2.0:
-                            recent_model = True
-                        elif hour_diff >= 2.0:
-                            recent_model = False    
-                    recent_model = False # 임시로 종료   
-                except:
-                    recent_model = False
-
-                # control은 추가로, exp plot이 되어있는지 확인
-                if state == 'con':
-                    try:
-                        loadname2 = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_' + 'exp' + '_trainingSet_result.csv'
-                        f = open(loadname2, 'r', encoding='utf-8')
-                        f.close()
-                    except:
-                        print(mouselist[sett], 'exp pair 없음, control 진행을 멈춥니다.')
-                        recent_model = True
-                # 학습된 모델도 없고, 최근에 진행중인것도 없으니 학습 시작합니다.    
-                if not(recent_model):
-                    print('mouse #', [mouselist[sett]], '학습된', state, 'model 없음. 새로시작합니다.')
-                    model.load_weights(initial_weightsave)
-                    dt = datetime.now()
-                    idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
-                        
-                    # 나중에 idcode는 없애던지.. 해야될듯 
-                    
-                    df2 = [idcode]
-                    csvfile = open(loadname, 'w', newline='')
-                    csvwriter = csv.writer(csvfile)
-                    csvwriter.writerow(df2)         
-                    csvfile.close() 
-
-                    X_training = []; [X_training.append([]) for i in range(msunit *fn)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
-                    X_valid = []; [X_valid.append([]) for i in range(msunit *fn)]
-                    Y_training_list = []
-                    Y_training_control_list = []
-#                    Y_training = np.array(Y); Y_training_control = np.array(Y_control)# 여기서 뺸다
-                    
-                    # cross validation을 위해 test set을 제거함
-                    delist = np.where(indexer[:,0]==mouselist[sett])[0]
-                    
-                    if mouselist[sett] in np.array(msset_total)[:,0]:
-                        for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
-                            print(mouselist[sett], 'cv', u)
-                            delist = np.concatenate((delist, np.where(indexer[:,0]==u)[0]), axis=0)
-                    
-                    for unit in range(msunit *fn): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
-                        X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
-#                        X_valid[unit] = np.array(X[unit])[delist]
-                
-                    Y_training_list = np.delete(np.array(Y), delist, 0)
-                    Y_training_control_list = np.delete(np.array(Y_control), delist, 0)
-#                    Y_valid = np.array(Y)[delist]
-                    
-#                    valid = tuple([X_valid, Y_valid])
-                    
-                    # validation을 위해 test set을 따로 뺌
-                    if validation_sw:
-                        X_tmp = []; Y_tmp = []
-                        
-                        testlist = []
-                        testlist = [mouselist[sett]]
-                        
-                        if mouselist[sett] in np.array(msset_total)[:,0]:
-                            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
-                                testlist.append(u)
-             
-                        if not(len(etc) == 0):
-                            if etc[0] == mouselist[sett]:
-                                print('test ssesion, etc group 입니다.') 
-                                testlist = list(etc)
-                        
-                        for test_mouseNum in testlist:
-                            sessionNum = 5
-                            if test_mouseNum in se3set:
-                                sessionNum = 3
-                            
-                            SE = test_mouseNum
-                            
-                            for se in range(sessionNum):
-                                init = False
-                                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2    
-                                c1 = SE in set1 and se in [0,2]
-                                c2 = SE in capsaicinGroup and se in [0,2]
-                                c3 = SE in pslGroup and se in [0]
-                                c4 = SE in shamGroup + adenosineGroup  and se in [0,1,2]
-                                c5 = SE in salineGroup and se in [0,1,2,3,4]
-                                c6 = SE in CFAgroup and se in [0]
-                                                
-                                if c1 or c2 or c3 or c4 or c5 or c6:
-                                    msclass = 0; init = True
-                                
-                                set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                                c11 = SE in set2 and se in [1]
-                                c12 = SE in CFAgroup and se in [1,2]
-                                c21 = SE in pslGroup and se in [1,2]
-                                
-                                if c11 or c12 or c21: #
-                                    msclass = 1; init = True
-                                    
-                                if init:
-                                    binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
-                                    binNum = len(binning)
-                                    
-                                    if signalss[test_mouseNum][se].shape[0] == full_sequence:
-                                        binNum = 1
-                                        binning = [0]
-                                        
-                                    for i in range(binNum):         
-                                        signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                        signal_full_roi = np.mean(signalss_PSL_test, axis=1)
-                                        mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
-                                        
-                                        signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                        mannual_signal2 = np.reshape(signal2, (signal2.shape[0], 1))
-
-                                        Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
-                                                       Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
-                                        
-                                        X_tmp += Xtest; Y_tmp += Ytest
-                                    
-                        Y_valid = np.array(Y_tmp)                
-                        if Y_valid.shape[0] != 0:      
-                            Xtest = array_recover(X_tmp); 
-                            Y_tmp = np.array(Y_tmp); Y_tmp = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
-                                        
-                            valid = tuple([Xtest, Y_tmp])
-                                    
-                    print('학습시작시간을 기록합니다.', df2)        
-                    print('mouse #', [mouselist[sett]])
-                    print('sample distributions.. ', np.round(np.mean(Y_training_list, axis = 0), 4))
-                    
-                    # bias 방지를 위해 동일하게 shuffle 
-                    np.random.seed(seed)
-                    shuffleix = list(range(X_training[0].shape[0]))
-                    np.random.shuffle(shuffleix) 
-#                    print(shuffleix)
-   
-                    tr_y_shuffle = Y_training_list[shuffleix]
-                    tr_y_shuffle_control = Y_training_control_list[shuffleix]
-
-                    tr_x = []
-                    for unit in range(msunit *fn):
-                        tr_x.append(X_training[unit][shuffleix])
-
-
-                    # 특정 training acc를 만족할때까지 epoch를 epochs단위로 지속합니다.
-                    current_acc = -np.inf; cnt = -1
-                    hist_save_loss = []
-                    hist_save_acc = []
-                    hist_save_val_loss = []
-                    hist_save_val_acc = []
-                                
-                    
-                    while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-#                        print('stop 조건을 표시합니다')
-#                        print('current_acc', current_acc, current_acc < acc_thr)
-
-                        if cnt > maxepoch/epochs:
-                            seed += 1
-                            model, idcode = keras_setup()        
-                            initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
-                            model.save_weights(initial_weightsave)
-                            dt = datetime.now()
-                            idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
-                            current_acc = -np.inf; cnt = -1
-                            print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
-
-                        cnt += 1; # print('cnt', cnt, 'current_acc', current_acc)
-
-                        if state == 'exp':
-                            current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
-                        elif state == 'con':
-                            current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights_control.h5'
-
-                        try:
-                            model.load_weights(current_weightsave)
-                            print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
-
-                        except:
-                            print('학습 진행중인 model 없음. 새로 시작합니다')
-
-                        # control 전용, control_epochs 구하기
-                        if state == 'con':
-                            mscsv = []
-                            f = open(loadname2, 'r', encoding='utf-8')
-                            rdr = csv.reader(f)
-                            for line in rdr:
-                                mscsv.append(line)
-                            f.close()    
-                            mscsv = np.array(mscsv)
-                            control_epochs = mscsv.shape[1]
-                        
-#                        # validation이 가치가없으므로 끔 
-#                        validation_sw = False
-                        
-                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
-                        hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
-                        hist_save_val_loss += list(np.array(hist.history['val_loss']))
-                        hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
-                             
-                        model.save_weights(current_weightsave)
-                        
-                        # 종료조건: 
-                        current_acc = hist_save_acc[-1] 
-                                
-                    model.save_weights(final_weightsave)   
-                    print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
-
-                    # hist 저장      
-                    plt.figure();
-                    mouseNum = mouselist[sett]
-                    plt.plot(hist_save_loss, label= '# ' + str(mouseNum) + ' loss')
-                    plt.plot(hist_save_acc, label= '# ' + str(mouseNum) + ' acc')
-                    plt.legend()
-                    plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.png')
-                    plt.close()
-
-                    savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_trainingSet_result.csv'
-                    csvfile = open(savename, 'w', newline='')
-                    csvwriter = csv.writer(csvfile)
-                    csvwriter.writerow(hist_save_acc)
-                    csvwriter.writerow(hist_save_loss)
-                    csvfile.close()
-
-                    if validation_sw and state == 'exp':
-                        plt.figure();
-                        mouseNum = mouselist[sett]
-                        plt.plot(hist_save_val_loss, label= '# ' + str(mouseNum) + ' loss')
-                        plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
-                        plt.legend()
-                        plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.png')
-                        plt.close()
-
-                        savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_' + state + '_validationSet_result.csv'
-                        csvfile = open(savename, 'w', newline='')
-                        csvwriter = csv.writer(csvfile)
-                        csvwriter.writerow(hist_save_val_acc)
-                        csvwriter.writerow(hist_save_val_loss)
-                        csvfile.close()
-
-            ####### test 구문 입니다. ##########        
+            # cv, training / dev set 생성, dev로 model 최적화를 따로 진행하지 않음. 단지 학습상황 확인용으로만 사용됨.
             
-            # 단일 cv set에서 대해서 기본적인 test list는 cv training 에서 제외된 data가 된다.
-            # 단, training에 전혀 사용하지 않는 set = etc set에 대해서는 모든 training set으로 cv training 후,
-            # 모든 etc set에 대해서 test 하므로, 이 경우 test list는 모든 etc set이 된다. 
+            # pre allocation
+            X_training = []; [X_training.append([]) for i in range(msunit *fn)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
+            X_valid = []; [X_valid.append([]) for i in range(msunit *fn)]
             
-            testlist = []
-            testlist = [mouselist[sett]]
+            # trainig set, delist는 test에 해당함. 쥐를 기준으로 한마리씩 뻄 
+            delist = np.where(indexer[:,0]==mouselist[sett])[0]
             
             if mouselist[sett] in np.array(msset_total)[:,0]:
                 for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
-                    testlist.append(u)
- 
-            if not(len(etc) == 0):
-                if etc[0] == mouselist[sett]:
-                    print('test ssesion, etc group 입니다.') 
-                    testlist = list(etc)
+                    print(mouselist[sett], 'subset으로써 추가 제거됩니다.', u)
+                    delist = np.concatenate((delist, np.where(indexer[:,0]==u)[0]), axis=0)
             
-            if state == 'exp':
-                final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
-            elif state == 'con':
-                final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final_control.h5'
-
-            trained_fortest = False
-            print(final_weightsave)
-            try:
-                model.load_weights(final_weightsave)
-                trained_fortest =  True
-                print('trained_fortest', trained_fortest)
-            except:
-                trained_fortest = False
-                print('trained_fortest', trained_fortest)
+            for unit in range(msunit *fn): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
+                X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
+#                        X_valid[unit] = np.array(X[unit])[delist]
         
-            ####### test - binning 구문 입니다. ##########, test version 2
-            # model load는 cv set 시작에서 무조건 하도록 되어 있음.
-            if trained_fortest and testsw2:   
-                for test_mouseNum in testlist:
-                    testbin = None
-                    picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_' + str(test_mouseNum) + '.pickle'
-                    try:
-                        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-                            tmp = pickle.load(f)
-                            testbin = False
-                            print('PSL_result_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
-                    except:
-                        testbin = True
-                    
-                    if testbin:
-                        PSL_result_save = []
-                        [PSL_result_save.append([]) for i in range(N)]
-                        
-                        for SE2 in range(N):
-                            [PSL_result_save[SE2].append([]) for i in range(5)]
-                        # PSL_result_save변수에 무조건 동일한 공간을 만들도록 설정함. pre allocation 개념
-                        
-                        
-                        sessionNum = 5
-                        if test_mouseNum in se3set:
-                            sessionNum = 3
-                        
-                        for se in range(sessionNum):
-                            
-                            binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
-                            binNum = len(binning)
-                            
-                            if signalss[test_mouseNum][se].shape[0] == full_sequence:
-                                binNum = 1
-                                binning = [0]
-                                                           
-                            [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
-                            
-                            i = 54; ROI = 0
-                            for i in range(binNum):         
-                                signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                ROInum = signalss_PSL_test.shape[1]
-                                
-                                [PSL_result_save[test_mouseNum][se][i].append([]) for k in range(ROInum)]
-                                for ROI in range(ROInum):
-                                    mannual_signal = signalss_PSL_test[:,ROI]
-                                    mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                                    
-                                    mannual_signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence] # 반복이지만.. 편의상
-                                    mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                
-                                    X, _, _, _ = dataGeneration(test_mouseNum, se, label=0, \
-                                           Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
-                                        
-                                    X_array = array_recover(X)
-                                    print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'ROI', ROI)
-                                    prediction = model.predict(X_array)
-                                    PSL_result_save[test_mouseNum][se][i][ROI] = prediction
-                    
-    #                    msdata = {'PSL_result_save' : PSL_result_save}
-                        
-                        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-                            pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
-                            print(picklesavename, '저장되었습니다.')
-# In[]      # mean signal 처리
-            if trained_fortest and testsw2:
-                for test_mouseNum in testlist:
-                    testbin = None
-                    picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_mean_' + str(test_mouseNum) + '.pickle'
-                    try:
-                        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-                            tmp = pickle.load(f)
-                            testbin = False
-                            print('PSL_result_mean_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
-                    except:
-                        testbin = True
-                        
-#                    testbin = True # 수정 될대까지 오버라이트
-                    if testbin:
-                        PSL_result_save_mean = []
-                        [PSL_result_save_mean.append([]) for i in range(N)]
-                        
-                        for SE2 in range(N):
-                            [PSL_result_save_mean[SE2].append([]) for i in range(5)]
-                        # PSL_result_save변수에 무조건 동일한 공간을 만들도록 설정함. pre allocation 개념
+            Y_training_list = np.delete(np.array(Y), delist, 0)
 
-                        sessionNum = 5
-                        if test_mouseNum in se3set:
-                            sessionNum = 3
+            # dev set,
+            if validation_sw:
+                X_tmp = []; Y_tmp = []
+                testlist = [mouselist[sett]]
+                
+                if mouselist[sett] in np.array(msset_total)[:,0]:
+                    for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
+                        testlist.append(u)
+     
+                if not(len(etc) == 0):
+                    if etc[0] == mouselist[sett]:
+                        print('test ssesion, etc group 입니다.') 
+                        testlist = list(etc)
+                
+                for test_mouseNum in testlist:
+                    sessionNum = 5
+                    if test_mouseNum in se3set:
+                        sessionNum = 3
+                    
+                    SE = test_mouseNum
+                    for se in range(sessionNum):
+                        init = False
+                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2    
+                        c1 = SE in set1 and se in [0,2]
+                        c2 = SE in capsaicinGroup and se in [0,2]
+                        c3 = SE in pslGroup and se in [0]
+                        c4 = SE in shamGroup + adenosineGroup  and se in [0,1,2]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
+                        c6 = SE in CFAgroup and se in [0]
+                        # dev set에 pain / nonpain 설정은 되도록 하는게 좋음. training에는 영향을 주지 않음.
+                        # 어쩃든 acc가 찍혀야 뭘 판단할태니..
+                                        
+                        if c1 or c2 or c3 or c4 or c5 or c6:
+                            msclass = 0; init = True
                         
-                        for se in range(sessionNum):    
+                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                        c11 = SE in set2 and se in [1]
+                        c12 = SE in CFAgroup and se in [1,2]
+                        c21 = SE in pslGroup and se in [1,2]
+                        
+                        if c11 or c12 or c21: #
+                            msclass = 1; init = True
+                            
+                        if init:
                             binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
-                            binNum = len(binning)
-                            
                             if signalss[test_mouseNum][se].shape[0] == full_sequence:
-                                binNum = 1
                                 binning = [0]
-                                                           
-                            [PSL_result_save_mean[test_mouseNum][se].append([]) for i in range(binNum)]
-                            
-                            i = 54; ROI = 0; msreport = []
+                            binNum = len(binning)
+                                
                             for i in range(binNum):         
                                 signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                signal_full_roi = np.mean(signalss_PSL_test, axis=1)
+                                mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
                                 
-                                mannual_signal = np.mean(signalss_PSL_test, axis=1)
+                                signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                mannual_signal2 = np.reshape(signal2, (signal2.shape[0], 1))
+
+                                Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += Xtest; Y_tmp += Ytest
+                                         
+                if np.array(Y_tmp).shape[0] != 0:      
+                    Xtest = array_recover(X_tmp); 
+                    Y_tmp = np.array(Y_tmp); Y_tmp = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
+                    valid = tuple([Xtest, Y_tmp])
+                                
+            print('mouse #', [mouselist[sett]])
+            print('sample distributions.. ', np.round(np.mean(Y_training_list, axis = 0), 4))
+            
+            # training bias 방지를 위해 동일하게 shuffle 
+            np.random.seed(seed)
+            shuffleix = list(range(X_training[0].shape[0]))
+            np.random.shuffle(shuffleix) 
+#                    print(shuffleix)
+   
+            tr_y_shuffle = Y_training_list[shuffleix]
+            tr_x = []
+            for unit in range(msunit *fn):
+                tr_x.append(X_training[unit][shuffleix])
+
+
+            # 특정 training acc를 만족할때까지 epoch를 epochs단위로 지속합니다.
+            current_acc = -np.inf; cnt = -1
+            hist_save_loss = []
+            hist_save_acc = []
+            hist_save_val_loss = []
+            hist_save_val_acc = []
+            
+            starttime = time.time()
+            while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
+                if cnt > maxepoch/epochs:
+                    seed += 1
+                    model, idcode = keras_setup()        
+                    model.save_weights(initial_weightsave)
+                    current_acc = -np.inf; cnt = -1
+                    starttime = time.time()
+                    print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
+
+                cnt += 1;
+                current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
+                
+                isfile1 = os.path.isfile(current_weightsave)
+                if isfile1:
+                    model.load_weights(current_weightsave)
+                    print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
+                else:
+                    print('학습 진행중인 model 없음. 새로 시작합니다')
+   
+                hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
+                
+                hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                hist_save_val_loss += list(np.array(hist.history['val_loss']))
+                hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
+                     
+                model.save_weights(current_weightsave)
+                
+                # 종료조건: 
+                current_acc = hist_save_acc[-1] 
+                        
+            model.save_weights(final_weightsave)   
+            print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
+
+            # hist 저장      
+            plt.figure();
+            mouseNum = mouselist[sett]
+            hist_save_loss_plot = np.array(hist_save_loss)/np.max(hist_save_loss)
+            
+            plt.plot(hist_save_loss_plot, label= '# ' + str(mouseNum) + ' loss')
+            plt.plot(hist_save_acc, label= '# ' + str(mouseNum) + ' acc')
+            plt.legend()
+            plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_trainingSet_result.png')
+            plt.close()
+
+            savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_trainingSet_result.csv'
+            csvfile = open(savename, 'w', newline='')
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow(hist_save_acc)
+            csvwriter.writerow(hist_save_loss)
+            csvwriter.writerow(time.time() - starttime)
+            csvfile.close()
+
+            if validation_sw:
+                plt.figure();
+                mouseNum = mouselist[sett]
+                hist_save_val_loss_plot = np.array(hist_save_val_loss)/np.max(hist_save_val_loss)
+                
+                plt.plot(hist_save_val_loss_plot, label= '# ' + str(mouseNum) + ' loss')
+                plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
+                plt.legend()
+                plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.png')
+                plt.close()
+
+                savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.csv'
+                csvfile = open(savename, 'w', newline='')
+                csvwriter = csv.writer(csvfile)
+                csvwriter.writerow(hist_save_val_acc)
+                csvwriter.writerow(hist_save_val_loss)
+                csvfile.close()
+
+        ####### test 구문 입니다. ##########        
+        # testlist는 위에 작성한 dev set의 testlist 변수를 그대로 이어 받는다.
+        # 단 etc에 경우 teslist를 따로 만든다.
+        if not(len(etc) == 0):
+            if etc[0] == mouselist[sett]:
+                print('test ssesion, etc group 입니다.') 
+                testlist = list(etc)
+        
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
+        isfile2 = os.path.isfile(final_weightsave)
+        print(final_weightsave)
+        print('test를 위한 model 존재 유무', isfile2)
+
+        ####### test - binning 구문 입니다. ##########, test version 2
+        # model load는 cv set 시작에서 무조건 하도록 되어 있음.
+        if not(isfile2) and testsw2:
+            model.load_weights(final_weightsave) # training / test는 흔히 별개로 처리되곤하기 때문에, 다시 로드한다.
+            
+            for test_mouseNum in testlist:
+                testbin = None
+                picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_' + str(test_mouseNum) + '.pickle'
+                picklesavename2 = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_mean_' + str(test_mouseNum) + '.pickle'
+                
+                isfile3 = os.path.isfile(picklesavename)
+                if isfile3:
+                    print('PSL_result_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
+
+                if not(isfile3):
+                    PSL_result_save = []
+                    [PSL_result_save.append([]) for i in range(N)]
+                    PSL_result_save_mean = []
+                    [PSL_result_save_mean.append([]) for i in range(N)]
+                    
+                    for SE2 in range(N):
+                        [PSL_result_save[SE2].append([]) for i in range(5)]
+                        [PSL_result_save_mean[SE2].append([]) for i in range(5)]
+                    # PSL_result_save변수에 무조건 동일한 공간을 만들도록 설정함. pre allocation 개념
+                    
+                    sessionNum = 5
+                    if test_mouseNum in se3set:
+                        sessionNum = 3
+                    
+                    for se in range(sessionNum):
+                        
+                        binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                        binNum = len(binning)
+                        
+                        if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                            binNum = 1
+                            binning = [0]
+                                                       
+                        [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
+                        [PSL_result_save_mean[test_mouseNum][se].append([]) for i in range(binNum)]
+                        
+                        i = 54; ROI = 0
+                        for i in range(binNum):    
+                            # each ROI
+                            signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                            ROInum = signalss_PSL_test.shape[1]
+                            
+                            [PSL_result_save[test_mouseNum][se][i].append([]) for k in range(ROInum)]
+                            
+                            mannual_signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                            mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+                            for ROI in range(ROInum):
+                                mannual_signal = signalss_PSL_test[:,ROI]
                                 mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                                 
-                                mannual_signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence] # 반복이지만.. 편의상
-                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                            
                                 X, _, _, _ = dataGeneration(test_mouseNum, se, label=0, \
-                                           Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                       Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
                                     
                                 X_array = array_recover(X)
-#                                print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'mean signal')
+                                print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'ROI', ROI)
                                 prediction = model.predict(X_array)
-                                PSL_result_save_mean[test_mouseNum][se][i] = prediction
-                                msreport.append(np.mean(prediction[:,1]))
+                                PSL_result_save[test_mouseNum][se][i][ROI] = prediction
                                 
-                            print(test_mouseNum, se, np.mean(msreport))
-     
-                    
-                        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-                            pickle.dump(PSL_result_save_mean, f, pickle.HIGHEST_PROTOCOL)
-                            print(picklesavename, '저장되었습니다.')
+                            # ROI mean
+                            mean_signal = np.mean(signalss_PSL_test, axis=1)
+                            mean_signal = np.reshape(mean_signal, (mean_signal.shape[0], 1))
 
+                            X, _, _, _ = dataGeneration(test_mouseNum, se, label=0, \
+                                       Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                
+                            X_array = array_recover(X)
+                            prediction = model.predict(X_array)
+                            PSL_result_save_mean[test_mouseNum][se][i] = prediction
+                            
+                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename, '저장되었습니다.')
+                        
+                    with open(picklesavename2, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(PSL_result_save_mean, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename2, '저장되었습니다.')
+# In[]      # mean signal 처리
+       
 
 # In[]
 
@@ -1179,8 +1025,4 @@ for q in project_list:
 
 
 
-
-
-
-#
 
