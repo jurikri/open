@@ -388,9 +388,9 @@ classratio = 1 # class under sampling ratio
 project_list = []
  # proejct name, seed
 
-project_list.append(['control_test_segment_adenosine_set1', 100, None])
-project_list.append(['control_test_segment_adenosine_set2', 200, None])
-project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#project_list.append(['control_test_segment_adenosine_set1', 100, None])
+#project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#project_list.append(['control_test_segment_adenosine_set3', 300, None])
 project_list.append(['control_test_segment_adenosine_set4', 400, None])
 project_list.append(['control_test_segment_adenosine_set5', 500, None])
 #project_list.append(['control_test3_segment', 300, None])
@@ -850,7 +850,7 @@ for q in project_list:
                     model, idcode = keras_setup()        
                     model.save_weights(initial_weightsave)
                     current_acc = -np.inf; cnt = -1
-                    starttime = time.time()
+#                    starttime = time.time()
                     print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
 
                 cnt += 1;
@@ -893,7 +893,8 @@ for q in project_list:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(hist_save_acc)
             csvwriter.writerow(hist_save_loss)
-            csvwriter.writerow(time.time() - starttime)
+            spendingtime = time.time() - starttime
+            csvwriter.writerow([spendingtime, spendingtime/60, spendingtime/60**2])
             csvfile.close()
 
             if validation_sw:
