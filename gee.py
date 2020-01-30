@@ -105,7 +105,10 @@ highGroup2 = msGroup['highGroup2']
 CFAgroup = msGroup['CFAgroup']
 
 msset = msGroup['msset']
-del msGroup['msset']
+msset2 = msGroup['msset2']
+del msGroup['msset']; del msGroup['msset2']
+msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
+
 skiplist = restrictionGroup + lowGroup + lidocainGroup
 
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup
@@ -302,11 +305,36 @@ def msacc2(pain, nonpain):
     
     return accuracy
 
+def nanex(array1):
+    array1 = np.array(array1)
+    array1 = array1[np.isnan(array1)==0]
+    return array1
+
 # 제외된 mouse 확인용, mouseGroup
 mouseGroup = []
 for i in list(msGroup.keys()):
     mouseGroup += msGroup[i]
 print('현재 grouping된 mouse #...', len(set(mouseGroup)), '/', str(N))
+      
+# long, short separate
+#msshort = 42; mslong = 97; 
+bins = 10
+shortlist = []; longlist = []
+for SE in range(N):
+    if SE in mouseGroup:
+        if not SE in skiplist:
+            sessionNum = 5
+            if SE in se3set:
+                sessionNum = 3
+            
+            for se in range(sessionNum):
+                length = np.array(signalss[SE][se]).shape[0]
+                if length > 180*FPS:
+                    longlist.append([SE,se])
+                elif length < 180*FPS:
+                    shortlist.append([SE,se])
+                else:
+                    print('error')
 
 # load 할 model 경로(들) 입력
 # index, project
@@ -314,9 +342,11 @@ project_list = []
 
 #project_list.append(['0114_double_merge', 100, None])
 
-project_list.append(['0116_CFA_l2_1', 200, None])
-project_list.append(['0116_CFA_l2_2', 300, None])
-#project_list.append(['0116_CFA_l2_3', 400, None])
+#project_list.append(['control_test1_segment', 200, None])
+
+project_list.append(['control_test_segment_adenosine_set1', 100, None])
+project_list.append(['control_test_segment_adenosine_set2', 200, None])
+project_list.append(['control_test_segment_adenosine_set3', 300, None])
 
 model_name = project_list 
              
@@ -374,15 +404,19 @@ for SE in range(N):
                     
         if len(current_value) > 0:
             current_value = np.mean(np.array(current_value), axis=0) # mean by project
-            mean_bins = np.mean(np.array(current_value), axis=1) # mean by bins
-            mean_BINS = np.mean(mean_bins) # mean by BINS
-            min_mean_save[SE][se] = mean_BINS
-
+            min_mean_save[SE][se] = current_value # [BINS][bins]
+            
+#            mean_bins = np.mean(np.array(current_value), axis=1) # mean by bins
+#            mean_BINS = np.mean(mean_bins) # mean by BINS
+#            min_mean_save[SE][se] = mean_BINS
+            
+            
         elif len(current_value) == 0:
             min_mean_save[SE][se] = np.nan
-
-biRNN_2 = np.zeros((N,5)); biRNN_2[:] = np.nan;
-## 모든 set 평균값으로만 계산
+            
+# In[]
+# mean, for shortlist (formalin, capsaicin) - short + long = all 로 사용
+biRNN_short = np.zeros((N,5)); biRNN_short[:] = np.nan;
 for SE in range(N):
     if not SE in grouped_total_list or SE in skiplist:
 #            print(SE, 'skip')
@@ -392,24 +426,88 @@ for SE in range(N):
         sessionNum = 3
         
     for se in range(sessionNum):
-        biRNN_2[SE,se]  = min_mean_save[SE][se]
-
-## subset 평균처리 후 main set으로 통합, subset은 nan으로 제외
-biRNN_22 = np.zeros((N,5)); biRNN_22[:] = np.nan
+#        if [SE, se] in shortlist:
+        biRNN_short[SE,se]  = np.mean(min_mean_save[SE][se])
+        
+biRNN_long_subset = np.zeros((N,5)); biRNN_long_subset[:] = np.nan
 for SE in range(N):
-    if SE in np.array(msset)[:,0]:
-        biRNN_22[SE,:] = np.nanmean(biRNN_2[np.array(msset)[np.where(np.array(msset)[:,0]==SE)[0][0],:],:],axis=0)
-    elif SE not in np.array(msset).flatten(): 
-        biRNN_22[SE,:] = biRNN_2[SE,:]
+    if SE in np.array(msset_total)[:,0]:
+        settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
+        biRNN_long_subset[SE,:] = np.nanmean(biRNN_short[settmp,:],axis=0)
+        print('set averaging', settmp)
+    elif SE not in np.array(msset_total).flatten(): 
+        biRNN_long_subset[SE,:] = biRNN_short[SE,:]
 
-## PRISM 정리 및 통계처리
-Aprism_biRNN2_formalin = msGrouping_nonexclude(biRNN_22)
-Aprism_biRNN2_capsaicin = biRNN_22[capsaicinGroup,0:3]
-Aprism_biRNN2_CFA = biRNN_22[CFAgroup,0:3]
-Aprism_biRNN2_psl = msGrouping_pslOnly(biRNN_22)
+# In[] ## PRISM 정리 및 통계처리
+Aprism_biRNN2_formalin = msGrouping_nonexclude(biRNN_long_subset)
+Aprism_biRNN2_capsaicin = biRNN_long_subset[capsaicinGroup,0:3]
+Aprism_biRNN2_CFA = biRNN_long_subset[CFAgroup,0:3]
+Aprism_biRNN2_psl = msGrouping_pslOnly(biRNN_long_subset)
 
 
+# 통계처리 출력용
+# PSL
+ms_statistics = pd.DataFrame([])
 
+sham1 = biRNN_long_subset[shamGroup,1]; sham1 = sham1[np.isnan(sham1)==0]
+sham2 = biRNN_long_subset[shamGroup,2]; sham2 = sham2[np.isnan(sham2)==0]     
+       
+psl0 = biRNN_long_subset[pslGroup,0]; psl0 = psl0[np.isnan(psl0)==0]
+psl1 = biRNN_long_subset[pslGroup,1]; psl1 = psl1[np.isnan(psl1)==0]
+psl2 = biRNN_long_subset[pslGroup,2]; psl2 = psl2[np.isnan(psl2)==0]
+      
+unpaired1 = stats.ttest_ind(sham1, psl1)[1]
+unpaired2 = stats.ttest_ind(sham2, psl2)[1]
+paired1 = stats.ttest_ind(psl0, psl1)[1]
+paired2 = stats.ttest_ind(psl0, psl2)[1]
+
+# Capsaicin
+msname = pd.DataFrame(['sham_d3 vs PSL_d3', 'sham_d10 vs PSL_d10', 'PSL_base vs PSL_d3', 'PSL_base vs PSL_d10'])
+stat = pd.DataFrame([unpaired1, unpaired2, paired1, paired2])
+
+ms_statistics = pd.concat([ms_statistics, msname, stat]
+           ,ignore_index=True, axis = 1)
+
+cap0 = nanex(biRNN_long_subset[capsaicinGroup,0])
+cap1 = nanex(biRNN_long_subset[capsaicinGroup,1])
+cap2 = nanex(biRNN_long_subset[capsaicinGroup,2])
+paired_cap0 = stats.ttest_rel(cap0, cap1)[1]
+paired_cap2 = stats.ttest_rel(cap2, cap1)[1]
+
+ms_statistics = pd.concat([ms_statistics, pd.DataFrame(['cap_before vs cap', paired_cap0]).T \
+                           , pd.DataFrame(['cap_after vs cap', paired_cap2]).T] \
+,ignore_index=True, axis = 0)
+
+
+# CFA
+CFA0 = nanex(biRNN_long_subset[CFAgroup,0])
+CFA1 = nanex(biRNN_long_subset[CFAgroup,1])
+CFA2 = nanex(biRNN_long_subset[CFAgroup,2])
+paired_CFA1 = stats.ttest_rel(CFA0, CFA1)[1]
+paired_CFA2 = stats.ttest_rel(CFA0, CFA2)[1]
+
+ms_statistics = pd.concat([ms_statistics, pd.DataFrame(['CFA base vs CFA d1', paired_CFA1]).T \
+                           , pd.DataFrame(['CFA base vs CFA d3', paired_CFA2]).T] \
+,ignore_index=True, axis = 0)
+
+
+print(ms_statistics)
+
+# In[] movement 정리
+
+movement_subset = np.zeros((N,5)); movement_subset[:] = np.nan
+for SE in range(N):
+    if SE in np.array(msset_total)[:,0]:
+        settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
+        movement_subset[SE,:] = np.nanmean(movement[settmp,:],axis=0)
+        print('set averaging', 'movement', settmp)
+    elif SE not in np.array(msset_total).flatten(): 
+        movement_subset[SE,:] = movement[SE,:]
+        
+Aprism_mov_biRNN2_formalin = msGrouping_nonexclude(movement_subset)
+Aprism_mov_biRNN2_capsaicin = movement_subset[capsaicinGroup,0:3]
+Aprism_mov_biRNN2_CFA = movement_subset[CFAgroup,0:3]
+Aprism_mov_biRNN2_psl = msGrouping_pslOnly(movement_subset)
 
 
 # In[]
