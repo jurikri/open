@@ -340,13 +340,16 @@ for SE in range(N):
 # index, project
 project_list = []
 
-#project_list.append(['0114_double_merge', 100, None])
+#project_list.append(['0116_CFA_l2_1', 100, None])
+#project_list.append(['0116_CFA_l2_2', 100, None])
+#project_list.append(['0116_CFA_l2_3', 100, None])
 
-#project_list.append(['control_test1_segment', 200, None])
+project_list.append(['control2_roiroi', 200, None])
 
-project_list.append(['control_test_segment_adenosine_set1', 100, None])
-project_list.append(['control_test_segment_adenosine_set2', 200, None])
-project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#project_list.append(['control_test_segment_adenosine_set1', 100, None])
+#project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#project_list.append(['control_test_segment_adenosine_set3', 300, None])
 
 model_name = project_list 
              
@@ -427,7 +430,7 @@ for SE in range(N):
         
     for se in range(sessionNum):
 #        if [SE, se] in shortlist:
-        biRNN_short[SE,se]  = np.mean(min_mean_save[SE][se])
+        biRNN_short[SE,se]  = np.mean(min_mean_save[SE][se]) # [BINS][bins]
         
 biRNN_long_subset = np.zeros((N,5)); biRNN_long_subset[:] = np.nan
 for SE in range(N):
@@ -515,10 +518,47 @@ import os
 os.sys.exit()
 
 
+# In[] capsaicin 시간에 따른 변화 비교
+msunit = 8
+minlength = 497; time_resolution = int(minlength/msunit)
+
+60/(time_resolution/FPS)
 
 
+timebin = 2
+cap_result = np.zeros((N,5,timebin)); cap_result[:] = np.nan;
+for SE in range(N):
+    if not SE in grouped_total_list or SE in skiplist:
+        continue
+    sessionNum = 5
+    if SE in se3set:
+        sessionNum = 3
+        
+    for se in range(sessionNum):
+        if SE in capsaicinGroup:
+            for t in range(timebin):
+                if t == 0:
+                    s = 0
+                    e = 22
+                elif t == 1:
+                    s = 22
+                    e = 44
+                
+                cap_result[SE,se,t]  = np.mean(min_mean_save[SE][se][0][s:e]) # [BINS][bins]
+                
+            if se == 1:
+                plt.figure()
+                mstitle = str(SE)+'_'+str(se)
+                plt.title(mstitle)
+                plt.plot(min_mean_save[SE][se][0])
+                plt.ylim((0,1))
+                savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\time_resolution\\'
+                plt.savefig(savepath+mstitle+'.png', dpi=1000)
+                plt.close()
+            
 
-
+np.mean(cap_result[:,:,0][capsaicinGroup,:], axis=0)
+np.mean(cap_result[:,:,1][capsaicinGroup,:], axis=0)
 
 
 
