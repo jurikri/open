@@ -36,12 +36,14 @@ def mslinear_regression(x,y):
 
 shortlist = []; longlist = []
 def msGrouping_nonexclude(msdata): 
-    df3 = pd.concat([pd.DataFrame(msdata[highGroup + highGroup2]) , pd.DataFrame(msdata[midleGroup]), \
-                     pd.DataFrame(msdata[salineGroup])] \
-                     , ignore_index=True, axis=1)
-        
-    df3 = np.array(df3)
+    df3 = pd.concat([pd.DataFrame(msdata[salineGroup,0:4]) \
+                                  ,pd.DataFrame(msdata[highGroup + highGroup2,0:4]) \
+                                  ,pd.DataFrame(msdata[midleGroup,0:4]) \
+                                  ,pd.DataFrame(msdata[ketoGroup,0:4]) \
+                                  ,pd.DataFrame(msdata[lidocainGroup,0:4])] \
+                                  ,ignore_index=True, axis=1)
     
+    df3 = np.array(df3)
     return df3
 
 def msGrouping_pslOnly(psl): # psl만 처리
@@ -109,7 +111,7 @@ msset2 = msGroup['msset2']
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
-skiplist = restrictionGroup + lowGroup + lidocainGroup
+skiplist = restrictionGroup + lowGroup
 
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup
 pslset = pslGroup + shamGroup + adenosineGroup
@@ -344,12 +346,12 @@ project_list = []
 #project_list.append(['0116_CFA_l2_2', 100, None])
 #project_list.append(['0116_CFA_l2_3', 100, None])
 
-project_list.append(['control2_roiroi', 200, None])
+#project_list.append(['control2_roiroi', 200, None])
 
-#project_list.append(['control_test_segment_adenosine_set1', 100, None])
-#project_list.append(['control_test_segment_adenosine_set2', 200, None])
-#project_list.append(['control_test_segment_adenosine_set3', 300, None])
-#project_list.append(['control_test_segment_adenosine_set3', 300, None])
+project_list.append(['control_test_segment_adenosine_set1', 100, None])
+project_list.append(['control_test_segment_adenosine_set2', 200, None])
+project_list.append(['control_test_segment_adenosine_set3', 300, None])
+project_list.append(['control_test_segment_adenosine_set4', 400, None])
 
 model_name = project_list 
              
@@ -362,6 +364,7 @@ for SE in range(N):
 
 # In[]
 min_mean_save = []; [min_mean_save.append([]) for k in range(N)]
+ROImean_save = []; [ROImean_save.append([]) for k in range(N)]
 roiRatio = 1
 for SE in range(N):
     if not SE in grouped_total_list or SE in skiplist: # ETC 추가후 lidocine skip 삭제할것 (여러개)
@@ -373,19 +376,21 @@ for SE in range(N):
         sessionNum = 3
     
     [min_mean_save[SE].append([]) for k in range(sessionNum)]
+    [ROImean_save[SE].append([]) for k in range(sessionNum)]
     for se in range(sessionNum):
-        current_value = []
+        current_value = []; result_mean_projects = []
         for i in range(len(model_name)): # repeat model 만큼 반복 후 평균냄
             ssw = False
             
             loadpath5 = savepath + 'result\\' + model_name[i][0] + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
+            loadpath_mean = savepath + 'result\\' + model_name[i][0] + '\\exp_raw\\' + 'PSL_result_mean_' + str(SE) + '.pickle'
                 
             if os.path.isfile(loadpath5):
                 with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
                     PSL_result_save = pickle.load(f)
-            
-            # ##################################
                 PSL_result_save2 = PSL_result_save[SE][se] # [BINS][ROI][bins] # BINS , full length 넘어갈때, # bins는 full length 안에서
+                
+                # ROI 평균처리에 대하여 및 반복처리
                 current_BINS = []
                 BINnum = len(PSL_result_save2)
                 if BINnum != 0:
@@ -404,21 +409,35 @@ for SE in range(N):
                         current_ROI_rank = np.array(current_ROI)[np.argsort(roiRank)[::-1][:int(round(roiRank.shape[0]*roiRatio))], :]
                         current_BINS.append(np.mean(np.array(current_ROI_rank ), axis=0)) # ROI 평균
                     current_value.append(current_BINS)
+                    # ROI 평균처리에 대하여 - 끝
                     
+            if os.path.isfile(loadpath_mean):
+                with open(loadpath_mean, 'rb') as f:  # Python 3: open(..., 'rb')
+                    result_mean = pickle.load(f)
+                result_mean_projects.append(np.array(result_mean[SE][se])) # [BINS][bins][nonpain,pain]
+ 
         if len(current_value) > 0:
             current_value = np.mean(np.array(current_value), axis=0) # mean by project
-            min_mean_save[SE][se] = current_value # [BINS][bins]
-            
-#            mean_bins = np.mean(np.array(current_value), axis=1) # mean by bins
-#            mean_BINS = np.mean(mean_bins) # mean by BINS
-#            min_mean_save[SE][se] = mean_BINS
-            
-            
+            min_mean_save[SE][se] = current_value # [BINS][bins]  
         elif len(current_value) == 0:
             min_mean_save[SE][se] = np.nan
             
+        if np.array(result_mean_projects).shape[0] > 0:
+            result_mean_projects2 = np.mean(np.array(result_mean_projects), axis=0) # mean by project
+            ROImean_save[SE][se] = result_mean_projects2[:,0,1]
+        elif np.array(result_mean_projects).shape[0] == 0:
+            ROImean_save[SE][se] = np.nan
+               
 # In[]
 # mean, for shortlist (formalin, capsaicin) - short + long = all 로 사용
+       
+#       ROImean_save        # average test 
+#       min_mean_save       # individual test
+            
+#calc_target = np.array(ROImean_save)
+calc_target = np.array(min_mean_save)
+
+            
 biRNN_short = np.zeros((N,5)); biRNN_short[:] = np.nan;
 for SE in range(N):
     if not SE in grouped_total_list or SE in skiplist:
@@ -430,7 +449,7 @@ for SE in range(N):
         
     for se in range(sessionNum):
 #        if [SE, se] in shortlist:
-        biRNN_short[SE,se]  = np.mean(min_mean_save[SE][se]) # [BINS][bins]
+        biRNN_short[SE,se]  = np.mean(calc_target[SE][se]) # [BINS][bins]
         
 biRNN_long_subset = np.zeros((N,5)); biRNN_long_subset[:] = np.nan
 for SE in range(N):
@@ -441,7 +460,7 @@ for SE in range(N):
     elif SE not in np.array(msset_total).flatten(): 
         biRNN_long_subset[SE,:] = biRNN_short[SE,:]
 
-# In[] ## PRISM 정리 및 통계처리
+# In ## PRISM 정리 및 통계처리
 Aprism_biRNN2_formalin = msGrouping_nonexclude(biRNN_long_subset)
 Aprism_biRNN2_capsaicin = biRNN_long_subset[capsaicinGroup,0:3]
 Aprism_biRNN2_CFA = biRNN_long_subset[CFAgroup,0:3]
@@ -511,6 +530,51 @@ Aprism_mov_biRNN2_formalin = msGrouping_nonexclude(movement_subset)
 Aprism_mov_biRNN2_capsaicin = movement_subset[capsaicinGroup,0:3]
 Aprism_mov_biRNN2_CFA = movement_subset[CFAgroup,0:3]
 Aprism_mov_biRNN2_psl = msGrouping_pslOnly(movement_subset)
+
+
+# total activity 정리
+
+t4_subset = np.zeros((N,5)); t4_subset[:] = np.nan
+for SE in range(N):
+    if SE in np.array(msset_total)[:,0]:
+        settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
+        t4_subset[SE,:] = np.nanmean(t4[settmp,:],axis=0)
+        print('set averaging', 'movement', settmp)
+    elif SE not in np.array(msset_total).flatten(): 
+        t4_subset[SE,:] = t4[SE,:]
+        
+Aprism_t4_biRNN2_formalin = msGrouping_nonexclude(t4_subset)
+Aprism_t4_biRNN2_capsaicin = t4_subset[capsaicinGroup,0:3]
+Aprism_t4_biRNN2_CFA = t4_subset[CFAgroup,0:3]
+Aprism_t4_biRNN2_psl = msGrouping_pslOnly(t4_subset)
+
+
+# In[] 시간에 따른 통증확률 시각화 (작업중)
+      
+#   calc_target
+            
+for SE in range(N):
+    if not SE in grouped_total_list or SE in skiplist:
+        continue
+    sessionNum = 5
+    if SE in se3set:
+        sessionNum = 3
+        
+    for se in range(sessionNum):
+        result_BINS = np.mean(calc_target[SE][se], axis=1) # [BINS][bins]
+        
+        fig = plt.figure(1, figsize=(9.7*1.5, 6*1.5))
+        plt.subplots_adjust(hspace = 0.3, wspace = 0.05)
+        
+        ax1 = plt.subplot(2,1,1 + se)
+        im1 = ax1.plot(result_BINS)
+        
+        ax2 = plt.subplot(2,1,2 + se)
+        im2 = ax2.plot(bahavss[SE][se])
+        
+        
+#        plt.plot(result_BINS)
+#        plt.plot(bahavss[SE][se])
 
 
 # In[]
