@@ -11,7 +11,8 @@ N값 자동화함. Group 지정만,
 """
 
 # In[] Group 지정
-highGroup =         [0,2,3,4,5,6,8,9,10,11,59] # 5%                 # exclude 7은 계속아픔. baseline도 아픔. 행동도 이상함 
+highGroup =         [0,2,3,4,5,6,8,9,10,11,59] # 5%                 
+# exclude 7, 이유: basline부터 발이 부어있음. inter phase에 movement ratio가 매우 이례적임 (3SD 이상일듯)
 # 1추가 제거
 midleGroup =        [20,21,22,23,24,25,26,57] # 1%
 restrictionGroup =  [27,28,29,30,43,44,45] # restriction 5%
@@ -19,15 +20,17 @@ lowGroup =          [31,32,33,35,36,37,38]  # 0.25%                  # exclude 3
 salineGroup =       [12,13,14,15,16,17,18,19,47,48,52,53,56,58] # control
 ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
-capsaicinGroup =    [60,61,62,64,65,82,83]
+capsaicinGroup =    [60,61,62,64,65,82,83,104,105]
 yohimbineGroup =    [63,66,67,68,69,74]
 pslGroup =          [70,71,72,75,76,77,78,79,80,84,85,86,87,88,93,94] # 73 제외, activitiy가 전반적으로 높음. cell 상태가 안좋기 때문에 제외하기로 함
+# 73 다시 넣을까? 
 shamGroup =         [81,89,90,91,92,97]
-adenosineGroup =    [98]
-
-highGroup2 =        [95,96] # 학습용, late ,recovery 제외됨, base movement data 없음
+adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
+CFAgroup =          [106,107,108,109,116,117]
+highGroup2 =        [95,96] # 학습용, late ,recovery는 애초에 분석되지 않음, base movement data 없음
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
+msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115]] # baseline 독립, training 때 base를 skip 하지 않음.
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -41,7 +44,11 @@ msGroup['capsaicinGroup'] = capsaicinGroup
 msGroup['yohimbineGroup'] = yohimbineGroup
 msGroup['pslGroup'] = pslGroup
 msGroup['shamGroup'] = shamGroup
+msGroup['adenosineGroup'] = adenosineGroup 
+msGroup['highGroup2'] = highGroup2
 msGroup['msset'] = msset
+msGroup['msset2'] = msset2
+msGroup['CFAgroup'] = CFAgroup
 
 import numpy as np
 import pandas as pd
@@ -109,13 +116,21 @@ def smoothListGaussian(array1,window):
 
      return smoothed  
  
+skipsw = False
 def mssignal_save(list1):
     newformat = list(range(70,N2))
     newformat.remove(74)
+    
     for N in list1:
-        print(N, '시작합니다')
         if N not in newformat:
+            print('signal preprosessing...', N)
             path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
+            savename = path + '\\signal_save.xlsx'
+            
+            if os.path.exists(savename) and skipsw:
+                print('이미 처리됨. skip', savename)
+                continue
+            
             loadpath = path + '\\' + raw_filepath
             df = pd.read_excel(loadpath)
             ROI = df.shape[1]
@@ -154,7 +169,14 @@ def mssignal_save(list1):
                      array2.append(np.array(msraw[s:,1:]))
                      
         elif N in newformat:
+            print('signal preprosessing...', N)
             path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
+            savename = path + '\\signal_save.xlsx'
+            
+            if os.path.exists(savename) and skipsw:
+                print('이미 처리됨. skip', savename)
+                continue
+            
             loadpath = path + '\\' + raw_filepath
             array0 = []; array2 =[]; k = -1
             while True:
@@ -238,7 +260,6 @@ def mssignal_save(list1):
                 
             array4.append(f_signal)
 
-        savename = path + '\\signal_save.xlsx'
         with pd.ExcelWriter(savename) as writer:  
             for se in range(len(array4)):      
                 msout = pd.DataFrame(array4[se], index=None, columns=None)
@@ -249,6 +270,7 @@ def mssignal_save(list1):
 # In[]
 
 def msMovementExtraction(list1):
+#    movement_thr_save = np.zeros((N2,5))
     for N in list1:
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
         behav_data_ms = list()
@@ -258,6 +280,11 @@ def msMovementExtraction(list1):
         
         for i in range(len(behav_data_ms)):
             loadpath = path + '\\' + behav_data_ms[i]
+            savename = path + '\\' + 'MS_' + behav_data[i] 
+            
+            if os.path.exists(savename) and skipsw:
+                print('이미 처리됨. skip', savename)
+                continue
         
             df = hdf5storage.loadmat(loadpath)
             diffplot = df['msdiff_gauss']
@@ -324,15 +351,27 @@ def msMovementExtraction(list1):
             if N == 91 and i == 0:
                 thr = 0.55
             if N == 91 and i == 1:
-                thr = 0.565
+                thr = 0.65
             if N == 97 and i == 0:
                 thr = 0.53
             if N == 97 and i == 1:
                 thr = 0.63
             if N == 97 and i == 2:
                 thr = 0.8
+            if N == 99 and i in [0,1]:
+                thr = 1
+            if N == 99 and i in [2]:
+                thr = 1.2
+                
+            if N == 100 and i in [1]:
+                thr = 0.9
+            if N == 101 and i in [2]:
+                thr = 1
+            if N == 116 and i in [0]:
+                thr = 0.9
                    
             aline = np.zeros(diffplot.shape[0]); aline[:] = thr
+#            movement_thr_save[SE,se] = thr
             
             if True:
                 plt.figure(i, figsize=(18, 9))
@@ -352,14 +391,14 @@ def msMovementExtraction(list1):
                 
                 plt.savefig(ftitle)
                 plt.close(i)
-                
-           
-            savems = np.zeros(msmatrix.shape[0])
-            savems[msmatrix > aline] = 1
-                      
-            savename = path + '\\' + 'MS_' + behav_data[i]   
+
+            # raw
+            msmatrix[msmatrix<thr] = 0
+            savems = msmatrix
+
             msout = pd.DataFrame(savems ,index=None, columns=None)
             msout.to_csv(savename, index=False, header=False)
+    return None
 
 # In[]
 
@@ -372,7 +411,7 @@ msMovementExtraction(runlist)
 # In[] signal & behavior import
 signalss = list(); bahavss = list()
 
-for SE in range(N):
+for SE in range(N2):
     print(SE, N)
     path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
 #    loadpath = path + '\\events_save.xlsx'
@@ -447,16 +486,7 @@ for SE in range(N):
             
     if np.sum(ROIsw) != np.array(signals[0]).shape[1]:
         print("signal이 없는 ROI가 존재함")
-    
-# In movement 계산 
-movement = np.zeros((N,5))
-for SE in range(N):
-    print(SE,N)
-    behavs = np.array(bahavss[SE])
-    for se in range(5):
-        behav = np.array(behavs[se])
-        movement[SE,se] = np.sum(behav)/behav.shape[0]
-        
+
 # In
 from scipy.stats.stats import pearsonr 
 def msbehav_syn(behav, signal): # behav syn 맞추기 
@@ -474,11 +504,6 @@ def msbehav_syn(behav, signal): # behav syn 맞추기
     return behav_syn  
 
 # syn를 위한 상수 계산
-    
-# 여긴 계산은 하지만, 대부분 사용하지 않는 코드임.
-# 비해비어 & 시그널의 최대 싱크를 맞춰보기만함.
-# 수치를와 시각화자료를 보고, 명백히 데이터획득과정의 에러로 판단되면 수정하고 그렇지 않으면 그냥 둠.
-# 명백히 달라서 수정하는것 -> fixlist
 
 synsave = np.zeros((N,5))
 SE = 6; se = 1    
@@ -523,9 +548,14 @@ for SE in range(N):
                 
                 if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept:
                     continue
+ 
+                if not np.sum(behav_syn2) == 0:
+                    r = pearsonr(singal_syn, behav_syn2)[0]
+                elif np.sum(behav_syn2) == 0:
+                    r = 0
                     
                 xaxis.append(syn)
-                yaxis.append(pearsonr(singal_syn, behav_syn2)[0])
+                yaxis.append(r)
                 
                 if np.sum(np.isnan(yaxis)) < 0:
                     print(SE,se, 'nan 있어요')
@@ -543,19 +573,33 @@ synsave[18,4] = 0
 synsave[43,3] = 0 
 synsave[43,4] = 0
 #synsave[39,3] = 0
-SE = 1; se = 1
-SE = 8; se = 4
+#SE = 1; se = 1
+#SE = 8; se = 4
 
 fixlist = [[1,1],[8,4]]
 print('다음 session은 syn가 안맞으므로 수정합니다.')
 print(fixlist)
 
+# In[]
+
+def downsampling(msssignal, wanted_size):
+    downratio = msssignal.shape[0]/wanted_size
+    downsignal = np.zeros(wanted_size)
+    downsignal[:] = np.nan
+    for frame in range(wanted_size):
+        s = int(round(frame*downratio))
+        e = int(round(frame*downratio+downratio))
+        downsignal[frame] = np.mean(msssignal[s:e])
+        
+    return np.array(downsignal)
+
 behavss2 = list()
 for SE in range(N):
     behavss2.append([])
     for se in range(5):
-       
-        behav_syn = msbehav_syn(bahavss[SE][se], signalss[SE][se])
+        
+        msbehav = np.array(bahavss[SE][se])
+        behav_syn = downsampling(msbehav, signalss[SE][se].shape[0])
         
         if [SE, se] in fixlist:
             fix = np.zeros(behav_syn.shape[0])
@@ -574,7 +618,7 @@ for SE in range(N):
                
         behavss2[SE].append(fix)
     
-if True:
+if True: # 시각화 저장
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0709'
     print('signal, movement 시각화는', savepath, '에 저장됩니다.')
     
@@ -618,9 +662,6 @@ if True:
             plt.savefig(mstitle)
             plt.close(SE)
 
-        
-#    import baseestimator
-
 
 try:
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
@@ -634,11 +675,8 @@ print('savepath', savepath)
 msdata = {
         'FPS' : FPS,
         'N' : N,
-        'bahavss' : bahavss,
-        'behavss2' : behavss2,
-#        'baseindex' : baseindex,
-#        'basess' : basess,
-        'movement' : movement,
+        'bahavss' : bahavss, # behavior 원본 
+        'behavss2' : behavss2, # behavior frame fix
         'msGroup' : msGroup,
         'msdir' : msdir,
         'signalss' : signalss
