@@ -4,7 +4,6 @@ Created on Sat Apr 20 20:58:38 2019
 
 @author: user
 """
-
 def msfilepath1(session):
 
     mainpath = 'E:\\mscore\\syncbackup\\paindecoder\\data\\'
@@ -832,6 +831,394 @@ def msfilepath1(session):
         path = mainpath + 's0918_2_PSL'
         behav_data = list()
         raw_filepath = 's0918_2_PSL.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 80: 
+        path = mainpath + 's0919_PSL'
+        behav_data = list()
+        raw_filepath = 's0919_PSL.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 81: 
+        path = mainpath + 's0926_Sham'
+        behav_data = list()
+        raw_filepath = 's0926_Sham.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 82: 
+        path = mainpath + 's0802_1_Cap'
+        behav_data = list()
+        raw_filepath = 's0802_1_Cap.xlsx'
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('004000.csv')
+        behav_data.append('004000.csv')
+        behav_data.append('004000.csv')
+        
+    elif session == 83: 
+        path = mainpath + 's0802_2_Cap'
+        behav_data = list()
+        raw_filepath = 's0802_2_Cap.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+        ##
+        
+    elif session == 84: 
+        path = mainpath + 's0903_PSL_t2'
+        behav_data = list()
+        raw_filepath = 's0903_PSL_t2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 85: 
+        path = mainpath + 's0906_2_PSL_t2'
+        behav_data = list()
+        raw_filepath = 's0906_2_PSL_t2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 86: 
+        path = mainpath + 's0909_1_PSL_t2'
+        behav_data = list()
+        raw_filepath = 's0909_1_PSL_t2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 87: 
+        path = mainpath + 's0910_PSL_2_t2'
+        behav_data = list()
+        raw_filepath = 's0910_PSL_2_t2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 88: 
+        path = mainpath + 's0918_2_PSL_t2'
+        behav_data = list()
+        raw_filepath = 's0918_2_PSL_t2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 89: 
+        path = mainpath + 's1011_1_Sham'
+        behav_data = list()
+        raw_filepath = 's1011_1_Sham.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+        ##
+        
+    elif session == 90: 
+        path = mainpath + 's1029_1_Sham'
+        behav_data = list()
+        raw_filepath = 's1029_1_Sham.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 91: 
+        path = mainpath + 's1029_2_Sham'
+        behav_data = list()
+        raw_filepath = 's1029_2_Sham.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 92: 
+        path = mainpath + 's1011_2_Sham'
+        behav_data = list()
+        raw_filepath = 's1011_2_Sham.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 93: 
+        path = mainpath + 's0918_1_PSL_2'
+        behav_data = list()
+        raw_filepath = 's0918_1_PSL_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 94: 
+        path = mainpath + 's0919_PSL_2'
+        behav_data = list()
+        raw_filepath = 's0919_PSL_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 95: 
+        path = mainpath + 's1220_2_Formalin_before5min_awake'
+        behav_data = list()
+        raw_filepath = 's1220_2_Formalin_before5min_awake.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 96: 
+        path = mainpath + 's1226_1_Formalin_before5min_awake'
+        behav_data = list()
+        raw_filepath = 's1226_1_Formalin_before5min_awake.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 97: 
+        path = mainpath + 's1105_Sham'
+        behav_data = list()
+        raw_filepath = 's1105_Sham.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 98: 
+        path = mainpath + 's1112_PSL_Adenosine'
+        behav_data = list()
+        raw_filepath = 's1112_PSL_Adenosine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 99: 
+        path = mainpath + 's1114_1_PSL_Adenosine'
+        behav_data = list()
+        raw_filepath = 's1114_1_PSL_Adenosine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+        ##
+        
+    elif session == 100: 
+        path = mainpath + 's1114_2_PSL_Adenosine'
+        behav_data = list()
+        raw_filepath = 's1114_2_PSL_Adenosine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 101: 
+        path = mainpath + 's1115_PSL_Adenosine'
+        behav_data = list()
+        raw_filepath = 's1115_PSL_Adenosine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 102: 
+        path = mainpath + 's1119_PSL_Adenosine'
+        behav_data = list()
+        raw_filepath = 's1119_PSL_Adenosine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 103: 
+        path = mainpath + 's1126_PSL_Adenosine'
+        behav_data = list()
+        raw_filepath = 's1126_PSL_Adenosine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 104: 
+        path = mainpath + 's1204_1_Cap'
+        behav_data = list()
+        raw_filepath = 's1204_1_Cap.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 105: 
+        path = mainpath + 's1204_2_Cap'
+        behav_data = list()
+        raw_filepath = 's1204_2_Cap.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        ##
+    elif session == 106: 
+        path = mainpath + 's1211_CFA'
+        behav_data = list()
+        raw_filepath = 's1211_CFA.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 107: 
+        path = mainpath + 's1212_1_CFA'
+        behav_data = list()
+        raw_filepath = 's1212_1_CFA.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 108: 
+        path = mainpath + 's1212_2_CFA'
+        behav_data = list()
+        raw_filepath = 's1212_2_CFA.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 109: 
+        path = mainpath + 's1218_CFA'
+        behav_data = list()
+        raw_filepath = 's1218_CFA.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+        ##
+        
+    elif session == 110: 
+        path = mainpath + 's1112_PSL_Adenosine_2'
+        behav_data = list()
+        raw_filepath = 's1112_PSL_Adenosine_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 111: 
+        path = mainpath + 's1114_1_PSL_Adenosine_2'
+        behav_data = list()
+        raw_filepath = 's1114_1_PSL_Adenosine_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 112: 
+        path = mainpath + 's1114_2_PSL_Adenosine_2'
+        behav_data = list()
+        raw_filepath = 's1114_2_PSL_Adenosine_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 113: 
+        path = mainpath + 's1115_PSL_Adenosine_2'
+        behav_data = list()
+        raw_filepath = 's1115_PSL_Adenosine_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 114: 
+        path = mainpath + 's1119_PSL_Adenosine_2'
+        behav_data = list()
+        raw_filepath = 's1119_PSL_Adenosine_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 115: 
+        path = mainpath + 's1126_PSL_Adenosine_2'
+        behav_data = list()
+        raw_filepath = 's1126_PSL_Adenosine_2.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 116: 
+        path = mainpath + 's0107_Cfa'
+        behav_data = list()
+        raw_filepath = 's0107_Cfa.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 117: 
+        path = mainpath + 's0109_Cfa'
+        behav_data = list()
+        raw_filepath = 's0109_Cfa.xlsx'
         behav_data.append('001000.csv')
         behav_data.append('002000.csv')
         behav_data.append('003000.csv')
