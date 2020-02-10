@@ -380,7 +380,7 @@ batch_size = 2**10 # 5000
 ###############
 
 # constant 
-maxepoch = 300
+maxepoch = 50
 n_in =  1 # number of features
 n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
@@ -673,7 +673,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = mouselist
+    wanted = highGroup + salineGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -848,8 +848,15 @@ for q in project_list:
             hist_save_val_acc = []
             
             starttime = time.time()
+            reset_sw = False
             while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-                if cnt > maxepoch/epochs:
+                
+                if cnt > 10 and acc_thr < 0.6:
+                    reset_sw = True
+                    print('reset_sw', reset_sw)
+                
+                if cnt > maxepoch/epochs or reset_sw:
+                    reset_sw = False
                     seed += 1
                     model, idcode = keras_setup()        
                     model.save_weights(initial_weightsave)
@@ -897,7 +904,7 @@ for q in project_list:
             csvwriter = csv.writer(csvfile)
             csvwriter.writerow(hist_save_acc)
             csvwriter.writerow(hist_save_loss)
-            csvwriter.writerow(time.time() - starttime)
+            csvwriter.writerow([time.time() - starttime])
             csvfile.close()
 
             if validation_sw:
@@ -1027,7 +1034,7 @@ for q in project_list:
 
 # In[]
 
-
+ 
 
 
 
