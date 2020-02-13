@@ -345,8 +345,8 @@ epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8
+n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
 
 #duplicatedNum = 1
 #mspainThr = 0.27
@@ -362,7 +362,7 @@ dropout_rate2 = 0.10 #
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = False
+testsw2 = True
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -391,11 +391,12 @@ project_list = []
 #project_list.append(['control_test_segment_adenosine_set1', 100, None])
 #project_list.append(['control_test_segment_adenosine_set2', 200, None])
 #project_list.append(['control_test_segment_adenosine_set3', 300, None])
-project_list.append(['control_test_segment_adenosine_set4', 400, None])
-project_list.append(['control_test_segment_adenosine_set5', 500, None])
+#project_list.append(['control_test_segment_adenosine_set4', 400, None])
+#project_list.append(['control_test_segment_adenosine_set5', 500, None])
 #project_list.append(['control_test3_segment', 300, None])
 #project_list.append(['control_test3_segment', 400, None])
 #project_list.append(['control_test3_segment', 500, None])
+project_list.append(['202012_withCFA_1', 100, None])
 
 q = project_list[0]
 for q in project_list:
@@ -645,7 +646,9 @@ for q in project_list:
     
     
     # training set 재설정
-    trainingset = trainingset; etc = []
+    trainingset = pslset
+    
+    etc = []
     forlist = list(trainingset)
     for SE in forlist:
         c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
@@ -658,7 +661,7 @@ for q in project_list:
             for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
 
-    mouselist = trainingset
+    mouselist = trainingset # 사용 중지 
     mouselist.sort()
     
 #    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
@@ -918,6 +921,11 @@ for q in project_list:
         ####### test 구문 입니다. ##########        
         # testlist는 위에 작성한 dev set의 testlist 변수를 그대로 이어 받는다.
         # 단 etc에 경우 teslist를 따로 만든다.
+        testlist = [mouselist[sett]]
+        if mouselist[sett] in np.array(msset_total)[:,0]:
+            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
+                testlist.append(u)
+        
         if not(len(etc) == 0):
             if etc[0] == mouselist[sett]:
                 print('test ssesion, etc group 입니다.') 
@@ -930,7 +938,7 @@ for q in project_list:
 
         ####### test - binning 구문 입니다. ##########, test version 2
         # model load는 cv set 시작에서 무조건 하도록 되어 있음.
-        if not(isfile2) and testsw2:
+        if isfile2 and testsw2:
             model.load_weights(final_weightsave) # training / test는 흔히 별개로 처리되곤하기 때문에, 다시 로드한다.
             
             for test_mouseNum in testlist:
