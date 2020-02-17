@@ -1,715 +1,29 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jan 22 20:53:37 2020
+
+@author: skklab
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr 20 20:58:38 2019
+
+@author: msbak
+"""
+import os  # 경로 관리
+# library import
+import pickle # python 변수를 외부저장장치에 저장, 불러올 수 있게 해줌
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
-import os
-import datetime
-import pickle
-import random; seed = 0
-from datetime import date
-
-from matplotlib import font_manager, rc
-font_name = font_manager.FontProperties(fname="c:/Windows/Fonts/malgun.ttf").get_name()
-rc('font', family=font_name)
-# In
-code_df = pd.read_html('http://kind.krx.co.kr/corpgeneral/corpList.do?method=download&searchType=13', header=0)[0] 
-
-# 종목코드가 6자리이기 때문에 6자리를 맞춰주기 위해 설정해줌 
-code_df.종목코드 = code_df.종목코드.map('{:06d}'.format) 
-# 우리가 필요한 것은 회사명과 종목코드이기 때문에 필요없는 column들은 제외해준다. 
-code_df = code_df[['회사명', '종목코드']] 
-# 한글로된 컬럼명을 영어로 바꿔준다. 
-code_df = code_df.rename(columns={'회사명': 'name', '종목코드': 'code'}) 
-
-# In
-def code_to_name(mscode):
-    return code_df.iloc[:,0][np.where(code_df.iloc[:,1] == mscode)[0][0]]
-
-def get_url(item_name, code_df): 
-    code = code_df.query("name=='{}'".format(item_name))['code'].iloc[0]
-    url = 'http://finance.naver.com/item/sise_day.nhn?code={code}'.format(code=code)
-#    print("요청 URL = {}".format(url)) 
-    return url, code
-
-def to_integer(dt_time):
-    return int(10000*dt_time.year + 100*dt_time.month + dt_time.day)
-
-def date_conv(msdata):
-    return to_integer(datetime.datetime.strptime(msdata, "%Y.%m.%d").date())
-
-def date_conv2(msdata):
-    return to_integer(datetime.datetime.strptime(msdata, "%Y-%m-%d").date())
-
-def date_conv3(msdata): # 통합버전
-    if type(msdata) != str and type(msdata) != 'datetime.date':
-        return np.nan
-    
-    try:
-        msout = to_integer(datetime.datetime.strptime(msdata, "%Y-%m-%d").date())
-    except:
-        try:
-            msout = to_integer(datetime.datetime.strptime(msdata, "%Y.%m.%d").date())
-        except:
-            try:
-                msout = to_integer(datetime.datetime.strptime(msdata, "%Y,%m,%d").date())
-            except:
-                msout = 10000*msdata.year + 100*msdata.month + msdata.day
-            
-    return msout
-
-def pratio_calc(ms1, ms2): # original, moving avg
-    cnt=[]
-    for i in range(ms1.shape[0]):
-        cnt.append(ms1[i]/ms2[i])
-
-    pratio = np.mean(cnt)
-    return pratio
-
-def them_calc(date, value, s, e, them_name, figuresw=False):
-    if not(np.max(date) > e and np.min(date) < s):
-#        print(item_name, them_name, 'data missing')
-        return np.nan
-    
-    ms_graph_value = value
-    ms_graph_date = date
-    
-    ix = ((ms_graph_date > s) * (ms_graph_date < e)) 
-    ixx = np.where(ix==1)[0]
-    
-    if figuresw:
-        plt.figure()
-        plt.plot(ms_graph_value[ix], label='beta = 1')
-        plt.legend()
-        
-    for beta in [0.8]:
-        moving_avg = np.zeros(ms_graph_value.shape[0]+1); moving_avg[1:] = np.nan
-        for i in range(1, ms_graph_value.shape[0]):
-            moving_avg[i] = ((beta*moving_avg[i-1]) + ((1-beta)*ms_graph_value[i]))
-    
-        if figuresw:
-            plt.plot(moving_avg[ixx], label='beta = ' + str(beta))
-    
-    
-    if figuresw:
-        msdate = ms_graph_date[ix] % 10000
-        msyear = ms_graph_date[ix] // 10000
-        miny = int(np.min(msyear)); maxy = int(np.max(msyear))
-        msmax = np.max(ms_graph_value)
-        for y in range(miny, maxy+1):
-            ix2 = np.where(((msyear == y) * (msdate < 200)) == True)[0]
-            if not(ix2.shape[0] == 0):
-                plt.fill_between([int(np.min(ix2)),int(np.max(ix2))], 0, msmax, color='moccasin', alpha=0.5)
-        
-        ms_xticks = np.array(range(0, ms_graph_date[ix].shape[0], 10))
-        plt.xticks(ms_xticks, np.array(ms_graph_date[ix][ms_xticks], dtype=int), rotation='vertical')
-    
-    ms1 = ms_graph_value[ix]
-    ms2 = moving_avg[ixx]
-    
-    pratio = pratio_calc(ms1, ms2)
-
-    if figuresw:
-        plt.title(them_name + '_' + str(pratio))
-    
-    return pratio
-
-# In
-import_method = 3
-# 1 for updae
-# 2 for re-start
-# 3 for just load
-
-path1 = 'E:\\mscore\\code_lab\\stockmarket\\'
-path2 = 'D:\\mscode\\stockmarket\\'
-path3 = 'C:\\test\\stockmarket\\'
-
-if os.path.isdir(path1):
-    mainpath = path1 
-elif os.path.isdir(path2):
-    mainpath = path2
-elif os.path.isdir(path3):
-    mainpath = path3
-    
-print('mainpath', mainpath)
-
-loadpath = mainpath + 'stock_law_pickle'
-isfile1 = os.path.isfile(loadpath)
-if import_method == 1: # 기존것 load후 update
-    with open(loadpath, 'rb') as f:  # Python 3: open(..., 'rb')
-        msdata_raw = pickle.load(f)
-        
-    mssignalss = msdata_raw['mssignalss']
-    msindex = msdata_raw['msindex']
-    
-    # update
-    removed = []
-    for ms_event in range(0, code_df.shape[0]):
-        exist_data = np.array(mssignalss[ms_event])
-        recent_date = np.max(exist_data[:,0])
-        #
-        try:
-            item_name = code_to_name(msindex[ms_event])
-        except:
-            print(msindex[ms_event], '존재하지 않습니다. 상폐?')
-            removed.append(msindex[ms_event])
-            continue
-        
-        url, code = get_url(item_name, code_df)
-        
-        df = pd.DataFrame(); msid1 = None
-        for page in range(1, 1000): 
-            if page % 10 == 0:
-                print(item_name, page)
-            
-            pg_url = '{url}&page={page}'.format(url=url, page=page)
-            
-            msdata = pd.read_html(pg_url, header=0)[0]
-            current_date = list(msdata.iloc[:,0])
-            for h in range(len(current_date)):
-                current_date[h] = date_conv3(current_date[h])
-            
-            if recent_date > np.nanmax(current_date):
-                print(item_name, page, 'stop')
-                break
-            msdata.iloc[:,0] = current_date
-            df = df.append(msdata, ignore_index=True) 
-            
-            msid = np.nanmean(msdata.iloc[:,1:5])
-            if msid1 == msid:
-                print(item_name, page, 'stop')
-                break
-            msid1 = msid
- 
-        df2_tmp = df.dropna()
-        df2_tmp = pd.concat([df2_tmp.iloc[:,0], df2_tmp.iloc[:,1], df2_tmp.iloc[:,6]], axis=1) 
-        # 날짜, 종가(close), 거래량만 사용 
-        df2_tmp = np.array(df2_tmp)
-        ix = np.argsort(df2_tmp[:,0])
-        df2_sorted = df2_tmp[ix]
-        
-        # 크롤링한 data df2_sorted를 exist_data에 추가 후 mssignalss에 다시 저장
-        for row in range(df2_sorted.shape[0]):
-            crow = df2_sorted[row,:]    
-            if crow[0] > exist_data[-1,0] and crow[0] != date_conv3(date.today()):
-                exist_data = np.concatenate((exist_data, np.reshape(crow, (1,3))), axis=0)
-                # 당일 데이터는 왜 있는겨? 아직 장중인데 
-                
-        mssignalss[ms_event] = np.array(exist_data)
-    
-    mssignalss2 = []; msindex2 =[]
-    for i in range(len(msindex)):
-        if msindex[i] in removed:
-            print(msindex[i], '상장폐지? 제외합니다')
-        else:
-            mssignalss2.append(mssignalss[i])
-            msindex2.append(msindex[i])
-    
-    msdict = {'mssignalss' : mssignalss2, 'msindex' : msindex2}
-    picklesavename = mainpath + 'stock_law_pickle'
-    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
-        print(picklesavename, '저장되었습니다.')
-                
-elif import_method == 2: # 새롭게 만듦
-    # In data from csv file
-    mssignalss = []; [mssignalss.append([]) for u in range(code_df.shape[0])]
-    mssave_them_score = []
-    msindex = []; [msindex.append([]) for u in range(code_df.shape[0])]
-    mspath = mainpath + 'stock_CSV\\'
-    for u in range(0, code_df.shape[0]):
-        # In
-        
-        item_name = code_df.iloc[u,0]
-        item_name = '브이티지엠피'
-        
-        print(item_name, 'started')
-        url, code = get_url(item_name, code_df)
-        # df1
-        loadpath = mspath + code + '.KS.csv'
-        
-        if os.path.isfile(loadpath):
-            df1 = pd.read_csv(loadpath)
-            for i in range(df1.shape[0]):
-                try:
-                    df1.iloc[i,0] = date_conv2(df1.iloc[i,0])
-                except:
-                    df1.iloc[i,0] = date_conv(df1.iloc[i,0])
-                
-            df1 = pd.concat([df1.iloc[:,0], df1.iloc[:,4], df1.iloc[:,6]], axis=1) # 날짜, 종가(close), 거래량만 사용 
-            df1 = np.array(df1)
-            # df2
-            lastdate = np.max(df1[:,0])
-            print(lastdate)
-            
-            # 날짜, 종가(close), 거래량만 사용 
-            
-            page = 0; whilesw = True
-            while whilesw:
-                page += 1
-                pg_url = '{url}&page={page}'.format(url=url, page=page)
-                df2_tmp = pd.read_html(pg_url, header=0)[0]
-                df2_tmp = df2_tmp.dropna()
-                
-                for i in range(df2_tmp.shape[0]-1, -1, -1):
-                    df2_tmp.iloc[i,0] = date_conv(df2_tmp.iloc[i,0])
-                    if df2_tmp.iloc[i,0] > lastdate:
-                        msadd = np.reshape(np.array([df2_tmp.iloc[i,0], df2_tmp.iloc[i,1], df2_tmp.iloc[i,6]]), (1,3))
-                        df1 = np.append(df1,msadd,axis=0)
-                    else:
-                        print(item_name, lastdate, 'integrated...')
-                        whilesw = False
-                    
-            ix = np.argsort(df1[:,0])
-            df1_sorted = df1[ix]
-            print(item_name, 'missing datas...', np.sum(np.isnan(df1_sorted[:,1])))
-            
-            df1_sorted = df1_sorted[np.isnan(df1_sorted[:,1])==0]
-            
-        else:
-            print(item_name, 'old data 없음')
-        
-            df = pd.DataFrame() 
-            # 1페이지에서 20페이지의 데이터만 가져오기 
-            msid1 = None
-            for page in range(1, 1000): 
-                if page % 10 == 0:
-                    print(item_name, page)
-                
-                pg_url = '{url}&page={page}'.format(url=url, page=page)
-                
-                msdata = pd.read_html(pg_url, header=0)[0]
-                df = df.append(msdata, ignore_index=True) 
-                msid = np.nanmean(msdata.iloc[:,1:5])
-                if msid1 == msid:
-                    print(item_name, page, 'stop')
-                    break
-                msid1 = msid
-                
-                # df.dropna()를 이용해 결측값 있는 행 제거 
-            df2_tmp = df.dropna()
-            df2_tmp = pd.concat([df2_tmp.iloc[:,0], df2_tmp.iloc[:,1], df2_tmp.iloc[:,6]], axis=1) 
-            # 날짜, 종가(close), 거래량만 사용 
-            for i in range(df2_tmp.shape[0]):
-                df2_tmp.iloc[i,0] = date_conv(df2_tmp.iloc[i,0])
-            
-            df2_tmp = np.array(df2_tmp)
-            ix = np.argsort(df2_tmp[:,0])
-            df2_sorted = df2_tmp[ix]
-            print(item_name, 'missing datas...', np.sum(np.isnan(df2_sorted[:,1])))
-            
-            df2_sorted = df2_sorted[np.isnan(df2_sorted[:,1])==0]
-            df1_sorted = df2_sorted
-            
-            mssignalss[u] = df1_sorted # save
-            msindex[u] = code # code가 변하는듯 하니, 여기 따로 저장해준다.
-        
-        if False: # 시각화
-            plt.figure()
-            plt.plot(df1_sorted[:,1])
-            mstitle = item_name + ' missing datas ' + str(np.sum(np.isnan(df1_sorted[:,1]))) + '__ date '\
-             + str(np.min(df1_sorted[:,0])) + ' to ' + str(np.max(df1_sorted[:,0]))
-            
-            plt.title(mstitle)
-            print(np.min(df1_sorted[:,0]), 'to', np.max(df1_sorted[:,0]))
-            
-            msdate = df1_sorted[:,0] % 10000
-            msyear = df1_sorted[:,0] // 10000
-            miny = int(np.min(msyear)); maxy = int(np.max(msyear))
-            msmax = np.max(df1_sorted[:,1])
-            for y in range(miny, maxy+1):
-                ix2 = np.where(((msyear == y) * (msdate < 200)) == True)[0]
-                if not(ix2.shape[0] == 0):
-                    plt.fill_between([int(np.min(ix2)),int(np.max(ix2))], 0, msmax, color='moccasin', alpha=0.5)
-            
-            ms_xticks = np.array(range(0, df1_sorted[:,0].shape[0], 200))
-            plt.xticks(ms_xticks, np.array(df1_sorted[:,0][ms_xticks], dtype=int), rotation='vertical')
-            
-            savepath = mainpath + 'msplot\\'
-            
-            plt.savefig(savepath + mstitle + '.png', dpi=1000)
-            plt.close()
-               
-    msdict = {'mssignalss' : mssignalss, 'msindex' : msindex}
-
-    picklesavename = 'E:\\mscore\\code_lab\\stockmarket\\' + 'stock_law_pickle'
-    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
-        print(picklesavename, '저장되었습니다.')
-        
-elif import_method == 3: # 기존것 load후 update
-    with open(loadpath, 'rb') as f:  # Python 3: open(..., 'rb')
-        msdata_raw = pickle.load(f)
-        
-    mssignalss = msdata_raw['mssignalss']
-    msindex = msdata_raw['msindex']
-
-# In[]
-import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
-import os
-import pickle    
-    
-overwrite = False
-path1 = 'E:\\mscore\\code_lab\\stockmarket\\'
-path2 = 'D:\\mscode\\stockmarket\\'
-path3 = 'C:\\test\\stockmarket\\'
+from datetime import datetime # 시관 관리 
+import csv
+import random
+import time
+#import tensorflow as tf
+#from tensorflow.keras import regularizers
 
-if os.path.isdir(path1):
-    mainpath = path1 
-elif os.path.isdir(path2):
-    mainpath = path2
-elif os.path.isdir(path3):
-    mainpath = path3
-    
-print('mainpath', mainpath)
-
-loadpath = mainpath + 'stock_law_pickle'
-isfile1 = os.path.isfile(loadpath)
-if isfile1 and not(overwrite): 
-    with open(loadpath, 'rb') as f:  # Python 3: open(..., 'rb')
-        msdata_raw = pickle.load(f)
-        
-    mssignalss = msdata_raw['mssignalss']
-    msindex = msdata_raw['msindex']
-    
-startday = 20121201 # moving avg 구해야되니깐 한달전 부터 가져오자
-
-X=[]; Z=[]
-for i in range(len(mssignalss)):
-    if np.min(mssignalss[i][:,0]) < startday:
-        sat = np.min(np.where(mssignalss[i][:,0] > 20100101)[0]) # 2010년부터 시작   
-        X.append(mssignalss[i][sat:,:])
-        Z.append(msindex[i])
-
-print('조건에 맞는 종목', len(X))
-
-# 특정종목 시각화
-if False:
-    plt.figure()
-    print(code_to_name('005880'))
-    plt.plot(np.array(X[np.where(np.array(Z) == '005880')[0][0]])[:,1])
-    
-    
-    plt.figure()
-    print(code_to_name('005930'))
-    plt.plot(np.array(X[np.where(np.array(Z) == '005930')[0][0]])[:,1])
-
-
-# missing data, 양쪽 값의 평균으로 채움 # 날짜 for 할수있어야함
-# missing이 연속으로 일어날경우, 일단 확인후, 채우거나 제외
-
-lastday = str(int(np.max(mssignalss[0][:,0]))) 
-dt_index = pd.date_range(start=str(startday), end=lastday)
-dt_list = np.array(dt_index.strftime("%Y%m%d").tolist(), dtype=int)
-
-# 휴일 체크.. holidays는 확인용 변수임
-exceptlist = [20150814, 20171002, 20170922] # 뭔날인지는 모르는데,, 단체로 없음
-holidays = []; dt_list2 = []
-for ms_date in dt_list: # 지정한 모든 날짜
-    sw = False
-    for ms_event in range(len(X)): # 종목  
-        if ms_date in X[ms_event][:,0] and not(ms_date in exceptlist):
-            sw = True
-        if sw:
-            break
-    if not(sw):
-        holidays.append(ms_date)
-    elif sw:
-        dt_list2.append(ms_date)
-print('holidays', len(holidays))
-
-# In[]
-# 개별 종목에서 비어있는 칸 채우기
-# 얼마나 비어있는지 저장해서 추후 처리함
-cnt = 0; 
-X_padding_save = []; [X_padding_save.append([]) for u in range(len(X))]
-padding_ix_save = []; [padding_ix_save.append([]) for u in range(len(X))]
-for ms_event in range(len(X)): # 종목
-    save_sw = True
-    xdate = X[ms_event][:,0]
-    xsignal = X[ms_event][:,1]
-    X_padding = []; padding_ix = []
-    for i in range(len(dt_list2)): # 지정한 모든 날짜 (휴일제외)
-        ms_date = dt_list2[i]
-        if ms_date in xdate:
-            mssignal = xsignal[np.where(xdate==ms_date)[0][0]]
-        if not (ms_date in xdate):
-#            print(ms_event, ms_date, mssignal)
-            
-            try:
-                before_day = xsignal[np.where(xdate==dt_list2[i-1])[0][0]]
-                after_day  = xsignal[np.where(xdate==dt_list2[i+1])[0][0]]
-                mssignal = np.mean([before_day, after_day])
-            except:
-                try:
-                    before_day = xsignal[np.where(xdate==dt_list2[i-1])[0][0]]
-                    mssignal = np.mean([before_day, after_day])
-                except:
-                    cnt += 1
-                    print('cnt', cnt)
-                    save_sw = False
-                    break
-
-            padding_ix.append(i)
-        X_padding.append([mssignal, ms_date])
-        
-    if save_sw:
-        X_padding_save[ms_event] = np.array(X_padding) 
-        # skip이 있는 구문이기 때문에 preallocation을 해야만 index가 유지됨.
-        # 해당 code index는 위 session에 Z에 유지되고, 아래에서 동일처리됨
-        padding_ix_save[ms_event] = padding_ix
-
-print('동일체크', len(X_padding_save))
- 
-pd_save = []; pd_save = np.zeros(len(padding_ix_save))
-for i in range(len(padding_ix_save)):
-    if len(padding_ix_save[i]) > 0:
-        pd_save[i] = np.sum(np.array(padding_ix_save[i]) > -1)
-
-# missing이 5days 이상인거 짤라버림.
-eix = np.where(pd_save>5)[0]
-print('mssing > 5d 는 제외합니다. 제외되는 종목수', eix.shape[0])
-#print(np.where(np.array(Z) == '005930')[0][0])
-# In[] 너무 많이 오른 (상한가초과) 주식 제외, 액면분할 주식 스케일링
-split_stock_list = []
-except_datas = [];
-for i in range(len(X_padding_save)):
-    if len(X_padding_save[i]) > 0:
-        mssignal = np.array(X_padding_save[i][:,0]) # signal for 0
-        
-        diff = np.zeros(mssignal.shape[0])
-        diff[:-1] = mssignal[1:]
-                
-        diff_ratio = (diff/mssignal)
-        dmax = np.max(diff_ratio[:-1])
-        dmin = np.min(diff_ratio[:-1])
-
-        if dmax > 1.31: # 상한가가 1.3임
-            except_datas.append(Z[i])
-        elif dmin < 1/2:
-            split_stock_list.append(Z[i])         
-print(len(except_datas))
-            
-# 눈으로보고... 걸르자........
-#i = -1
-## In[]
-#i += 1
-#code = split_stock_list[i]          
-#plt.figure()
-#print(split_stock_list[i], code_to_name(code))
-#plt.plot(np.array(X[np.where(np.array(Z) == code)[0][0]])[:,1])
-#A = np.array(X[np.where(np.array(Z) == code)[0][0]])
-        
-except_datas2 = ['074600', '047560', '126870', '050120', '099340', '014470', '099320', \
-                '056190', '139670', '002070', '073070', '114570', '007540', '005740', \
-                '122350', '009620', '097780', '131390', '064800', '090710', '010240', \
-                '016880', '001000', '000700', '137940', '053060', '060560', '005880']
-cnt = 0
-for i in range(len(split_stock_list)): 
-    if not split_stock_list[i] in except_datas2:
-        code = split_stock_list[i]          
-#        plt.figure()
-#        print(split_stock_list[i], code_to_name(code))
-#        plt.plot(np.array(X_padding_save[np.where(np.array(Z) == code)[0][0]])[:,0])
-        
-        zix = np.where(np.array(Z) == code)[0][0]
-        mssignal = np.array(X_padding_save[zix][:,0]) # signal for 0        
-        diff = np.zeros(mssignal.shape[0])
-        diff[:-1] = mssignal[1:]        
-        diff_ratio = (diff[:-1]/mssignal[:-1])
-        dmax = np.max(diff_ratio[:-1])
-        dmin = np.min(diff_ratio[:-1])
-        
-#        plt.figure()
-#        plt.plot(diff_ratio)
-        
-        splitix = list(np.where(diff_ratio<0.5)[0])
-        splitix.append(mssignal.shape[0]-1)
-        splitix2 = [-1]; splitix2 = splitix2 + splitix
-        
-        ms_merge = np.zeros(mssignal.shape[0])
-        for j in range(len(splitix2)-1):
-#            plt.figure()
-#            plt.plot(mssignal[splitix2[j]+1:splitix2[j+1]+1])
-            
-            tmp_signal = np.array(mssignal[splitix2[j]+1:splitix2[j+1]+1])
-            if j > 0:
-                tmp_signal = tmp_signal * (mssignal[splitix2[j]] / mssignal[splitix2[j]+1])
-            ms_merge[splitix2[j]+1:splitix2[j+1]+1] = tmp_signal
-#            if j
-        cnt += 1
-        if cnt < 5 and False:
-            plt.figure()
-            plt.plot(X_padding_save[zix][:,0])
-            plt.figure()
-            plt.plot(ms_merge)
-        
-        X_padding_save[zix][:,0] = ms_merge
-
-# In[]     
-X2=[]; Z2=[]
-for i in range(len(X_padding_save)):
-#    print(len(X_padding_save[i]))
-    if not i in list(eix) and len(X_padding_save[i]) > 0:
-        if not Z[i] in except_datas + except_datas2:
-            # 제외 list에 있거나 data가 없는 경우 빼 버림.
-            # index 변경됨 
-            X2.append(X_padding_save[i]) # data 2
-            Z2.append(Z[i]) # index 2
-X2 = np.array(X2)
-print('X2', X2.shape, '(종목수, 길이)')
-print('동일체크', X2.shape[0], len(Z2))
-
-# In X2에서 moving average ratio 구하고 가자..
-
-#moving_avg_ratio = []
-#for ms_event in range(len(X2)):
-#    ms_graph_value = np.array(X2[ms_event][:,0])
-#    
-#    for beta in [0.8]:
-#        moving_avg = np.zeros(ms_graph_value.shape[0]); moving_avg[1:] = np.nan
-#        for i in range(1, ms_graph_value.shape[0]):
-#            moving_avg[i] = ((beta*moving_avg[i-1]) + ((1-beta)*ms_graph_value[i]))
-#            
-#    moving_avg_ratio.append(moving_avg)
-#moving_avg_ratio = np.array(moving_avg_ratio)   
-
-# In[] X2 nmr
-plt.figure()
-X2_nmr = list(np.array(X2))
-cnt=0
-for ms_event in range(len(X2)):
-    X2_signal = np.array(X2[ms_event][:,0])
-    X2_signal = X2_signal/np.mean(X2_signal)
-    cnt += 1
-    if cnt < 50 and False:
-        print(ms_event, Z[ms_event])
-        plt.plot(X2_signal)
-        
-    X2_nmr[ms_event][:,0] = X2_signal
-        
-# In[]    
-
-def genarator_by_year(test_year, month_list2, test_only):
-    buy = np.nan
-    duration_days = 30
-    yearlist = []
-    for u in range(5, -1, -1):
-        yearlist.append(test_year-u)
-        
-    X2_nmr_forY = list(np.array(X2_nmr))
-    X2_nmr_forX = list(np.array(X2_nmr))
-    
-    ml_dataset=[]; [ml_dataset.append([]) for u in range(3)] # data, label, index
-    [ml_dataset[0].append([]) for u in range(len(yearlist))]
-    for msmonth in month_list2:
-        for i in range(len(X2_nmr_forY)): # 종목     
-            # y
-            ydate = test_year*10000 + msmonth
-            y_at = np.min(np.where(X2_nmr_forY[i][:,1] > ydate)) # col 1 for date
-            
-            if not(test_only):
-                buy = X2_nmr_forY[i][y_at,0]
-                if np.isnan(buy):
-                    break
-                
-                sell = np.mean(X2_nmr_forY[i][y_at+1:y_at+duration_days+1,0])                
-                yvalue = (sell/buy)-1
-                
-                X2_nmr_forY[i][y_at,0] = np.nan
-                X2_nmr_forY[i][y_at+1:y_at+duration_days+1,0] = np.nan
-                
-                if yvalue > 0.08: # good
-                    ytmp = [0,1]
-                elif yvalue < 0.01: 
-                    ytmp = [1,0] # bad
-                else:
-                    ytmp = [0,0] # neutral
-            elif test_only:
-                ytmp = [1,0]
-                
-            ml_dataset[1].append(ytmp)            
-            
-            # x
-            for yix, msyears in enumerate(yearlist):
-                sdate = msyears*10000 + msmonth
-                x_at = np.min(np.where(X2_nmr_forX[i][:,1] > sdate)) # col 1 for date
-            
-                if msyears != test_year:
-                    xtmp = X2_nmr_forX[i][:,0][x_at: x_at+duration_days]
-                elif msyears == test_year: 
-                    xtmp = X2_nmr_forX[i][:,0][x_at-duration_days: x_at]
-                 
-                ml_dataset[0][yix].append(np.reshape(xtmp, (xtmp.shape[0], 1))) # [data][years]
-            
-            # z
-            ml_dataset[2].append(Z2[i] + str(ydate))
-        if not(np.isnan(buy)):
-            print(msmonth, 'for', test_year)
-    return ml_dataset
-    
-# In[] sampling
-test_only = False
-
-month_list = []; start_at = 101
-for m in range(1,13):
-    for d in range(1,32):
-        month_list.append(m*100+d)
-month_list = np.array(month_list)
-six = int(np.where(month_list==start_at)[0])
-month_list2 = np.concatenate((month_list[six:], month_list[:six]), axis=0)
-
-test_year = 2019
-ml_dataset = genarator_by_year(test_year, month_list, test_only)
-
-test_year = 2018
-ml_dataset2018 = genarator_by_year(test_year, month_list, test_only)
-
-for u in range(len(ml_dataset[0])):
-    ml_dataset[0][u] = np.concatenate((ml_dataset[0][u], ml_dataset2018[0][u]), axis=0)
-ml_dataset[1] = np.concatenate((ml_dataset[1], ml_dataset2018[1]), axis=0)
-ml_dataset[2] = np.concatenate((ml_dataset[2], ml_dataset2018[2]), axis=0)
-
-print('total sample #', len(ml_dataset[1]))
-print('sample distributions', np.mean(ml_dataset[1], axis=0), 'cover', np.mean(ml_dataset[1])*2)
-
- # upsampling, neutral 제거
-ml_dataset[1] = np.array(ml_dataset[1])
-badix = np.where(ml_dataset[1][:,0]==1)[0]
-goodix = np.where(ml_dataset[1][:,1]==1)[0]
-print('sample distributions', 'ix 재확인', badix.shape[0], goodix.shape[0])
-
-data0 = np.array(ml_dataset[1])[badix]
-data1 = np.array(ml_dataset[1])[goodix]
-mul = data0.shape[0] // data1.shape[0]
-mod = data0.shape[0] % data1.shape[0]
-rix = list(range(data1.shape[0]))
-random.seed(seed); rix2 = random.sample(rix, mod)
-
-# X먼저, bad 넣고, good 반복해서 append
-trX=[]; [trX.append([]) for u in range(len(ml_dataset[0]))]
-for u in range(len(ml_dataset[0])):
-    trX[u] = np.array(ml_dataset[0][u][badix])
-trY = np.array(ml_dataset[1])[badix]
-trZ = np.array(ml_dataset[2])[badix]
-print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
-
-for m in range(mul): 
-    for u in range(len(ml_dataset[0])):
-        trX[u] = np.append(trX[u], ml_dataset[0][u][goodix], axis=0)
-    trY = np.append(trY, np.array(ml_dataset[1])[goodix], axis=0)
-    trZ = np.append(trZ, np.array(ml_dataset[2])[goodix], axis=0)
-    print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
-    
-for u in range(len(ml_dataset[0])):
-    trX[u] = np.append(trX[u], ml_dataset[0][u][goodix][rix2], axis=0)
-trY = np.append(trY, np.array(ml_dataset[1])[goodix][rix2], axis=0)
-trZ = np.append(trZ, np.array(ml_dataset[2])[goodix][rix2], axis=0)
-
-print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
-
-
-# In[]
 from keras import regularizers
 from keras.layers.core import Dropout
 from keras import initializers
@@ -719,366 +33,995 @@ from keras.layers.recurrent import LSTM
 from keras.layers.wrappers import Bidirectional
 from keras.optimizers import Adam
 
-inputsize = np.zeros(len(ml_dataset[0]), dtype=int) 
-for unit in range(len(ml_dataset[0])):
-    inputsize[unit] = ml_dataset[0][unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
 
+# set pathway
+try:
+    savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
+except:
+    try:
+        savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
+    except:
+        try:
+            savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
+        except:
+            savepath = ''; # os.chdir(savepath);
+print('savepath', savepath)
+
+# check the save pathway
+try:
+    df2 = [['SE', 'se', '%']]
+    df2.append([1, 1, 1])
+    csvfile = open('mscsvtest.csv', 'w', newline='')
+    csvwriter = csv.writer(csvfile)
+    for row in range(len(df2)):
+        csvwriter.writerow(df2[row])
+    
+    csvfile.close()
+except:
+    print('저장경로가 유효하지 않습니다.')
+
+# var import
+with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+    msdata_load = pickle.load(f)
+    
+
+#with open('pointSave.pickle', 'rb') as f:  # Python 3: open(..., 'wb')
+#    pointSave = pickle.load(f)
+    
+FPS = msdata_load['FPS']
+N = msdata_load['N']
+bahavss = msdata_load['bahavss']   # 움직임 정보
+#behavss2 = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전 
+#movement = msdata_load['movement'] # 움직인정보를 평균내서 N x 5 matrix에 저장
+msGroup = msdata_load['msGroup'] # 그룹정보
+msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
+signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
+
+highGroup = msGroup['highGroup']    # 5% formalin
+midleGroup = msGroup['midleGroup']  # 1% formalin
+lowGroup = msGroup['lowGroup']      # 0.25% formalin
+salineGroup = msGroup['salineGroup']    # saline control
+restrictionGroup = msGroup['restrictionGroup']  # 5% formalin + restriciton
+ketoGroup = msGroup['ketoGroup'] # 5% formalin + keto 100
+lidocaineGroup = msGroup['lidocaineGroup'] # 5% formalin + lidocaine
+capsaicinGroup = msGroup['capsaicinGroup'] # capsaicin
+yohimbineGroup = msGroup['yohimbineGroup'] # 5% formalin + yohimbine
+pslGroup = msGroup['pslGroup'] # partial sciatic nerve injury model
+shamGroup = msGroup['shamGroup']
+adenosineGroup = msGroup['adenosineGroup']
+highGroup2 = msGroup['highGroup2']
+CFAgroup = msGroup['CFAgroup']
+
+msset = msGroup['msset']
+msset2 = msGroup['msset2']
+del msGroup['msset']; del msGroup['msset2']
+msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
+
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup
+pslset = pslGroup + shamGroup + adenosineGroup
+
+# In[]
+
+def downsampling(msssignal, wanted_size):
+    downratio = msssignal.shape[0]/wanted_size
+    downsignal = np.zeros(wanted_size)
+    downsignal[:] = np.nan
+    for frame in range(wanted_size):
+        s = int(round(frame*downratio))
+        e = int(round(frame*downratio+downratio))
+        downsignal[frame] = np.mean(msssignal[s:e])
+        
+    return np.array(downsignal)
+
+t4 = np.zeros((N,5)); movement = np.zeros((N,5))
+for SE in range(N):
+    for se in range(5):
+        t4[SE,se] = np.mean(signalss[SE][se])
+        movement[SE,se] = np.mean(bahavss[SE][se]>0) # binaryzation or not
+        # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
+
+# 절대값으로 resizing 하면안됨. session 마다 size가 다름을 고려해야함. 수정요망 . 
+movement_syn = []
+[movement_syn.append([]) for u in range(N)]
+
+for SE in range(N):
+    [movement_syn[SE].append([]) for u in range(5)]
+    for se in range(5):
+        movement_syn[SE][se] = downsampling(bahavss[SE][se], signalss[SE][se].shape[0])
+        
+
+    
+#        print(np.mean(movement_syn[SE][se]))
+##plt.plot(movement_syn[1][1])
+#import sys
+#sys.exit()    
+#
+
+grouped_total_list = []
+keylist = list(msGroup.keys())
+for k in range(len(keylist)):
+    grouped_total_list += msGroup[keylist[k]]
+
+bins = 10 # 최소 time frame 간격
+
+totaldataset = grouped_total_list
+        
+shortlist = []; longlist = []
+for SE in range(N):
+    if SE in totaldataset:
+        for se in range(5):
+            length = np.array(signalss[SE][se]).shape[0]
+            if length > 180*FPS:
+                longlist.append([SE,se])
+            elif length < 180*FPS:
+                shortlist.append([SE,se])
+            else:
+                print('error')                   
+
+#msset = [[70,72],[71,84],[75,85],[76,86], [79,88]]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+def array_recover(X_like):
+    X_like_toarray = []; X_like = np.array(X_like)
+    for input_dim in range(msunit *fn):
+        tmp = np.zeros((X_like.shape[0],X_like[0,input_dim].shape[0]))
+        for row in range(X_like.shape[0]):
+            tmp[row,:] = X_like[row,input_dim]
+    
+        X_like_toarray.append(tmp)
+        
+        X_like_toarray[input_dim] =  \
+        np.reshape(X_like_toarray[input_dim], (X_like_toarray[input_dim].shape[0],X_like_toarray[input_dim].shape[1],1))
+    
+    return X_like_toarray
+
+# data 생성
+SE = 70; se = 1; label = 1; roiNum=None; GAN=False; Mannual=False; mannual_signal=None; passframesave=np.array([])
+def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=False, \
+                   mannual_signal=None, mannual_signal2=None, passframesave=np.array([])):    
+    X = []; Y = []; Z = []
+    if label == 0:
+        label = [1, 0] # nonpain
+    elif label == 1:
+        label = [0, 1] # pain
+#    elif label == 2:
+#        label = [0, 0] # nonpain low
+ 
+    if not(roiNum==None):
+        s = roiNum; e = roiNum+1
+    elif roiNum==None:
+        s = 0; e = signalss[SE][se].shape[1]
+    
+    if Mannual:
+        signal_full = mannual_signal
+        mannual_signal2 = mannual_signal2
+        
+#    elif not(Mannual):
+#        signal_full = np.array(signalss_cut[SE][se])
+        
+    signal1 = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
+    signal2 = np.mean(mannual_signal2[:,s:e], axis=1)
+    
+#    del signal1
+#    signal1 = np.array(signal2)  # signal1을 movement로 intercept # movement를 signal1로 작업할 떄만 사용
+    
+#    if GAN:
+#        signal_full = np.array(GAN_data[SE][se])
+#        signal_full_roi = np.mean(signal_full[:,s:e], axis=1)
+    
+    lastsave = np.zeros(msunit, dtype=int)
+    lastsave2 = np.zeros(msunit, dtype=int) # 체크용
+    
+    binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
+    
+    if len(binlist) == 0:
+        binlist = [0]
+
+    if passframesave.shape[0] != 0:
+        binlist = passframesave
+
+    t4_save = []
+    for frame in binlist:   
+        X_tmp = []; [X_tmp.append([]) for k in range(msunit * fn)] 
+
+        for unit in range(msunit):
+            if frame <= full_sequence - sequenceSize[unit]:
+                X_tmp[unit] = (signal1[frame : frame + sequenceSize[unit]])
+                lastsave[unit] = frame
+                
+                if unit == 0:
+                    t4_save.append(np.mean(signal1[frame : frame + sequenceSize[unit]]))
+                
+            else:
+                X_tmp[unit] = (signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+#                print(frame, unit, lastsave[unit])
+                if unit == 0:
+                    t4_save.append(np.mean(signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))
+                    
+        if fn > 1:
+            branchNum = 1
+            signal2 = np.array(signal2)
+            for unit in range(msunit):
+                if frame <= full_sequence - sequenceSize[unit]:
+                    X_tmp[unit+msunit*branchNum] = (signal2[frame : frame + sequenceSize[unit]])
+                    lastsave[unit] = frame
+                    
+                    if unit == 0:
+                        t4_save.append(np.mean(signal2[frame : frame + sequenceSize[unit]]))
+                    
+                else:
+                    X_tmp[unit+msunit*branchNum]  = (signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+    #                print(frame, unit, lastsave[unit])
+                    if unit == 0:
+                        t4_save.append(np.mean(signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))   
+                    
+    ############
+                
+        if False: # 시각화로 체크 위치만
+            msimg = np.zeros((msunit*10, full_sequence))
+            
+            for unit in range(msunit):
+                if frame <= full_sequence - sequenceSize[unit]:
+                    msimg[unit*10:(unit+1)*10, frame : frame + sequenceSize[unit]] = 1
+                    lastsave2[unit] = frame
+                    
+                else:
+                    msimg[unit*10:(unit+1)*10, lastsave2[unit] : lastsave2[unit] + sequenceSize[unit]] = 1
+                    
+            plt.figure()
+            plt.imshow(msimg)
+            
+         # signal 자체를 시각화로 체크 
+         # frame은 계속 돌려야 하기 때문에, if문을 개별적으로 설정함
+        if False:
+            if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
+                plt.figure(frame, figsize=(8,3))
+                
+            for unit in range(msunit):
+                if frame <= full_sequence - sequenceSize[unit]:
+                    lastsave2[unit] = frame 
+                    start = frame
+                    end = frame + sequenceSize[unit]
+                    
+                else: 
+                    start = lastsave2[unit]
+                    end = lastsave2[unit] + sequenceSize[unit]
+                    
+                if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
+                    if unit == 0:
+                        ax1 = plt.subplot(msunit, 1, unit+1)
+                        tmp = np.mean(signalss[SE][se], axis=1)
+                        tmp[:start] = np.nan; tmp[end:] = np.nan
+                        ax1.plot(tmp)
+                        ax1.axes.get_xaxis().set_visible(False)
+                        ax1.axes.get_yaxis().set_visible(False) 
+                    else:
+                        ax2 = plt.subplot(msunit, 1, unit+1, sharex = ax1)
+                        tmp = np.mean(signalss[SE][se], axis=1)
+                        tmp[:start] = np.nan; tmp[end:] = np.nan
+                        ax2.plot(tmp)
+                        ax2.axes.get_xaxis().set_visible(False)
+                        ax2.axes.get_yaxis().set_visible(False)
+                        
+                    plt.savefig(str(frame) + '.png')
+                    
+
+        X.append(X_tmp)
+        Y.append(label)
+        Z.append([SE,se])
+
+    return X, Y, Z, t4_save
+
+# 최소길이 찾기
+mslength = np.zeros((N,5)); mslength[:] = np.nan
+for SE in range(N):
+    if SE in totaldataset:
+        for se in range(5):
+#            if [SE, se] in longlist:
+            signal = np.array(signalss[SE][se])
+            mslength[SE,se] = signal.shape[0]
+
+full_sequence = int(np.nanmin(mslength))
+#full_sequence = int(round(FPS*60)) # 20200115 test용, 최소 크기를 1분으로 고정
+print('full_sequence', full_sequence, 'frames')
+
+#signalss_cut = preprocessing(endpoint=int(full_sequence))
+
+msunit = 1 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+
+sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
+for i in range(msunit):
+    sequenceSize[i] = int(full_sequence/msunit*(i+1))
+sequenceSize = sequenceSize.astype(np.int)
+
+print('full_sequence', full_sequence)
+print('sequenceSize', sequenceSize)
+
+  
+###############
+# hyperparameters #############
+ 
 # learning intensity
-epochs = 10 # epoch 종료를 결정할 최소 단위.
+epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
+fn = 1
 
-n_out = 2
-acc_thr = 0.90
-maxepoch = 600
+n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
 
-n_hidden = int(8 * 8) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 8) # fully conneted laye node 갯수 # 8
+#duplicatedNum = 1
+#mspainThr = 0.27
+#acitivityThr = 0.4
+# 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.4 # regularization 상수
+l2_rate = 0.3 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
-batch_size = 2**11
 
-# In[]
-def keras_setup():
-    #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
-    init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
+#testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
+trainingsw = True # training 하려면 True 
+statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
+validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
+testsw2 = False
+#if testsw2:
+##    import os
+#    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+#    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+#    import tensorflow as tf
+
+# 집 컴퓨터, test 전용으로 수정
+c1 = savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'
+if True and c1:
+    trainingsw = True
+    testsw2 = False
+
+acc_thr = 0.91 # 0.93 -> 0.94
+batch_size = 2**10 # 5000
+###############
+
+# constant 
+maxepoch = 300
+n_in =  1 # number of features
+n_out = 2 # number of class # 20191104: 3 class로 시도
+classratio = 1 # class under sampling ratio
+
+project_list = []
+ # proejct name, seed
+
+#project_list.append(['control_test_segment_adenosine_set1', 100, None])
+#project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#project_list.append(['control_test_segment_adenosine_set4', 400, None])
+#project_list.append(['control_test_segment_adenosine_set5', 500, None])
+#project_list.append(['control_test3_segment', 300, None])
+#project_list.append(['control_test3_segment', 400, None])
+#project_list.append(['control_test3_segment', 500, None])
+project_list.append(['202012_withCFA_1', 100, None])
+project_list.append(['202012_withCFA_2', 200, None])
+
+q = project_list[0]
+for q in project_list:
+    settingID = q[0]; seed = q[1]; seed2 = int(seed+1)
+    continueSW = q[2]
     
-    input1 = []; [input1.append([]) for i in range(len(ml_dataset[0]))] # 최초 input layer
-    input2 = []; [input2.append([]) for i in range(len(ml_dataset[0]))] # input1을 받아서 끝까지 이어지는 변수
+    print('settingID', settingID, 'seed', seed, 'continueSW', continueSW)
+
+    # set the pathway2
+    RESULT_SAVE_PATH = './result/'
+    if not os.path.exists(RESULT_SAVE_PATH):
+        os.mkdir(RESULT_SAVE_PATH)
+
+    RESULT_SAVE_PATH = './result/' + settingID + '//'
+    if not os.path.exists(RESULT_SAVE_PATH):
+        os.mkdir(RESULT_SAVE_PATH)
     
-    for unit in range(len(ml_dataset[0])):
-        input1[unit] = keras.layers.Input(shape=(inputsize[unit], 1)) # 각 병렬 layer shape에 따라 input 받음
-        input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
-        input2[unit] = Dense(n_hidden , kernel_initializer = init, \
-              activation='relu')(input2[unit]) # fully conneted layers, relu
-        input2[unit] = Dropout(dropout_rate1)(input2[unit]) # dropout
-        input2[unit] = keras.layers.Reshape((1,input2[unit].shape[1]))(input2[unit])
+    if not os.path.exists(RESULT_SAVE_PATH + 'exp/'):
+        os.mkdir(RESULT_SAVE_PATH + 'exp/')
     
-    added = keras.layers.concatenate(input2, axis=1) 
-    added = Bidirectional(LSTM(n_hidden))(added)
+    if not os.path.exists(RESULT_SAVE_PATH + 'exp_raw/'):
+        os.mkdir(RESULT_SAVE_PATH + 'exp_raw/') 
     
-    merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate),\
-                    activation='relu')(added) # fully conneted layers, relu
-    merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
+    if not os.path.exists(RESULT_SAVE_PATH + 'control/'):
+        os.mkdir(RESULT_SAVE_PATH + 'control/')
     
-    merge_2 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
-                    activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
-    merge_3 = Dense(n_out, input_dim=n_out)(merge_2) # regularization 삭제
-    merge_4 = Activation('softmax')(merge_3) # activation as softmax function
+    if not os.path.exists(RESULT_SAVE_PATH + 'control_raw/'):
+        os.mkdir(RESULT_SAVE_PATH + 'control_raw/')
     
-    model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
-    model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
+    if not os.path.exists(RESULT_SAVE_PATH + 'model/'):
+        os.mkdir(RESULT_SAVE_PATH + 'model/')
     
-    #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
-    return model
+    if not os.path.exists(RESULT_SAVE_PATH + 'tmp/'):
+        os.mkdir(RESULT_SAVE_PATH + 'tmp/')
 
-RESULT_SAVE_PATH = mainpath + 'tf_result_20200217_\\'  # project
-if not os.path.exists(RESULT_SAVE_PATH):
-    os.mkdir(RESULT_SAVE_PATH)
-
-initial_weightsave = RESULT_SAVE_PATH + 'initial_weight.h5'
-
-#model = keras_setup()
-#model.save_weights(initial_weightsave)
-#print(model.summary())
-# In[]
-# In
-tfoverwrite = False
-#import random
-import time
-import csv
-
-cvnum = 5; allsetsw = False
-tn = trY.shape[0]/cvnum
-
-# cv
-
-badcode = trZ[np.where(trY[:,0]==1)[0]]
-goodcode = trZ[np.where(trY[:,1]==1)[0]]
-print(badcode.shape[0], goodcode.shape[0])
-#
-badcode = np.array(list(set(badcode)))
-goodcode = np.array(list(set(goodcode)))
-print(badcode.shape[0], goodcode.shape[0])
-
-id_list_bad = list(range(badcode.shape[0]))
-random.seed(seed); random.shuffle(id_list_bad) 
-id_list_good = list(range(goodcode.shape[0]))
-random.seed(seed); random.shuffle(id_list_good) 
-
-tn1 = badcode.shape[0]/5
-tn2 = goodcode.shape[0]/5
-
-l2_rate = 0.2
-
-for cv in range(0, cvnum+1):
-    l2_rate += l2_rate/10
-    print('l2_rate', l2_rate)
-    
-    testset1 = id_list_bad[int(round(tn1*cv)):int(round(tn1*(cv+1)))]
-    testset2 = id_list_good[int(round(tn2*cv)):int(round(tn2*(cv+1)))]
-
-    if cv == cvnum-1:
-        testset1 = id_list_bad[int(round(tn1*cv)):]
-        testset2 = id_list_good[int(round(tn2*cv)):]
-    elif cv == cvnum:
-        allsetsw = True
-    
-    vix = []
-    for i in range(len(testset1)):
-        vix += list(np.where(trZ == badcode[testset1][i])[0])
-    print('vix', len(vix))
-    for i in range(len(testset2)):
-        vix += list(np.where(trZ == goodcode[testset2][i])[0])
-    print('vix', len(vix))
-
-    final_weightsave = RESULT_SAVE_PATH + str(cv) + '_my_model_weights_final.h5'
-    exist_model = os.path.isfile(final_weightsave)
-    print('training을 위한 model 존재 유무', exist_model)
-    
-    if tfoverwrite or not(exist_model):
-        print('cv #', cv, '학습된 model 없음. 새로시작합니다.')
-        model = keras_setup()
-#        model.load_weights(initial_weightsave) # model reset for start 
-        before_loss = -np.inf; stop_cnt = 0; stop_sw = False
+    testset = []
+    trainingset = list(totaldataset)
+    for u in testset:
+        try:
+            trainingset.remove(u)
+        except:
+            pass
+# In[]    
+    # initiate
+    def ms_sampling():
+        sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
-        if not(allsetsw):
-            tr_x = []; x_valid = []; tr_y = []
-            for ms_years in range(len(ml_dataset[0])):   
-                tr_x.append(np.delete(np.array(trX[ms_years]), vix, axis=0))
-                x_valid.append(np.array(trX[ms_years])[vix])
-                
-            tr_y = np.delete(np.array(trY), vix, axis=0)
-            y_valid = np.array(trY)[vix]
-            print('cv #', cv, 'distribution', np.mean(tr_y, axis=0))
-        elif allsetsw:
-            tr_x = []; x_valid = []; tr_y = []
-            tr_x = list(trX); tr_y = np.array(trY)
+        datasetX = []; datasetY = []; datasetZ = []
+        for classnum in range(n_out):
+            datasetX.append([]); datasetY.append([]); datasetZ.append([])
             
-        shuffle_ix = list(range(len(tr_y)))
-        random.seed(seed); random.shuffle(shuffle_ix)
-        for ms_years in range(len(ml_dataset[0])):   
-            tr_x[ms_years] = tr_x[ms_years][shuffle_ix]
-        tr_y = tr_y[shuffle_ix]
-         
-        current_acc = -np.inf; cnt = -1
-        hist_save_loss = []
-        hist_save_acc = []
-        hist_save_val_loss = []
-        hist_save_val_acc = []
-        starttime = time.time()
-        current_weightsave = RESULT_SAVE_PATH + str(cv) + '_current_weight.h5'
-#        model.save_weights(current_weightsave) 
-        while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-            if cnt > maxepoch/epochs or stop_sw:
-                seed += 1
-                model = keras_setup() # for test
-#                model.save_weights(initial_weightsave)
-                before_loss = -np.inf; stop_cnt = 0; stop_sw = False
-                current_acc = -np.inf; cnt = -1
-                print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
-                
-            cnt += 1;
-            isfile1 = os.path.isfile(current_weightsave)
-            if isfile1 and cnt > 0:
-                model.load_weights(current_weightsave)
-#                model.load_weights(initial_weightsave) # model reset for start 
+        # nonpain     
+        msclass = 0 # nonpain
+        X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
+        for SE in range(N):
+            if SE in trainingset:
+                for se in range(5):      
+                    # pain Group에 들어갈 수 있는 모든 경우의 수 
+                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+                    c1 = SE in set1 and se in [0,2]
+                    c2 = SE in capsaicinGroup and se in [0,2]
+                    c3 = SE in pslGroup + adenosineGroup and se in [0]
+                    c4 = SE in shamGroup and se in [0,1,2]
+                    c5 = SE in salineGroup and se in [0,1,2,3,4]
+                    c6 = SE in CFAgroup and se in [0]
+                                    
+                    if c1 or c2 or c3 or c4 or c5 or c6:
+                        # msset 만 baseline을 제외시킴, total set 아님 
+                        exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
+                        if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
+                            mssignal = np.mean(signalss[SE][se], axis=1)
+                            mssignal2 = np.array(movement_syn[SE][se])
+                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                            
+                            for u in msbins:
+                                mannual_signal = mssignal[u:u+full_sequence]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                
+                                mannual_signal2 = mssignal2[u:u+full_sequence]
+                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
 
-                print('cv #', cv, cnt, '번째 이어서 학습합니다.')
-            else:
-#                model.load_weights(initial_weightsave) # model reset for start 
-                print('학습 진행중인 model 없음. 새로 시작합니다')
+                                X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
+                    
+        datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
+        
+        sampleNum[msclass] = len(datasetX[msclass])
+        print('nonpain_sampleNum', sampleNum[msclass])
+        
+        msclass = 1 # pain
+        X_tmp = []; Y_tmp = []; Z_tmp = []
+        for SE in range(N):
+            if SE in trainingset:
+                for se in range(5):      
+                    # pain Group에 들어갈 수 있는 모든 경우의 수 
+                    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                    c11 = SE in set2 and se in [1]
+                    c12 = SE in CFAgroup and se in [1,2]
 
-            if not(allsetsw):
-                hist = model.fit(tr_x, tr_y, batch_size=batch_size, \
-                                 epochs=epochs, validation_data = (x_valid, y_valid))
-                hist_save_val_loss += list(np.array(hist.history['val_loss']))
-                hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
-            elif allsetsw:
-                hist = model.fit(tr_x, tr_y, batch_size=batch_size, \
-                                 epochs=epochs)
-                
+                    if c11 or c12: # 
+                        if not(0.15 < movement[SE,se]):
+                            print(SE, se, 'movement 부족, pain session에서 제외.')
+                            continue
+                    
+                        mssignal = np.mean(signalss[SE][se], axis=1)
+                        mssignal2 = np.array(movement_syn[SE][se])
+                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                        
+                        for u in msbins:
+                            mannual_signal = mssignal[u:u+full_sequence]
+                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                            
+                            mannual_signal2 = mssignal2[u:u+full_sequence]
+                            mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+
+                            X, Y, Z, _ = dataGeneration(SE, se, label=msclass, \
+                                           Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                            X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
+                    
+        datasetX[msclass] = np.array(X_tmp)
+        datasetY[msclass] = np.array(Y_tmp)
+        datasetZ[msclass] = np.array(Z_tmp)
+        sampleNum[msclass] = len(datasetX[msclass]); print('pain_sampleNum', sampleNum[msclass])
             
-            hist_save_loss += list(np.array(hist.history['loss'])); 
-            hist_save_acc += list(np.array(hist.history['accuracy']))
-            
-            
-            model.save_weights(current_weightsave) 
-            current_acc = hist_save_acc[-1]
-            current_loss = round(hist_save_loss[-1], 3)
-            
-            if current_acc < 0.51:
-                stop_sw = True
-                       
-        model.save_weights(final_weightsave)   
-        print('cv #', cv, 'traning 종료, final model을 저장합니다.')
+        diff = sampleNum[0] - sampleNum[1]
+        print('painsample #', diff, '부족, duplicate로 채움')
+        msclass = 1
+        
+        for u in range(int(diff/sampleNum[1])):
+            datasetX[msclass] = np.concatenate((np.array(datasetX[msclass]), np.array(X_tmp)), axis=0)
+            datasetY[msclass] = np.concatenate((np.array(datasetY[msclass]), np.array(Y_tmp)), axis=0)
+            datasetZ[msclass] = np.concatenate((np.array(datasetZ[msclass]), np.array(Z_tmp)), axis=0)
               
-        # hist figure save
-        plt.figure();
-        mouseNum = cv
-        hist_save_loss_plot = np.array(hist_save_loss)/np.max(hist_save_loss)
-        
-        plt.plot(hist_save_loss_plot, label= '# ' + str(mouseNum) + ' loss')
-        plt.plot(hist_save_acc, label= '# ' + str(mouseNum) + ' acc')
-        plt.legend()
-        plt.savefig(RESULT_SAVE_PATH + str(mouseNum) + '_trainingSet_result.png')
-        plt.close()
+        remain = diff % sampleNum[1]    
+              
+        random.seed(seed)
+        rix = random.sample(range(len(X_tmp)), remain)
+                  
+        datasetX[msclass] = np.concatenate((np.array(datasetX[msclass]), np.array(X_tmp)[rix]), axis=0)
+        datasetY[msclass] = np.concatenate((np.array(datasetY[msclass]), np.array(Y_tmp)[rix]), axis=0)
+        datasetZ[msclass] = np.concatenate((np.array(datasetZ[msclass]), np.array(Z_tmp)[rix]), axis=0)
 
-        savename = RESULT_SAVE_PATH + str(mouseNum) + '_trainingSet_result.csv'
-        csvfile = open(savename, 'w', newline='')
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(hist_save_acc)
-        csvwriter.writerow(hist_save_loss)
-        spendingtime = time.time() - starttime
-        csvwriter.writerow([spendingtime, spendingtime/60, spendingtime/60**2])
-        csvwriter.writerow([l2_rate])
-        csvfile.close()
+        return datasetX, datasetY, datasetZ
+    
+    X_save2, Y_save2, Z_save2 = ms_sampling()
+#    if continueSW != None:
+#        X_save2, Y_save2, Z_save2, t4_save = ms_sampling_continue()
+#    painindex_classs = np.concatenate((painindex_class0, painindex_class1), axis=0)
+    #  datasetX = X_save; datasetY = Y_save; datasetZ = Z_save
+    
+    for i in range(n_out):
+        print('class', str(i),'sampling 이후', np.array(X_save2[i]).shape[0])
 
-        if not(allsetsw):
-            plt.figure();
-            mouseNum = cv
-            hist_save_val_loss_plot = np.array(hist_save_val_loss)/np.max(hist_save_val_loss)
+    X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
+    for i in range(1,n_out):
+        X = np.concatenate((X,X_save2[i]), axis = 0)
+        Y = np.concatenate((Y,Y_save2[i]), axis = 0)
+        Z = np.concatenate((Z,Z_save2[i]), axis = 0)
+
+    X = array_recover(X)
+    Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
+    indexer = np.array(Z)
+
+    # control: label을 session만 유지하면서 무작위로 섞음
+    Y_control = np.array(Y)
+    for SE in range(N):
+        for se in range(5):
+            cbn = [SE, se]
             
-            plt.plot(hist_save_val_loss_plot, label= '# ' + str(mouseNum) + ' loss')
-            plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
+            identical_ix = np.where(np.sum(indexer==cbn, axis=1)==2)[0]
+            if identical_ix.shape[0] != 0:
+                random.seed(None)  # control의 경우 seed 없음
+                dice = random.choice([[1,0], [0,1]])
+                Y_control[identical_ix] = dice
+                
+    # cross validation을 위해, training / test set split            
+    # mouselist는 training set에 사용된 list임.
+    # training set에 사용된 mouse의 마릿수 만큼 test set을 따로 만듦
+    
+    inputsize = np.zeros(msunit *fn, dtype=int) 
+    for unit in range(msunit *fn):
+        inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
+        
+    def keras_setup():
+        #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        
+        dt = datetime.now()
+        idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
+
+        #init = initializers.glorot_normal(seed=None)
+
+        init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
+        
+        input1 = []; [input1.append([]) for i in range(msunit *fn)] # 최초 input layer
+        input2 = []; [input2.append([]) for i in range(msunit *fn)] # input1을 받아서 끝까지 이어지는 변수
+        
+        for unit in range(msunit *fn):
+            input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in)) # 각 병렬 layer shape에 따라 input 받음
+            input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
+            input2[unit] = Dense(layer_1, kernel_initializer = init, \
+                  activation='relu')(input2[unit]) # fully conneted layers, relu
+            input2[unit] = Dropout(dropout_rate1)(input2[unit]) # dropout
+        
+        if msunit *fn == 1:
+            added = input2[0]
+        elif not(msunit *fn == 1):
+            added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
+        merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate),\
+                        activation='relu')(added) # fully conneted layers, relu
+        merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
+        merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
+                        activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
+        merge_3 = Dense(n_out, input_dim=n_out)(merge_2) # regularization 삭제
+        merge_4 = Activation('softmax')(merge_3) # activation as softmax function
+        
+        model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
+        model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
+        
+        #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        return model, idcode
+    
+    model, idcode = keras_setup()        
+    initial_weightsave = RESULT_SAVE_PATH + 'model//' + 'initial_weight.h5'
+    model.save_weights(initial_weightsave)
+    print(model.summary())
+    
+    if False: # 시각화 
+        # 20190903, VS code로 옮긴뒤로 에러나는 중, 해결필요
+        print(model.summary())
+        
+        from contextlib import redirect_stdout
+        
+        with open('modelsummary.txt', 'w') as f:
+            with redirect_stdout(f):
+                model.summary()
+                
+        from keras.utils import plot_model
+        plot_model(model, to_file='model.png')
+        
+             
+    ##
+        
+    print('acc_thr', acc_thr, '여기까지 학습합니다.')
+    print('maxepoch', maxepoch)
+    
+    
+    
+    # training set 재설정
+    trainingset = trainingset
+    etc = []
+    forlist = list(trainingset)
+    for SE in forlist:
+        c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
+        if c1 and SE in trainingset:
+            trainingset.remove(SE)
+            print('removed', SE)
+            
+        c2 = msset_total[:,0]
+        if SE in c2:
+            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
+                trainingset.remove(u)
+
+    mouselist = trainingset # 사용 중지 
+    mouselist.sort()
+    
+#    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
+#    mouselist = list(np.sort(np.array(mouselist))[::-1]) # runlist reverse
+    
+    if not(len(etc) == 0):
+        mouselist.append(etc[0])
+    
+    # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
+    
+    wanted = pslset
+#    wanted = np.sort(wanted)
+    mannual = [] # 절대 아무것도 넣지마 
+
+    print('mouselist', mouselist)
+    print('etc', etc)
+    for i in wanted:
+        try:
+            mannual.append(np.where(np.array(mouselist)==i)[0][0])
+        except:
+            print(i, 'is excluded.', 'etc group에서 확인')
+            
+    print('wanted', np.array(mouselist)[mannual])
+            
+#    np.random.seed(seed2)
+#    shuffleix = list(range(len(mannual)))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+#    np.random.shuffle(shuffleix)
+#    print('shuffleix', shuffleix)
+#    mannual = np.array(mannual)[shuffleix]
+#    print('etc ix', np.where(np.array(mouselist)== etc)[0])
+#     구지 mannual을 두고 다시 indexing 하는 이유는, 인지하기 편하기 때문임. 딱히 안써도 됨
+    
+    # save_hyper_parameters 기록남기기
+    save_hyper_parameters = []
+    save_hyper_parameters.append(['settingID', settingID])
+    save_hyper_parameters.append(['epochs', epochs])
+    save_hyper_parameters.append(['lr', lr])
+    save_hyper_parameters.append(['n_hidden', n_hidden])
+    save_hyper_parameters.append(['layer_1', layer_1])
+    save_hyper_parameters.append(['l2_rate', l2_rate])
+    save_hyper_parameters.append(['dropout_rate1', dropout_rate1])
+    save_hyper_parameters.append(['dropout_rate2', dropout_rate2])
+    save_hyper_parameters.append(['acc_thr', acc_thr])
+    save_hyper_parameters.append(['batch_size', batch_size])
+    save_hyper_parameters.append(['seed', seed])
+#    save_hyper_parameters.append(['classratio', classratio])
+    save_hyper_parameters.append(['mouselist', mouselist])
+    save_hyper_parameters.append(['full_sequence', full_sequence])
+    
+    
+    
+    savename4 = RESULT_SAVE_PATH + 'model/' + '00_model_save_hyper_parameters.csv'
+    
+    if not (os.path.isfile(savename4)):
+        print(settingID, 'prameter를 저장합니다. prameter를 저장합니다. prameter를 저장합니다.')
+        csvfile = open(savename4, 'w', newline='')
+        csvwriter = csv.writer(csvfile)
+        for row in range(len(save_hyper_parameters)):
+            csvwriter.writerow(save_hyper_parameters[row])
+        csvfile.close()
+        
+    # In[]
+
+    sett = 0; ix = 0
+    for ix, sett in enumerate(mannual):
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
+        print('final_weightsave', final_weightsave)
+        
+        exist_model = os.path.isfile(final_weightsave)
+        print('training을 위한 model 존재 유무', exist_model)
+
+        if not(exist_model) and trainingsw: # trainingsw
+            print('mouse #', [mouselist[sett]], '학습된 model 없음. 새로시작합니다.')
+            model.load_weights(initial_weightsave) # model reset for start 
+
+            # cv, training / dev set 생성, dev로 model 최적화를 따로 진행하지 않음. 단지 학습상황 확인용으로만 사용됨.
+            
+            # pre allocation
+            X_training = []; [X_training.append([]) for i in range(msunit *fn)] # input은 msunit만큼 병렬구조임으로 list도 여러개 만듦
+            X_valid = []; [X_valid.append([]) for i in range(msunit *fn)]
+            
+            # trainig set, delist는 test에 해당함. 쥐를 기준으로 한마리씩 뻄 
+            delist = np.where(indexer[:,0]==mouselist[sett])[0]
+            
+            if mouselist[sett] in np.array(msset_total)[:,0]:
+                for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
+                    print(mouselist[sett], 'subset으로써 추가 제거됩니다.', u)
+                    delist = np.concatenate((delist, np.where(indexer[:,0]==u)[0]), axis=0)
+            
+            for unit in range(msunit *fn): # input은 msunit 만큼 병렬구조임. for loop으로 각자 계산함
+                X_training[unit] = np.delete(np.array(X[unit]), delist, 0)
+#                        X_valid[unit] = np.array(X[unit])[delist]
+        
+            Y_training_list = np.delete(np.array(Y), delist, 0)
+
+            # dev set,
+            if validation_sw:
+                X_tmp = []; Y_tmp = []
+                testlist = [mouselist[sett]]
+                
+                if mouselist[sett] in np.array(msset_total)[:,0]:
+                    for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
+                        testlist.append(u)
+     
+                if not(len(etc) == 0):
+                    if etc[0] == mouselist[sett]:
+                        print('test ssesion, etc group 입니다.') 
+                        testlist = list(etc)
+                
+                for test_mouseNum in testlist:
+                    sessionNum = 5
+                    if test_mouseNum in se3set:
+                        sessionNum = 3
+                    
+                    SE = test_mouseNum
+                    for se in range(sessionNum):
+                        init = False
+                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2    
+                        c1 = SE in set1 and se in [0,2]
+                        c2 = SE in capsaicinGroup and se in [0,2]
+                        c3 = SE in pslGroup and se in [0]
+                        c4 = SE in shamGroup + adenosineGroup  and se in [0,1,2]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
+                        c6 = SE in CFAgroup and se in [0]
+                        # dev set에 pain / nonpain 설정은 되도록 하는게 좋음. training에는 영향을 주지 않음.
+                        # 어쩃든 acc가 찍혀야 뭘 판단할태니..
+                                        
+                        if c1 or c2 or c3 or c4 or c5 or c6:
+                            msclass = 0; init = True
+                        
+                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                        c11 = SE in set2 and se in [1]
+                        c12 = SE in CFAgroup and se in [1,2]
+                        c21 = SE in pslGroup and se in [1,2]
+                        
+                        if c11 or c12 or c21: #
+                            msclass = 1; init = True
+                            
+                        if init:
+                            binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                            if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                                binning = [0]
+                            binNum = len(binning)
+                                
+                            for i in range(binNum):         
+                                signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                signal_full_roi = np.mean(signalss_PSL_test, axis=1)
+                                mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
+                                
+                                signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                                mannual_signal2 = np.reshape(signal2, (signal2.shape[0], 1))
+
+                                Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += Xtest; Y_tmp += Ytest
+                                         
+                if np.array(Y_tmp).shape[0] != 0:      
+                    Xtest = array_recover(X_tmp); 
+                    Y_tmp = np.array(Y_tmp); Y_tmp = np.reshape(Y_tmp, (Y_tmp.shape[0], n_out))
+                    valid = tuple([Xtest, Y_tmp])
+                                
+            print('mouse #', [mouselist[sett]])
+            print('sample distributions.. ', np.round(np.mean(Y_training_list, axis = 0), 4))
+            
+            # training bias 방지를 위해 동일하게 shuffle 
+            np.random.seed(seed)
+            shuffleix = list(range(X_training[0].shape[0]))
+            np.random.shuffle(shuffleix) 
+#                    print(shuffleix)
+   
+            tr_y_shuffle = Y_training_list[shuffleix]
+            tr_x = []
+            for unit in range(msunit *fn):
+                tr_x.append(X_training[unit][shuffleix])
+
+
+            # 특정 training acc를 만족할때까지 epoch를 epochs단위로 지속합니다.
+            current_acc = -np.inf; cnt = -1
+            hist_save_loss = []
+            hist_save_acc = []
+            hist_save_val_loss = []
+            hist_save_val_acc = []
+            
+            starttime = time.time()
+            while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
+                if cnt > maxepoch/epochs:
+                    seed += 1
+                    model, idcode = keras_setup()        
+                    model.save_weights(initial_weightsave)
+                    current_acc = -np.inf; cnt = -1
+#                    starttime = time.time()
+                    print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
+
+                cnt += 1;
+                current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
+                
+                isfile1 = os.path.isfile(current_weightsave)
+                if isfile1:
+                    model.load_weights(current_weightsave)
+                    print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
+                else:
+                    print('학습 진행중인 model 없음. 새로 시작합니다')
+   
+                hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
+                
+                hist_save_loss += list(np.array(hist.history['loss'])); hist_save_acc += list(np.array(hist.history['accuracy']))
+                hist_save_val_loss += list(np.array(hist.history['val_loss']))
+                hist_save_val_acc += list(np.array(hist.history['val_accuracy'])) 
+                     
+                model.save_weights(current_weightsave)
+                
+                # 종료조건: 
+                current_acc = hist_save_acc[-1] 
+                        
+            model.save_weights(final_weightsave)   
+            print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
+
+            # hist 저장      
+            plt.figure();
+            mouseNum = mouselist[sett]
+            hist_save_loss_plot = np.array(hist_save_loss)/np.max(hist_save_loss)
+            
+            plt.plot(hist_save_loss_plot, label= '# ' + str(mouseNum) + ' loss')
+            plt.plot(hist_save_acc, label= '# ' + str(mouseNum) + ' acc')
             plt.legend()
-            plt.savefig(RESULT_SAVE_PATH + str(mouseNum) + '_validationSet_result.png')
+            plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_trainingSet_result.png')
             plt.close()
 
-            savename = RESULT_SAVE_PATH + str(mouseNum) + '_validationSet_result.csv'
+            savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_trainingSet_result.csv'
             csvfile = open(savename, 'w', newline='')
             csvwriter = csv.writer(csvfile)
-            csvwriter.writerow(hist_save_val_acc)
-            csvwriter.writerow(hist_save_val_loss)
+            csvwriter.writerow(hist_save_acc)
+            csvwriter.writerow(hist_save_loss)
+            spendingtime = time.time() - starttime
+            csvwriter.writerow([spendingtime, spendingtime/60, spendingtime/60**2])
             csvfile.close()
-            
-    # In[] 수익률로 평가
-for cv in range(5, cvnum+1):
-    model = keras_setup() # for test
-    final_weightsave = RESULT_SAVE_PATH + str(cv) + '_my_model_weights_final.h5'
-    model.load_weights(final_weightsave)
-    
-    # In[]
-    # 2019, 2018 data load
-    test_only = True
-    month_list = np.array([1215])
-    test_year = 2019
-    ml_dataset = genarator_by_year(test_year, month_list, test_only)
-    
-    predict_result = model.predict(ml_dataset[0])
-    
-    # cv tes t기능 추가 
- 
-#    profit_thr = 0.5
-    for profit_thr in [0.5, 0.7, 0.9]:
-        pratio = np.mean(predict_result[:,1] > profit_thr)
-        print('pratio', pratio)
-        go = np.where(predict_result[:,1] > profit_thr)[0]  # [0,1] good; [1,0] bad
+
+            if validation_sw:
+                plt.figure();
+                mouseNum = mouselist[sett]
+                hist_save_val_loss_plot = np.array(hist_save_val_loss)/np.max(hist_save_val_loss)
+                
+                plt.plot(hist_save_val_loss_plot, label= '# ' + str(mouseNum) + ' loss')
+                plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
+                plt.legend()
+                plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.png')
+                plt.close()
+
+                savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.csv'
+                csvfile = open(savename, 'w', newline='')
+                csvwriter = csv.writer(csvfile)
+                csvwriter.writerow(hist_save_val_acc)
+                csvwriter.writerow(hist_save_val_loss)
+                csvfile.close()
+
+        ####### test 구문 입니다. ##########        
+        # testlist는 위에 작성한 dev set의 testlist 변수를 그대로 이어 받는다.
+        # 단 etc에 경우 teslist를 따로 만든다.
+        testlist = [mouselist[sett]]
+        if mouselist[sett] in np.array(msset_total)[:,0]:
+            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
+                testlist.append(u)
         
-        profit_save = np.zeros((go.shape[0], len(list(range(1,30))) )); profit_save[:] = np.nan
-        for after_day in range(1,30):
-            for i in range(go.shape[0]):
-                mscode = ml_dataset[2][go[i]][:6]
-                msdate = int(ml_dataset[2][go[i]][6:])
-                raw = mssignalss[np.where(np.array(msindex) == mscode)[0][0]]
-                
-                ix2 = np.where(raw[:,0] > msdate)[0]
-                buyix = np.min(ix2);
-                
-                buy_at = raw[buyix][1]
-                sell_at = raw[buyix+after_day][1] # raw[:,1][buyix+after_day]
-                profit = (sell_at/buy_at)-1
-      
-                profit_save[i,after_day-1] = profit
-    
-        mean_profit = np.mean(profit_save)
-#        plt.imshow(profit_save)
-        print('profit_thr', profit_thr, 'mean profit', mean_profit)
-    
-#    savename = RESULT_SAVE_PATH + str(cv) + '_profit.txt'
-#    csvfile = open(savename, 'w', newline='')
-#    csvwriter = csv.writer(csvfile)
-#    csvwriter.writerow([mean_profit])
-#    csvwriter.writerow([pratio])
-#    csvfile.close()
-#                
-# In[]
+        if not(len(etc) == 0):
+            if etc[0] == mouselist[sett]:
+                print('test ssesion, etc group 입니다.') 
+                testlist = list(etc)
+        
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
+        isfile2 = os.path.isfile(final_weightsave)
+        print(final_weightsave)
+        print('test를 위한 model 존재 유무', isfile2)
 
-# 중립 데이터에 대한 평가도 추가로 실시, validation만 믿지 말것
-            # 수익모델과 연결 -> 평가로 수익모델로, 중립데이터도 포함하여 -> 결국 + - 몇 원으로 표시
-# 2019 test 모델 추가 -> 추가
-# data tracking, 종목별, 월별 정확도 분석 -> Z(종목), M(월)로 저장해놨음.
+        ####### test - binning 구문 입니다. ##########, test version 2
+        # model load는 cv set 시작에서 무조건 하도록 되어 있음.
+        if isfile2 and testsw2:
+            model.load_weights(final_weightsave) # training / test는 흔히 별개로 처리되곤하기 때문에, 다시 로드한다.
             
-            # 컨트롤 수익모델
-         
-# 수익모델
-# In[]
-# 수익모델 최적화, 파는날짜 ,
-            
-# 2020년 data test
-# cv test 모델에 2018년도 추가, 지금 cv는 중립데이터가 없음
+            for test_mouseNum in testlist:
+                testbin = None
+                picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_' + str(test_mouseNum) + '.pickle'
+                picklesavename2 = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_mean_' + str(test_mouseNum) + '.pickle'
+                
+                isfile3 = os.path.isfile(picklesavename)
+                if isfile3:
+                    print('PSL_result_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
 
+                if not(isfile3):
+                    PSL_result_save = []
+                    [PSL_result_save.append([]) for i in range(N)]
+                    PSL_result_save_mean = []
+                    [PSL_result_save_mean.append([]) for i in range(N)]
+                    
+                    for SE2 in range(N):
+                        [PSL_result_save[SE2].append([]) for i in range(5)]
+                        [PSL_result_save_mean[SE2].append([]) for i in range(5)]
+                    # PSL_result_save변수에 무조건 동일한 공간을 만들도록 설정함. pre allocation 개념
+                    
+                    sessionNum = 5
+                    if test_mouseNum in se3set:
+                        sessionNum = 3
+                    
+                    for se in range(sessionNum):
+                        
+                        binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                        binNum = len(binning)
+                        
+                        if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                            binNum = 1
+                            binning = [0]
+                                                       
+                        [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
+                        [PSL_result_save_mean[test_mouseNum][se].append([]) for i in range(binNum)]
+                        
+                        i = 54; ROI = 0
+                        for i in range(binNum):    
+                            # each ROI
+                            signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                            ROInum = signalss_PSL_test.shape[1]
+                            
+                            [PSL_result_save[test_mouseNum][se][i].append([]) for k in range(ROInum)]
+                            
+                            mannual_signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                            mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+                            for ROI in range(ROInum):
+                                mannual_signal = signalss_PSL_test[:,ROI]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                
+                                X, _, _, _ = dataGeneration(test_mouseNum, se, label=0, \
+                                       Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                    
+                                X_array = array_recover(X)
+                                print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'ROI', ROI)
+                                prediction = model.predict(X_array)
+                                PSL_result_save[test_mouseNum][se][i][ROI] = prediction
+                                
+                            # ROI mean
+                            mean_signal = np.mean(signalss_PSL_test, axis=1)
+                            mean_signal = np.reshape(mean_signal, (mean_signal.shape[0], 1))
 
-# 독립코드로 사용할때 쓸것
-model = keras_setup() # for test
-final_weightsave = RESULT_SAVE_PATH + str(5) + '_my_model_weights_final.h5'
-model.load_weights(final_weightsave)
-
-month_list = np.array([201])
-fortest = True
-profit_thr = 0.50
-Xtest, _, Ztest, Mtest = genarator_by_year(2020, dt_list2, X2, month_list)
-print('test samples...', len(Xtest[0]))
-
-predict_result = model.predict(Xtest)
-   
-print('ratio', np.mean(predict_result[:,1] > profit_thr))
-go = np.where(predict_result[:,1] > profit_thr)[0]  # [0,1] good; [1,0] bad
-
-profit_save = np.zeros((go.shape[0], len(list(range(1,31))) )); profit_save[:] = np.nan
-for after_day in range(1,31):
-    for i in range(go.shape[0]):
-        mscode = Ztest[go[i]]
-        msdate = Mtest[go[i]]
-        ###몰랑 
-        raw = mssignalss[np.where(np.array(msindex3) == mscode)[0][0]]
-        buyix = np.where(raw[:,0]==msdate)[0]
-        if len(buyix) != 0:
-            buy_at = raw[buyix][0][1]
-            sell_at = raw[buyix+after_day][0][1]
-            profit = (sell_at/buy_at)-1
-            profit_save[i,after_day-1] = profit
-  
-mean_profit = np.nanmean(profit_save)
-print('mean profit', mean_profit)
-
-savename = RESULT_SAVE_PATH + str(cv) + '_profit.txt'
-csvfile = open(savename, 'w', newline='')
-csvwriter = csv.writer(csvfile)
-csvwriter.writerow([mean_profit])
-csvfile.close()
-
-
-
-
-
-
-
+                            X, _, _, _ = dataGeneration(test_mouseNum, se, label=0, \
+                                       Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                
+                            X_array = array_recover(X)
+                            prediction = model.predict(X_array)
+                            PSL_result_save_mean[test_mouseNum][se][i] = prediction
+                            
+                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename, '저장되었습니다.')
+                        
+                    with open(picklesavename2, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(PSL_result_save_mean, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename2, '저장되었습니다.')
+# In[]      # mean signal 처리
        
 
-   
-        
-        
-        
-    
-    
-    
-    
-    
-
-    
+# In[]
 
 
 
@@ -1089,29 +1032,7 @@ csvfile.close()
 
 
 
-
-
-
-
-
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
-
-
-
+#
 
 
 
