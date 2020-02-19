@@ -57,6 +57,14 @@ def msGrouping_pslOnly(psl): # psl만 처리
     
     return df3
 
+def msGrouping_yohimbine(msdata):
+    msdata = np.array(msdata)
+    df3 = np.array(pd.concat([pd.DataFrame(msdata[salineGroup,1:4]) \
+                                  ,pd.DataFrame(msdata[yohimbineGroup,1:4])] \
+                                  ,ignore_index=True, axis=1))
+    df3 = np.array(df3)
+    return df3
+
 
 try:
     savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
@@ -347,11 +355,15 @@ project_list = []
 #project_list.append(['0116_CFA_l2_3', 100, None])
 
 #project_list.append(['control2_roiroi', 200, None])
-
+#project_list.append(['control2_roiroi', 100, None])
+#
 project_list.append(['control_test_segment_adenosine_set1', 100, None])
 project_list.append(['control_test_segment_adenosine_set2', 200, None])
 project_list.append(['control_test_segment_adenosine_set3', 300, None])
 project_list.append(['control_test_segment_adenosine_set4', 400, None])
+project_list.append(['control_test_segment_adenosine_set5', 500, None])
+
+#project_list.append(['202012_withCFA_1', 100, None])
 
 model_name = project_list 
              
@@ -530,7 +542,7 @@ Aprism_mov_biRNN2_formalin = msGrouping_nonexclude(movement_subset)
 Aprism_mov_biRNN2_capsaicin = movement_subset[capsaicinGroup,0:3]
 Aprism_mov_biRNN2_CFA = movement_subset[CFAgroup,0:3]
 Aprism_mov_biRNN2_psl = msGrouping_pslOnly(movement_subset)
-
+Aprism_mov_biRNN2_yohimbine = msGrouping_yohimbine(movement_subset)
 
 # total activity 정리
 
@@ -547,35 +559,47 @@ Aprism_t4_biRNN2_formalin = msGrouping_nonexclude(t4_subset)
 Aprism_t4_biRNN2_capsaicin = t4_subset[capsaicinGroup,0:3]
 Aprism_t4_biRNN2_CFA = t4_subset[CFAgroup,0:3]
 Aprism_t4_biRNN2_psl = msGrouping_pslOnly(t4_subset)
+Aprism_t4_biRNN2_yohimbine = msGrouping_yohimbine(t4_subset)
 
 
 # In[] 시간에 따른 통증확률 시각화 (작업중)
-      
-#   calc_target
-            
+              
 for SE in range(N):
     if not SE in grouped_total_list or SE in skiplist:
         continue
+    
+    if not(SE in pslset): # psl만 시각화
+        continue
+    
     sessionNum = 5
     if SE in se3set:
         sessionNum = 3
-        
+    
+    minsize=[]; painindex=[]; resultsave=[]    
     for se in range(sessionNum):
         result_BINS = np.mean(calc_target[SE][se], axis=1) # [BINS][bins]
         
-        fig = plt.figure(1, figsize=(9.7*1.5, 6*1.5))
-        plt.subplots_adjust(hspace = 0.3, wspace = 0.05)
+        resultsave.append(result_BINS)
+        minsize.append(result_BINS.shape[0])
+        pix = 0
+        if SE in pslGroup and se in [1,2]:
+            pix = 1
+        painindex.append(pix)
+print('최소 BINS', np.min(minsize))        
         
-        ax1 = plt.subplot(2,1,1 + se)
-        im1 = ax1.plot(result_BINS)
-        
-        ax2 = plt.subplot(2,1,2 + se)
-        im2 = ax2.plot(bahavss[SE][se])
-        
-        
-#        plt.plot(result_BINS)
-#        plt.plot(bahavss[SE][se])
+for i in range(len(resultsave)):
+    resultsave[i] = resultsave[i][:np.min(minsize)]
+resultsave = np.array(resultsave)
+painindex = np.array(painindex)
 
+ix0 = np.where(painindex==0)[0] # nonpain
+ix1 = np.where(painindex==1)[0] # pain
+ix2 = np.concatenate((ix0[:5],ix1[:5]),aixs=0)
+plt.figure(1, figsize=(9.7*1.5, 6*1.5))
+
+for gap in range(10):
+    plt.plot(np.array(resultsave[ix2[gap], :]) + gap*1.1)
+        
 
 # In[]
 import os
