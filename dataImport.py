@@ -28,6 +28,7 @@ shamGroup =         [81,89,90,91,92,97]
 adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
 CFAgroup =          [106,107,108,109,116,117]
 highGroup2 =        [95,96] # 학습용, late ,recovery는 애초에 분석되지 않음, base movement data 없음
+chloroquineGroup =  [118,119,120,121,122,123]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115]] # baseline 독립, training 때 base를 skip 하지 않음.
@@ -46,9 +47,12 @@ msGroup['pslGroup'] = pslGroup
 msGroup['shamGroup'] = shamGroup
 msGroup['adenosineGroup'] = adenosineGroup 
 msGroup['highGroup2'] = highGroup2
+msGroup['CFAgroup'] = CFAgroup
+msGroup['chloroquineGroup'] = chloroquineGroup
+
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
-msGroup['CFAgroup'] = CFAgroup
+
 
 import numpy as np
 import pandas as pd
@@ -259,7 +263,7 @@ def mssignal_save(list1):
                 f_signal[frame,:] = (array2[se][frame, :] - f0_vector) / f0_vector
                 
             array4.append(f_signal)
-
+            
         with pd.ExcelWriter(savename) as writer:  
             for se in range(len(array4)):      
                 msout = pd.DataFrame(array4[se], index=None, columns=None)
