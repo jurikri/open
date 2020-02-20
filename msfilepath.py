@@ -1223,6 +1223,66 @@ def msfilepath1(session):
         behav_data.append('002000.csv')
         behav_data.append('003000.csv')
         behav_data.append('003000.csv')
+        behav_data.append('003000.csv') ##
+        
+    elif session == 118: 
+        path = mainpath + 's0115_Chloroquine'
+        behav_data = list()
+        raw_filepath = 's0115_Chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')        
+        
+    elif session == 119: 
+        path = mainpath + 's0116_Chloroquine'
+        behav_data = list()
+        raw_filepath = 's0116_Chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')        
+        
+    elif session == 120: 
+        path = mainpath + 's0117_Chloroquine'
+        behav_data = list()
+        raw_filepath = 's0117_Chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+
+    elif session == 121: 
+        path = mainpath + 's0122_Chloroquine'
+        behav_data = list()
+        raw_filepath = 's0122_Chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')        
+        
+    elif session == 122: 
+        path = mainpath + 's0130_Chloroquine'
+        behav_data = list()
+        raw_filepath = 's0130_Chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')        
+        
+    elif session == 123: 
+        path = mainpath + 's0130_2_Chloroquine'
+        behav_data = list()
+        raw_filepath = 's0130_2_Chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
         behav_data.append('003000.csv')
         
     else:
