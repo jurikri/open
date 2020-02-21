@@ -398,6 +398,7 @@ project_list = []
 #project_list.append(['control_test3_segment', 500, None])
 project_list.append(['202012_withCFA_1', 100, None])
 project_list.append(['202012_withCFA_2', 200, None])
+#project_list.append(['202012_withCFA_3', 300, None])
 
 q = project_list[0]
 for q in project_list:
