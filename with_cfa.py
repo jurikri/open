@@ -11,18 +11,15 @@ Created on Sat Apr 20 20:58:38 2019
 
 @author: msbak
 """
-import os  # 경로 관리
-# library import
-import pickle # python 변수를 외부저장장치에 저장, 불러올 수 있게 해줌
+import os  
+import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime # 시관 관리 
+from datetime import datetime
 import csv
 import random
 import time
-#import tensorflow as tf
-#from tensorflow.keras import regularizers
 
 from keras import regularizers
 from keras.layers.core import Dropout
@@ -47,32 +44,13 @@ except:
             savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 
-# check the save pathway
-try:
-    df2 = [['SE', 'se', '%']]
-    df2.append([1, 1, 1])
-    csvfile = open('mscsvtest.csv', 'w', newline='')
-    csvwriter = csv.writer(csvfile)
-    for row in range(len(df2)):
-        csvwriter.writerow(df2[row])
-    
-    csvfile.close()
-except:
-    print('저장경로가 유효하지 않습니다.')
-
 # var import
 with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
-    
-
-#with open('pointSave.pickle', 'rb') as f:  # Python 3: open(..., 'wb')
-#    pointSave = pickle.load(f)
-    
+     
 FPS = msdata_load['FPS']
 N = msdata_load['N']
 bahavss = msdata_load['bahavss']   # 움직임 정보
-#behavss2 = msdata_load['behavss2'] # 투포톤과 syn 맞춰진 버전 
-#movement = msdata_load['movement'] # 움직인정보를 평균내서 N x 5 matrix에 저장
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
 signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
@@ -91,7 +69,8 @@ shamGroup = msGroup['shamGroup']
 adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 CFAgroup = msGroup['CFAgroup']
-
+chloroquineGroup = msGroup['chloroquineGroup']
+ 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
 del msGroup['msset']; del msGroup['msset2']
@@ -113,6 +92,7 @@ def downsampling(msssignal, wanted_size):
         
     return np.array(downsignal)
 
+# t4 = total activity, movement 
 t4 = np.zeros((N,5)); movement = np.zeros((N,5))
 for SE in range(N):
     for se in range(5):
@@ -120,7 +100,10 @@ for SE in range(N):
         movement[SE,se] = np.mean(bahavss[SE][se]>0) # binaryzation or not
         # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
 
+##
 # 절대값으로 resizing 하면안됨. session 마다 size가 다름을 고려해야함. 수정요망 . 
+        # 현재 사용하지 않으므로, 나중으로 미루겠음.. 
+        # 수정.. 되있음? 되있는듯
 movement_syn = []
 [movement_syn.append([]) for u in range(N)]
 
@@ -128,15 +111,9 @@ for SE in range(N):
     [movement_syn[SE].append([]) for u in range(5)]
     for se in range(5):
         movement_syn[SE][se] = downsampling(bahavss[SE][se], signalss[SE][se].shape[0])
-        
-
-    
-#        print(np.mean(movement_syn[SE][se]))
-##plt.plot(movement_syn[1][1])
-#import sys
-#sys.exit()    
-#
-
+ 
+##
+       
 grouped_total_list = []
 keylist = list(msGroup.keys())
 for k in range(len(keylist)):
@@ -145,21 +122,22 @@ for k in range(len(keylist)):
 bins = 10 # 최소 time frame 간격
 
 totaldataset = grouped_total_list
-        
-shortlist = []; longlist = []
-for SE in range(N):
-    if SE in totaldataset:
-        for se in range(5):
-            length = np.array(signalss[SE][se]).shape[0]
-            if length > 180*FPS:
-                longlist.append([SE,se])
-            elif length < 180*FPS:
-                shortlist.append([SE,se])
-            else:
-                print('error')                   
+      
+### 미사용. 삭제예정  
+#shortlist = []; longlist = []
+#for SE in range(N):
+#    if SE in totaldataset:
+#        for se in range(5):
+#            length = np.array(signalss[SE][se]).shape[0]
+#            if length > 180*FPS:
+#                longlist.append([SE,se])
+#            elif length < 180*FPS:
+#                shortlist.append([SE,se])
+#            else:
+#                print('error')
 
-#msset = [[70,72],[71,84],[75,85],[76,86], [79,88]]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+### 미사용. 삭제예정                
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
 def array_recover(X_like):
     X_like_toarray = []; X_like = np.array(X_like)
     for input_dim in range(msunit *fn):
@@ -199,7 +177,7 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
 #        signal_full = np.array(signalss_cut[SE][se])
         
     signal1 = np.mean(signal_full[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
-    signal2 = np.mean(mannual_signal2[:,s:e], axis=1)
+#    signal2 = np.mean(mannual_signal2[:,s:e], axis=1)
     
 #    del signal1
 #    signal1 = np.array(signal2)  # signal1을 movement로 intercept # movement를 signal1로 작업할 떄만 사용
@@ -209,7 +187,7 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
 #        signal_full_roi = np.mean(signal_full[:,s:e], axis=1)
     
     lastsave = np.zeros(msunit, dtype=int)
-    lastsave2 = np.zeros(msunit, dtype=int) # 체크용
+#    lastsave2 = np.zeros(msunit, dtype=int) # 체크용
     
     binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
     
@@ -237,72 +215,72 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
                 if unit == 0:
                     t4_save.append(np.mean(signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))
                     
-        if fn > 1:
-            branchNum = 1
-            signal2 = np.array(signal2)
-            for unit in range(msunit):
-                if frame <= full_sequence - sequenceSize[unit]:
-                    X_tmp[unit+msunit*branchNum] = (signal2[frame : frame + sequenceSize[unit]])
-                    lastsave[unit] = frame
-                    
-                    if unit == 0:
-                        t4_save.append(np.mean(signal2[frame : frame + sequenceSize[unit]]))
-                    
-                else:
-                    X_tmp[unit+msunit*branchNum]  = (signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
-    #                print(frame, unit, lastsave[unit])
-                    if unit == 0:
-                        t4_save.append(np.mean(signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))   
-                    
-    ############
-                
-        if False: # 시각화로 체크 위치만
-            msimg = np.zeros((msunit*10, full_sequence))
-            
-            for unit in range(msunit):
-                if frame <= full_sequence - sequenceSize[unit]:
-                    msimg[unit*10:(unit+1)*10, frame : frame + sequenceSize[unit]] = 1
-                    lastsave2[unit] = frame
-                    
-                else:
-                    msimg[unit*10:(unit+1)*10, lastsave2[unit] : lastsave2[unit] + sequenceSize[unit]] = 1
-                    
-            plt.figure()
-            plt.imshow(msimg)
-            
-         # signal 자체를 시각화로 체크 
-         # frame은 계속 돌려야 하기 때문에, if문을 개별적으로 설정함
-        if False:
-            if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
-                plt.figure(frame, figsize=(8,3))
-                
-            for unit in range(msunit):
-                if frame <= full_sequence - sequenceSize[unit]:
-                    lastsave2[unit] = frame 
-                    start = frame
-                    end = frame + sequenceSize[unit]
-                    
-                else: 
-                    start = lastsave2[unit]
-                    end = lastsave2[unit] + sequenceSize[unit]
-                    
-                if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
-                    if unit == 0:
-                        ax1 = plt.subplot(msunit, 1, unit+1)
-                        tmp = np.mean(signalss[SE][se], axis=1)
-                        tmp[:start] = np.nan; tmp[end:] = np.nan
-                        ax1.plot(tmp)
-                        ax1.axes.get_xaxis().set_visible(False)
-                        ax1.axes.get_yaxis().set_visible(False) 
-                    else:
-                        ax2 = plt.subplot(msunit, 1, unit+1, sharex = ax1)
-                        tmp = np.mean(signalss[SE][se], axis=1)
-                        tmp[:start] = np.nan; tmp[end:] = np.nan
-                        ax2.plot(tmp)
-                        ax2.axes.get_xaxis().set_visible(False)
-                        ax2.axes.get_yaxis().set_visible(False)
-                        
-                    plt.savefig(str(frame) + '.png')
+#        if fn > 1:
+#            branchNum = 1
+#            signal2 = np.array(signal2)
+#            for unit in range(msunit):
+#                if frame <= full_sequence - sequenceSize[unit]:
+#                    X_tmp[unit+msunit*branchNum] = (signal2[frame : frame + sequenceSize[unit]])
+#                    lastsave[unit] = frame
+#                    
+#                    if unit == 0:
+#                        t4_save.append(np.mean(signal2[frame : frame + sequenceSize[unit]]))
+#                    
+#                else:
+#                    X_tmp[unit+msunit*branchNum]  = (signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+#    #                print(frame, unit, lastsave[unit])
+#                    if unit == 0:
+#                        t4_save.append(np.mean(signal2[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))   
+#                    
+#    ############
+#                
+#        if False: # 시각화로 체크 위치만
+#            msimg = np.zeros((msunit*10, full_sequence))
+#            
+#            for unit in range(msunit):
+#                if frame <= full_sequence - sequenceSize[unit]:
+#                    msimg[unit*10:(unit+1)*10, frame : frame + sequenceSize[unit]] = 1
+#                    lastsave2[unit] = frame
+#                    
+#                else:
+#                    msimg[unit*10:(unit+1)*10, lastsave2[unit] : lastsave2[unit] + sequenceSize[unit]] = 1
+#                    
+#            plt.figure()
+#            plt.imshow(msimg)
+#            
+#         # signal 자체를 시각화로 체크 
+#         # frame은 계속 돌려야 하기 때문에, if문을 개별적으로 설정함
+#        if False:
+#            if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
+#                plt.figure(frame, figsize=(8,3))
+#                
+#            for unit in range(msunit):
+#                if frame <= full_sequence - sequenceSize[unit]:
+#                    lastsave2[unit] = frame 
+#                    start = frame
+#                    end = frame + sequenceSize[unit]
+#                    
+#                else: 
+#                    start = lastsave2[unit]
+#                    end = lastsave2[unit] + sequenceSize[unit]
+#                    
+#                if True and (frame == 0 or frame == 100 or frame == 300 or frame == 410):
+#                    if unit == 0:
+#                        ax1 = plt.subplot(msunit, 1, unit+1)
+#                        tmp = np.mean(signalss[SE][se], axis=1)
+#                        tmp[:start] = np.nan; tmp[end:] = np.nan
+#                        ax1.plot(tmp)
+#                        ax1.axes.get_xaxis().set_visible(False)
+#                        ax1.axes.get_yaxis().set_visible(False) 
+#                    else:
+#                        ax2 = plt.subplot(msunit, 1, unit+1, sharex = ax1)
+#                        tmp = np.mean(signalss[SE][se], axis=1)
+#                        tmp[:start] = np.nan; tmp[end:] = np.nan
+#                        ax2.plot(tmp)
+#                        ax2.axes.get_xaxis().set_visible(False)
+#                        ax2.axes.get_yaxis().set_visible(False)
+#                        
+#                    plt.savefig(str(frame) + '.png')
                     
 
         X.append(X_tmp)
@@ -311,12 +289,37 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
 
     return X, Y, Z, t4_save
 
+# reset..?
+from keras.backend.tensorflow_backend import set_session
+from keras.backend.tensorflow_backend import clear_session
+#from keras.backend.tensorflow_backend import get_session
+import tensorflow.python.keras.backend as K
+import tensorflow as tf
+
+def reset_keras(classifier):
+    sess = K.get_session()
+    clear_session()
+    sess.close()
+    sess = K.get_session()
+
+    try:
+        del classifier # this is from global space - change this as you need
+    except:
+        pass
+
+#    print(gc.collect()) # if it's done something you should see a number being outputted
+
+    # use the same config as you used to create the session
+#    config = tf.config.experimental
+#    config.gpu_options.per_process_gpu_memory_fraction = 1
+#    config.gpu_options.visible_device_list = "0"
+#    set_session(tf.Session(config=config))
+    
 # 최소길이 찾기
 mslength = np.zeros((N,5)); mslength[:] = np.nan
 for SE in range(N):
     if SE in totaldataset:
         for se in range(5):
-#            if [SE, se] in longlist:
             signal = np.array(signalss[SE][se])
             mslength[SE,se] = signal.shape[0]
 
@@ -347,6 +350,8 @@ fn = 1
 
 n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
 layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
+# 6 for normal
+# 10 for +cfa
 
 #duplicatedNum = 1
 #mspainThr = 0.27
@@ -354,7 +359,7 @@ layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.3 # regularization 상수
+l2_rate = 0.1 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
@@ -376,7 +381,7 @@ if True and c1:
     testsw2 = False
 
 acc_thr = 0.91 # 0.93 -> 0.94
-batch_size = 2**10 # 5000
+batch_size = 2**9 # 5000
 ###############
 
 # constant 
@@ -393,12 +398,9 @@ project_list = []
 #project_list.append(['control_test_segment_adenosine_set3', 300, None])
 #project_list.append(['control_test_segment_adenosine_set4', 400, None])
 #project_list.append(['control_test_segment_adenosine_set5', 500, None])
-#project_list.append(['control_test3_segment', 300, None])
-#project_list.append(['control_test3_segment', 400, None])
-#project_list.append(['control_test3_segment', 500, None])
-project_list.append(['202012_withCFA_1', 100, None])
-project_list.append(['202012_withCFA_2', 200, None])
-#project_list.append(['202012_withCFA_3', 300, None])
+#project_list.append(['202012_withCFA_1', 100, None])
+#project_list.append(['202012_withCFA_2', 200, None])
+project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
 
 q = project_list[0]
 for q in project_list:
@@ -464,8 +466,9 @@ for q in project_list:
                     c4 = SE in shamGroup and se in [0,1,2]
                     c5 = SE in salineGroup and se in [0,1,2,3,4]
                     c6 = SE in CFAgroup and se in [0]
+                    c7 = SE in chloroquineGroup and se in [0]
                                     
-                    if c1 or c2 or c3 or c4 or c5 or c6:
+                    if c1 or c2 or c3 or c4 or c5 or c6 or c7:
                         # msset 만 baseline을 제외시킴, total set 아님 
                         exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
                         if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
@@ -501,21 +504,30 @@ for q in project_list:
                     c12 = SE in CFAgroup and se in [1,2]
 
                     if c11 or c12: # 
-                        if not(0.15 < movement[SE,se]):
-                            print(SE, se, 'movement 부족, pain session에서 제외.')
-                            continue
+                        # 뒤에 window 단위로 수정함으로써, 필요없다. 삭제예정
+#                        if not(0.15 < movement[SE,se]):
+#                            print(SE, se, 'movement 부족, pain session에서 제외.')
+#                            continue
                     
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         mssignal2 = np.array(movement_syn[SE][se])
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                         
+                        t = 0
                         for u in msbins:
                             mannual_signal = mssignal[u:u+full_sequence]
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                             
                             mannual_signal2 = mssignal2[u:u+full_sequence]
                             mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-
+                            
+                            if np.mean(mannual_signal2) < 0.15:
+                                t += 1
+                                continue
+                            
+                        if t > 0:
+                            print('excluded', SE, se, len(msbins)-t, '/', len(msbins))
+                            
                             X, Y, Z, _ = dataGeneration(SE, se, label=msclass, \
                                            Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
                             X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
@@ -646,8 +658,6 @@ for q in project_list:
     print('acc_thr', acc_thr, '여기까지 학습합니다.')
     print('maxepoch', maxepoch)
     
-    
-    
     # training set 재설정
     trainingset = trainingset
     etc = []
@@ -662,6 +672,9 @@ for q in project_list:
         if SE in c2:
             for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
+                
+        if SE in chloroquineGroup: # chloroquineGroup을 training에만 사용하고, test하지 않음
+            trainingset.remove(SE)
 
     mouselist = trainingset # 사용 중지 
     mouselist.sort()
@@ -688,14 +701,6 @@ for q in project_list:
             
     print('wanted', np.array(mouselist)[mannual])
             
-#    np.random.seed(seed2)
-#    shuffleix = list(range(len(mannual)))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
-#    np.random.shuffle(shuffleix)
-#    print('shuffleix', shuffleix)
-#    mannual = np.array(mannual)[shuffleix]
-#    print('etc ix', np.where(np.array(mouselist)== etc)[0])
-#     구지 mannual을 두고 다시 indexing 하는 이유는, 인지하기 편하기 때문임. 딱히 안써도 됨
-    
     # save_hyper_parameters 기록남기기
     save_hyper_parameters = []
     save_hyper_parameters.append(['settingID', settingID])
@@ -712,8 +717,6 @@ for q in project_list:
 #    save_hyper_parameters.append(['classratio', classratio])
     save_hyper_parameters.append(['mouselist', mouselist])
     save_hyper_parameters.append(['full_sequence', full_sequence])
-    
-    
     
     savename4 = RESULT_SAVE_PATH + 'model/' + '00_model_save_hyper_parameters.csv'
     
@@ -737,6 +740,11 @@ for q in project_list:
 
         if not(exist_model) and trainingsw: # trainingsw
             print('mouse #', [mouselist[sett]], '학습된 model 없음. 새로시작합니다.')
+                  
+            reset_keras(model)
+            model, idcode = keras_setup() # 혹시.. 모르겠으니 reset 함.
+            # 이 문구를 사용할경우 수동으로 memory 초기화가 필요한데 해결방법이..
+            
             model.load_weights(initial_weightsave) # model reset for start 
 
             # cv, training / dev set 생성, dev로 model 최적화를 따로 진행하지 않음. 단지 학습상황 확인용으로만 사용됨.
@@ -788,10 +796,11 @@ for q in project_list:
                         c4 = SE in shamGroup + adenosineGroup  and se in [0,1,2]
                         c5 = SE in salineGroup and se in [0,1,2,3,4]
                         c6 = SE in CFAgroup and se in [0]
+                        c7 = SE in chloroquineGroup and se in [0]
                         # dev set에 pain / nonpain 설정은 되도록 하는게 좋음. training에는 영향을 주지 않음.
                         # 어쩃든 acc가 찍혀야 뭘 판단할태니..
                                         
-                        if c1 or c2 or c3 or c4 or c5 or c6:
+                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
                             msclass = 0; init = True
                         
                         set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
