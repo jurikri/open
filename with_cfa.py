@@ -348,8 +348,8 @@ epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 12) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 12) # fully conneted laye node 갯수 # 8 # 원래 6 
 # 6 for normal
 # 10 for +cfa
 
@@ -381,7 +381,7 @@ if True and c1:
     testsw2 = False
 
 acc_thr = 0.91 # 0.93 -> 0.94
-batch_size = 2**9 # 5000
+batch_size = 2**11 # 5000
 ###############
 
 # constant 
@@ -400,7 +400,9 @@ project_list = []
 #project_list.append(['control_test_segment_adenosine_set5', 500, None])
 #project_list.append(['202012_withCFA_1', 100, None])
 #project_list.append(['202012_withCFA_2', 200, None])
-project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
+#project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
+project_list.append(['202012_withCFA_4', 400, None]) # chroloquine 추가후 첫 test임.
+
 
 q = project_list[0]
 for q in project_list:
@@ -859,7 +861,7 @@ for q in project_list:
             
             starttime = time.time()
             while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-                if cnt > maxepoch/epochs:
+                if (cnt > maxepoch/epochs) and current_acc < 0.7 or cnt > 1000/epochs:
                     seed += 1
                     model, idcode = keras_setup()        
                     model.save_weights(initial_weightsave)
