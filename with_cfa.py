@@ -367,7 +367,7 @@ dropout_rate2 = 0.10 #
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = False
+testsw2 = True
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -401,7 +401,10 @@ project_list = []
 #project_list.append(['202012_withCFA_1', 100, None])
 #project_list.append(['202012_withCFA_2', 200, None])
 #project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
-project_list.append(['202012_withCFA_4', 400, None]) # chroloquine 추가후 첫 test임.
+#project_list.append(['202012_withCFA_4', 400, None]) # chroloquine 추가후 첫 test임.
+ 
+project_list.append(['200224_half_nonseg_1', 100, None])
+project_list.append(['200224_half_nonseg_2', 200, None])
 
 
 q = project_list[0]
@@ -505,7 +508,7 @@ for q in project_list:
                     c11 = SE in set2 and se in [1]
                     c12 = SE in CFAgroup and se in [1,2]
 
-                    if c11 or c12: # 
+                    if c11: # or c12: # 
                         # 뒤에 window 단위로 수정함으로써, 필요없다. 삭제예정
 #                        if not(0.15 < movement[SE,se]):
 #                            print(SE, se, 'movement 부족, pain session에서 제외.')
@@ -843,7 +846,8 @@ for q in project_list:
             # training bias 방지를 위해 동일하게 shuffle 
             np.random.seed(seed)
             shuffleix = list(range(X_training[0].shape[0]))
-            np.random.shuffle(shuffleix) 
+#            np.random.shuffle(shuffleix)
+            shuffleix = random.sample(shuffleix, int(round(len(shuffleix)/2)))
 #                    print(shuffleix)
    
             tr_y_shuffle = Y_training_list[shuffleix]
