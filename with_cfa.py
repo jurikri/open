@@ -329,7 +329,7 @@ print('full_sequence', full_sequence, 'frames')
 
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
 
-msunit = 1 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+msunit = 8 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
 sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
@@ -345,11 +345,11 @@ print('sequenceSize', sequenceSize)
  
 # learning intensity
 epochs = 1 # epoch 종료를 결정할 최소 단위.
-lr = 1e-3 # learning rate
+lr = 1e-4 # learning rate
 fn = 1
 
-n_hidden = int(8 * 12) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 12) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6 
 # 6 for normal
 # 10 for +cfa
 
@@ -359,7 +359,7 @@ layer_1 = int(8 * 12) # fully conneted laye node 갯수 # 8 # 원래 6
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.1 # regularization 상수
+l2_rate = 0.3 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
@@ -367,7 +367,7 @@ dropout_rate2 = 0.10 #
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = True
+testsw2 = False
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -381,7 +381,7 @@ if True and c1:
     testsw2 = False
 
 acc_thr = 0.91 # 0.93 -> 0.94
-batch_size = 2**11 # 5000
+batch_size = 2**10 # 5000
 ###############
 
 # constant 
@@ -403,9 +403,14 @@ project_list = []
 #project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
 #project_list.append(['202012_withCFA_4', 400, None]) # chroloquine 추가후 첫 test임.
  
-project_list.append(['200224_half_nonseg_1', 100, None])
-project_list.append(['200224_half_nonseg_2', 200, None])
+#project_list.append(['200224_half_nonseg_1', 100, None])
+#project_list.append(['200224_half_nonseg_2', 200, None])
 
+#project_list.append(['200224_half_seg_1', 100, None])
+#project_list.append(['200224_half_seg_2', 200, None])
+
+project_list.append(['200224_34_seg_1', 100, None])
+project_list.append(['200224_34_seg_2', 200, None])
 
 q = project_list[0]
 for q in project_list:
@@ -847,7 +852,7 @@ for q in project_list:
             np.random.seed(seed)
             shuffleix = list(range(X_training[0].shape[0]))
 #            np.random.shuffle(shuffleix)
-            shuffleix = random.sample(shuffleix, int(round(len(shuffleix)/2)))
+            shuffleix = random.sample(shuffleix, int(round(len(shuffleix)/4*3)))
 #                    print(shuffleix)
    
             tr_y_shuffle = Y_training_list[shuffleix]
