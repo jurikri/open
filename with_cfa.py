@@ -458,9 +458,10 @@ for q in project_list:
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup 
     
-    
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup
+    for msdel in msset_total[:,1]:
+        set3.remove(msdel)
     
     reducing_test_list = []; reducing_ratio = 0.75
     random.seed(seed)
@@ -469,8 +470,13 @@ for q in project_list:
     reducing_test_list += random.sample(set2, int(round(len(set2)*reducing_ratio)))
     random.seed(seed)
     reducing_test_list += random.sample(set3, int(round(len(set3)*reducing_ratio)))
-    print('selected mouse #', len(reducing_test_list)) 
-   
+
+    for msadd in msset_total[:,0]:
+          if msadd in reducing_test_list:
+              tmp = msset_total[[np.where(msset_total[:,0] == msadd)][0][0],1]
+              reducing_test_list += list(tmp)
+    print('selected mouse #', len(reducing_test_list))          
+#    print(reducing_test_list)
     def ms_sampling():
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
@@ -532,7 +538,6 @@ for q in project_list:
                         c12 = SE in CFAgroup and se in [1,2]
                           
                         if c11: # or c12: # 
-                            # 뒤에 window 단위로 수정함으로써, 필요없다. 삭제예정
                             if not(0.15 < movement[SE,se]):
                                 print(SE, se, 'movement 부족, pain session에서 제외.')
                                 continue
@@ -678,6 +683,7 @@ for q in project_list:
     print('acc_thr', acc_thr, '여기까지 학습합니다.')
     print('maxepoch', maxepoch)
     
+#    print(reducing_test_list)
     # training set 재설정
     trainingset = trainingset
     etc = []
@@ -693,7 +699,7 @@ for q in project_list:
             for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
                 
-        if SE in chloroquineGroup: # chloroquineGroup을 training에만 사용하고, test하지 않음
+        if SE in chloroquineGroup and SE in trainingset: # chloroquineGroup을 training에만 사용하고, test하지 않음
             trainingset.remove(SE)
 
     mouselist = trainingset # 사용 중지 
