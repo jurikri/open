@@ -455,6 +455,19 @@ for q in project_list:
             pass
 # In[]    
     # initiate
+    
+    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+    set1 = lowGroup + lidocaineGroup + restrictionGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup 
+    reducing_test_list = []; reducing_ratio = 0.75
+    random.seed(seed)
+    reducing_test_list += random.sample(set1, int(round(len(set1)*reducing_ratio)))
+    random.seed(seed)
+    reducing_test_list += random.sample(set2, int(round(len(set2)*reducing_ratio)))
+    random.seed(seed)
+    reducing_test_list += random.sample(set3, int(round(len(set3)*reducing_ratio)))
+    print('selected mouse #', len(reducing_test_list)) 
+   
     def ms_sampling():
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
@@ -467,36 +480,37 @@ for q in project_list:
         X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
         for SE in range(N):
             if SE in trainingset:
-                for se in range(5):      
-                    # pain Group에 들어갈 수 있는 모든 경우의 수 
-                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
-                    c1 = SE in set1 and se in [0,2]
-                    c2 = SE in capsaicinGroup and se in [0,2]
-                    c3 = SE in pslGroup + adenosineGroup and se in [0]
-                    c4 = SE in shamGroup and se in [0,1,2]
-                    c5 = SE in salineGroup and se in [0,1,2,3,4]
-                    c6 = SE in CFAgroup and se in [0]
-                    c7 = SE in chloroquineGroup and se in [0]
+                if SE in reducing_test_list:
+                    for se in range(5):      
+                        # pain Group에 들어갈 수 있는 모든 경우의 수 
+                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+                        c1 = SE in set1 and se in [0,2]
+                        c2 = SE in capsaicinGroup and se in [0,2]
+                        c3 = SE in pslGroup + adenosineGroup and se in [0]
+                        c4 = SE in shamGroup and se in [0,1,2]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
+                        c6 = SE in CFAgroup and se in [0]
+                        c7 = SE in chloroquineGroup and se in [0]
+                                        
+                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
+                            # msset 만 baseline을 제외시킴, total set 아님 
+                            exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
+                            if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
+                                mssignal = np.mean(signalss[SE][se], axis=1)
+                                mssignal2 = np.array(movement_syn[SE][se])
+                                msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                                
+                                for u in msbins:
+                                    mannual_signal = mssignal[u:u+full_sequence]
+                                    mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                                     
-                    if c1 or c2 or c3 or c4 or c5 or c6 or c7:
-                        # msset 만 baseline을 제외시킴, total set 아님 
-                        exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
-                        if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
-                            mssignal = np.mean(signalss[SE][se], axis=1)
-                            mssignal2 = np.array(movement_syn[SE][se])
-                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
-                            
-                            for u in msbins:
-                                mannual_signal = mssignal[u:u+full_sequence]
-                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                                
-                                mannual_signal2 = mssignal2[u:u+full_sequence]
-                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-
-                                X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
-                                               Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
-                                
-                                X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
+                                    mannual_signal2 = mssignal2[u:u+full_sequence]
+                                    mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+    
+                                    X, Y, Z, t4_save = dataGeneration(SE, se, label=msclass, \
+                                                   Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                    
+                                    X_tmp += X; Y_tmp += Y; Z_tmp += Z; T_tmp += t4_save 
                     
         datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
         
@@ -507,40 +521,41 @@ for q in project_list:
         X_tmp = []; Y_tmp = []; Z_tmp = []
         for SE in range(N):
             if SE in trainingset:
-                for se in range(5):      
-                    # pain Group에 들어갈 수 있는 모든 경우의 수 
-                    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                    c11 = SE in set2 and se in [1]
-                    c12 = SE in CFAgroup and se in [1,2]
-
-                    if c11: # or c12: # 
-                        # 뒤에 window 단위로 수정함으로써, 필요없다. 삭제예정
-#                        if not(0.15 < movement[SE,se]):
-#                            print(SE, se, 'movement 부족, pain session에서 제외.')
-#                            continue
-                    
-                        mssignal = np.mean(signalss[SE][se], axis=1)
-                        mssignal2 = np.array(movement_syn[SE][se])
-                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                if SE in reducing_test_list:
+                    for se in range(5):      
+                        # pain Group에 들어갈 수 있는 모든 경우의 수 
+                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                        c11 = SE in set2 and se in [1]
+                        c12 = SE in CFAgroup and se in [1,2]
+    
+                        if c11: # or c12: # 
+                            # 뒤에 window 단위로 수정함으로써, 필요없다. 삭제예정
+    #                        if not(0.15 < movement[SE,se]):
+    #                            print(SE, se, 'movement 부족, pain session에서 제외.')
+    #                            continue
                         
-                        t = 0
-                        for u in msbins:
-                            mannual_signal = mssignal[u:u+full_sequence]
-                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                            mssignal = np.mean(signalss[SE][se], axis=1)
+                            mssignal2 = np.array(movement_syn[SE][se])
+                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
-                            mannual_signal2 = mssignal2[u:u+full_sequence]
-                            mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                            
-                            if np.mean(mannual_signal2) < 0.15:
-                                t += 1
-                                continue
-                            
-                        if t > 0:
-                            print('excluded', SE, se, len(msbins)-t, '/', len(msbins))
-                            
-                            X, Y, Z, _ = dataGeneration(SE, se, label=msclass, \
-                                           Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
-                            X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
+                            t = 0
+                            for u in msbins:
+                                mannual_signal = mssignal[u:u+full_sequence]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                
+                                mannual_signal2 = mssignal2[u:u+full_sequence]
+                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+                                
+                                if np.mean(mannual_signal2) < 0.15:
+                                    t += 1
+                                    continue
+                                
+                            if t > 0:
+                                print('excluded', SE, se, len(msbins)-t, '/', len(msbins))
+                                
+                                X, Y, Z, _ = dataGeneration(SE, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
                     
         datasetX[msclass] = np.array(X_tmp)
         datasetY[msclass] = np.array(Y_tmp)
@@ -852,7 +867,7 @@ for q in project_list:
             np.random.seed(seed)
             shuffleix = list(range(X_training[0].shape[0]))
 #            np.random.shuffle(shuffleix)
-            shuffleix = random.sample(shuffleix, int(round(len(shuffleix)/4*3)))
+            shuffleix = random.sample(shuffleix, int(round(len(shuffleix)/1))) # reducing
 #                    print(shuffleix)
    
             tr_y_shuffle = Y_training_list[shuffleix]
