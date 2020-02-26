@@ -409,8 +409,8 @@ project_list = []
 #project_list.append(['200224_half_seg_1', 100, None])
 #project_list.append(['200224_half_seg_2', 200, None])
 
-project_list.append(['200224_34_seg_1', 100, None])
-project_list.append(['200224_34_seg_2', 200, None])
+project_list.append(['200226_0.75_segv2_1', 100, None])
+project_list.append(['200226_0.75_segv2_2', 200, None])
 
 q = project_list[0]
 for q in project_list:
@@ -459,6 +459,9 @@ for q in project_list:
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup
     set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup 
+    
+    
+    
     reducing_test_list = []; reducing_ratio = 0.75
     random.seed(seed)
     reducing_test_list += random.sample(set1, int(round(len(set1)*reducing_ratio)))
@@ -527,31 +530,23 @@ for q in project_list:
                         set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
                         c11 = SE in set2 and se in [1]
                         c12 = SE in CFAgroup and se in [1,2]
-    
+                          
                         if c11: # or c12: # 
                             # 뒤에 window 단위로 수정함으로써, 필요없다. 삭제예정
-    #                        if not(0.15 < movement[SE,se]):
-    #                            print(SE, se, 'movement 부족, pain session에서 제외.')
-    #                            continue
+                            if not(0.15 < movement[SE,se]):
+                                print(SE, se, 'movement 부족, pain session에서 제외.')
+                                continue
                         
                             mssignal = np.mean(signalss[SE][se], axis=1)
                             mssignal2 = np.array(movement_syn[SE][se])
                             msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
-                            t = 0
                             for u in msbins:
                                 mannual_signal = mssignal[u:u+full_sequence]
                                 mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                                 
                                 mannual_signal2 = mssignal2[u:u+full_sequence]
                                 mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                                
-                                if np.mean(mannual_signal2) < 0.15:
-                                    t += 1
-                                    continue
-                                
-                            if t > 0:
-                                print('excluded', SE, se, len(msbins)-t, '/', len(msbins))
                                 
                                 X, Y, Z, _ = dataGeneration(SE, se, label=msclass, \
                                                Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
