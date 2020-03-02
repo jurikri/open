@@ -264,7 +264,7 @@ dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
 #testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
-trainingsw = True # training 하려면 True 
+trainingsw = False # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 testsw2 = True
@@ -280,7 +280,7 @@ if True and c1:
     trainingsw = True
     testsw2 = False
 
-acc_thr = 0.94 # 0.93 -> 0.94
+acc_thr = 0.85 # 0.93 -> 0.94
 batch_size = 2**11 # 5000
 ###############
 
