@@ -329,7 +329,7 @@ print('full_sequence', full_sequence, 'frames')
 
 #signalss_cut = preprocessing(endpoint=int(full_sequence))
 
-msunit = 8 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
+msunit = 1 # input으로 들어갈 시계열 길이 및 갯수를 정함. full_sequence기준으로 1/n, 2/n ... n/n , n/n
 
 sequenceSize = np.zeros(msunit) # 각 시계열 길이들을 array에 저장
 for i in range(msunit):
@@ -345,11 +345,11 @@ print('sequenceSize', sequenceSize)
  
 # learning intensity
 epochs = 1 # epoch 종료를 결정할 최소 단위.
-lr = 1e-4 # learning rate
+lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
 # 6 for normal
 # 10 for +cfa
 
@@ -359,7 +359,7 @@ layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.3 # regularization 상수
+l2_rate = 0.7 # regularization 상수
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
@@ -367,7 +367,7 @@ dropout_rate2 = 0.10 #
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = False
+testsw2 = True
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -380,12 +380,12 @@ if True and c1:
     trainingsw = True
     testsw2 = False
 
-acc_thr = 0.91 # 0.93 -> 0.94
-batch_size = 2**10 # 5000
+acc_thr = 0.85 # 0.93 -> 0.94
+batch_size = 2**11 # 5000
 ###############
 
 # constant 
-maxepoch = 300
+maxepoch = 3000
 n_in =  1 # number of features
 n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
@@ -403,14 +403,20 @@ project_list = []
 #project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
 #project_list.append(['202012_withCFA_4', 400, None]) # chroloquine 추가후 첫 test임.
  
+project_list.append(['202012_withCFA_3', 302, None])
+project_list.append(['202012_withCFA_4', 400, None])
+ 
 #project_list.append(['200224_half_nonseg_1', 100, None])
 #project_list.append(['200224_half_nonseg_2', 200, None])
 
 #project_list.append(['200224_half_seg_1', 100, None])
 #project_list.append(['200224_half_seg_2', 200, None])
 
-project_list.append(['200226_0.75_segv2_1', 100, None])
-project_list.append(['200226_0.75_segv2_2', 200, None])
+#project_list.append(['200226_0.75_segv2_1', 100, None])
+#project_list.append(['200226_0.75_segv2_2', 200, None])
+
+#project_list.append(['200226_0.75_nonsegv2_1', 100, None])
+#project_list.append(['200226_0.75_nonsegv2_2', 200, None])
 
 q = project_list[0]
 for q in project_list:
@@ -457,13 +463,13 @@ for q in project_list:
     # initiate
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-    set1 = lowGroup + lidocaineGroup + restrictionGroup
+    set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
     
     set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
-    reducing_test_list = []; reducing_ratio = 0.75
+    reducing_test_list = []; reducing_ratio = 1
     random.seed(seed)
     reducing_test_list += random.sample(set1, int(round(len(set1)*reducing_ratio)))
     random.seed(seed)
@@ -537,7 +543,7 @@ for q in project_list:
                         c11 = SE in set2 and se in [1]
                         c12 = SE in CFAgroup and se in [1,2]
                           
-                        if c11: # or c12: # 
+                        if c11 or c12: # 
                             if not(0.15 < movement[SE,se]):
                                 print(SE, se, 'movement 부족, pain session에서 제외.')
                                 continue
@@ -654,7 +660,7 @@ for q in project_list:
         merge_4 = Activation('softmax')(merge_3) # activation as softmax function
         
         model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
-        model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
+        model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, decay=1e-8, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
         
         #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         return model, idcode
@@ -686,6 +692,7 @@ for q in project_list:
 #    print(reducing_test_list)
     # training set 재설정
     trainingset = trainingset
+    print('trainingset #, pre', len(trainingset))
     etc = []
     forlist = list(trainingset)
     for SE in forlist:
@@ -698,12 +705,15 @@ for q in project_list:
         if SE in c2:
             for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
                 trainingset.remove(u)
+                print('subset 포함을 위한 제거', u)
                 
         if SE in chloroquineGroup and SE in trainingset: # chloroquineGroup을 training에만 사용하고, test하지 않음
             trainingset.remove(SE)
+            print('chloroquineGroup 평가하지 않음', SE)
 
     mouselist = trainingset # 사용 중지 
     mouselist.sort()
+    print('mouselist #', len(mouselist))
     
 #    if savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\':
 #    mouselist = list(np.sort(np.array(mouselist))[::-1]) # runlist reverse
@@ -886,10 +896,11 @@ for q in project_list:
             
             starttime = time.time()
             while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-                if (cnt > maxepoch/epochs) and current_acc < 0.7 or cnt > 1000/epochs:
+                if (cnt > maxepoch/epochs) or (current_acc < 0.70 and cnt > 300/epochs): # or ( current_acc < 0.70 and cnt > 50/epochs):
                     seed += 1
+                    reset_keras(model)
                     model, idcode = keras_setup()        
-                    model.save_weights(initial_weightsave)
+#                    model.save_weights(initial_weightsave)
                     current_acc = -np.inf; cnt = -1
 #                    starttime = time.time()
                     print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
@@ -898,7 +909,7 @@ for q in project_list:
                 current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
                 
                 isfile1 = os.path.isfile(current_weightsave)
-                if isfile1:
+                if isfile1 and cnt > 0:
                     model.load_weights(current_weightsave)
                     print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
                 else:
