@@ -745,9 +745,10 @@ for q in project_list:
                         set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
                         c11 = SE in set2 and se in [1]
                         c12 = SE in CFAgroup and se in [1,2]
-                        c21 = SE in pslGroup and se in [1,2]
+                        c13 = SE in pslGroup and se in [1,2]
+                        c14 = SE in chloroquineGroup and se in [1]
                         
-                        if c11 or c12 or c21: #
+                        if c14: #
                             msclass = 1; init = True
                             
                         if init:
