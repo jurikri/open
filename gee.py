@@ -174,6 +174,17 @@ def accuracy_cal(pain, non_pain, fsw=False):
         plt.show()
         
     return accuracy, roc_auc, fig
+
+def mslinear_regression(x,y):
+    x = np.array(x); y = np.array(y); 
+    x = x[np.isnan(x)==0]; y = y[np.isnan(y)==0]
+    
+    n = x.shape[0]
+    r = (1/(n-1)) * np.sum(((x - np.mean(x))/np.std(x)) * ((y - np.mean(y))/np.std(y)))
+    m = r*(np.std(y)/np.std(x))
+    b = np.mean(y) - np.mean(x)*m
+
+    return m, b # bx+a
     
 def pain_nonpain_sepreate(target, painGroup, nonpainGroup):
     valuetable = np.array(target)
@@ -356,14 +367,28 @@ project_list = []
 
 #project_list.append(['control2_roiroi', 200, None])
 #project_list.append(['control2_roiroi', 100, None])
-#
-project_list.append(['control_test_segment_adenosine_set1', 100, None])
-project_list.append(['control_test_segment_adenosine_set2', 200, None])
-project_list.append(['control_test_segment_adenosine_set3', 300, None])
-project_list.append(['control_test_segment_adenosine_set4', 400, None])
-project_list.append(['control_test_segment_adenosine_set5', 500, None])
+##
+#project_list.append(['control_test_segment_adenosine_set1', 100, None])
+#project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#project_list.append(['control_test_segment_adenosine_set4', 400, None])
+#project_list.append(['control_test_segment_adenosine_set5', 500, None])
 
 #project_list.append(['202012_withCFA_1', 100, None])
+#project_list.append(['202012_withCFA_2', 200, None])
+#project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
+#project_list.append(['202012_withCFA_4', 400, None]) # chroloquine 추가후 첫 test임.
+
+#project_list.append(['200224_half_nonseg_1', 100, None])
+#project_list.append(['200224_half_nonseg_2', 200, None])
+
+#project_list.append(['200224_half_seg_1', 100, None])
+#project_list.append(['200224_half_seg_2', 200, None])
+
+#project_list.append(['200226_0.75_segv2_1', 100, None])
+#project_list.append(['200226_0.75_segv2_2', 200, None])
+
+
 
 model_name = project_list 
              
@@ -563,7 +588,7 @@ Aprism_t4_biRNN2_yohimbine = msGrouping_yohimbine(t4_subset)
 
 
 # In[] 시간에 따른 통증확률 시각화 (작업중)
-              
+minsize=[]; painindex=[]; resultsave=[]                
 for SE in range(N):
     if not SE in grouped_total_list or SE in skiplist:
         continue
@@ -574,10 +599,12 @@ for SE in range(N):
     sessionNum = 5
     if SE in se3set:
         sessionNum = 3
-    
-    minsize=[]; painindex=[]; resultsave=[]    
+     
     for se in range(sessionNum):
         result_BINS = np.mean(calc_target[SE][se], axis=1) # [BINS][bins]
+        
+        if result_BINS.shape[0] < 5:
+            continue
         
         resultsave.append(result_BINS)
         minsize.append(result_BINS.shape[0])
@@ -594,59 +621,134 @@ painindex = np.array(painindex)
 
 ix0 = np.where(painindex==0)[0] # nonpain
 ix1 = np.where(painindex==1)[0] # pain
-ix2 = np.concatenate((ix0[:5],ix1[:5]),aixs=0)
-plt.figure(1, figsize=(9.7*1.5, 6*1.5))
+ix2 = np.concatenate((ix0[-32:], ix1), axis=0)
 
-for gap in range(10):
-    plt.plot(np.array(resultsave[ix2[gap], :]) + gap*1.1)
-        
+plt.figure(1, figsize=(9.7*1, 6*1))
+plt.imshow(resultsave[ix2], cmap='hot')
+plt.colorbar()
+savepath2 = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + str(SE) + '_heatmap.png', dpi=1000)
 
 # In[]
 import os
 os.sys.exit()
 
 
-# In[] capsaicin 시간에 따른 변화 비교
-msunit = 8
-minlength = 497; time_resolution = int(minlength/msunit)
-
-60/(time_resolution/FPS)
-
-
-timebin = 2
-cap_result = np.zeros((N,5,timebin)); cap_result[:] = np.nan;
-for SE in range(N):
-    if not SE in grouped_total_list or SE in skiplist:
-        continue
-    sessionNum = 5
-    if SE in se3set:
-        sessionNum = 3
+# In[] ROC plot (동시)
+def msacc(class0, class1, mslabel='None', figsw=False):
+    pos_label = 1; roc_auc = -np.inf; fig = None
+    while roc_auc < 0.5:
+        class0 = np.array(class0); class1 = np.array(class1)
+        class0 = class0[np.isnan(class0)==0]; class1 = class1[np.isnan(class1)==0]
         
-    for se in range(sessionNum):
-        if SE in capsaicinGroup:
-            for t in range(timebin):
-                if t == 0:
-                    s = 0
-                    e = 22
-                elif t == 1:
-                    s = 22
-                    e = 44
-                
-                cap_result[SE,se,t]  = np.mean(min_mean_save[SE][se][0][s:e]) # [BINS][bins]
-                
-            if se == 1:
-                plt.figure()
-                mstitle = str(SE)+'_'+str(se)
-                plt.title(mstitle)
-                plt.plot(min_mean_save[SE][se][0])
-                plt.ylim((0,1))
-                savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\time_resolution\\'
-                plt.savefig(savepath+mstitle+'.png', dpi=1000)
-                plt.close()
+        anstable = list(np.ones(class1.shape[0])) + list(np.zeros(class0.shape[0]))
+        predictValue = np.array(list(class1)+list(class0)); predictAns = np.array(anstable)
+        #            
+        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=pos_label)
+        
+        maxix = np.argmax((1-fpr) * tpr)
+        specificity = 1-fpr[maxix]; sensitivity = tpr[maxix]
+        accuracy = ((class1.shape[0] * sensitivity) + (class0.shape[0]  * specificity)) / (class1.shape[0] + class0.shape[0])
+        roc_auc = metrics.auc(fpr,tpr)
+        
+        if roc_auc < 0.5:
+            pos_label = 0
             
+    if figsw:
+        sz = 0.9
+        fig = plt.figure(1, figsize=(7*sz, 5*sz))
+        lw = 2
+        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))))
+        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate', fontsize=20)
+        plt.ylabel('True Positive Rate', fontsize=20)
+#        plt.title('ROC')
+        plt.legend(loc="lower right", prop={'size': 15})
+#        plt.show()
+            
+    return roc_auc, accuracy, fig
 
-np.mean(cap_result[:,:,0][capsaicinGroup,:], axis=0)
-np.mean(cap_result[:,:,1][capsaicinGroup,:], axis=0)
+# ROC1
+# (t4, event amp)
+# formalin only 
+target = np.array(Aprism_t4_biRNN2_formalin)
+pain = list(target[:,5]) + list(target[:,9])
+nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) \
++ list(target[:,8]) + list(target[:,10])
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='Mean activity, AUC:', figsw=True)   
+
+with open('formalin_event_detection.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+    formalin_event_detection = pickle.load(f)
+    formalin_event_detection = formalin_event_detection['Aprism_amplitude_formalin']
+
+target = np.array(formalin_event_detection)
+pain = list(target[:,5]) + list(target[:,9])
+nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) \
++ list(target[:,8]) + list(target[:,10]) 
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='Event amplitude, AUC:', figsw=True)  
+
+plt.savefig(savepath2 + 'ROC_fig1.png', dpi=1000)
+
+# ROC2
+# # (bRNN), AA, AI, IA, II
+# formalin only
+ 
+# ROC3
+# bRNN
+# Capsaicin, CFA, PSL
+
+# In[] Movement, t4 corr, Fig1 H
+
+target = np.array(movement)
+paindata = target[highGroup+midleGroup,1]
+nonpaindata = list(target[highGroup+midleGroup,0]) + list(target[highGroup+midleGroup,2]) + \
+list(target[salineGroup,:].flatten())
+
+target2 = np.array(t4)
+paindata2 = target2[highGroup+midleGroup,1]
+nonpaindata2 = list(target2[highGroup+midleGroup,0]) + list(target2[highGroup+midleGroup,2]) + \
+list(target2[salineGroup,:].flatten())
+
+plt.figure(0, figsize=(1.2*4, 1*4))
+plt.scatter(paindata, paindata2, s=3) # x:mov, y:t4
+m, b = mslinear_regression(paindata, paindata2)
+xaxis = np.arange(0,1.1,0.1)
+plt.plot(xaxis, xaxis*m+b, label='pain')
+
+plt.scatter(nonpaindata, nonpaindata2, s=3) # x:mov, y:t4
+m, b = mslinear_regression(nonpaindata, nonpaindata2)
+plt.plot(xaxis, xaxis*m+b, label='nonpain')
+
+plt.xlabel('Movement ratio', fontsize=20)
+plt.ylabel('Mean activity (df/f0)', fontsize=20)
+plt.axis([0, 0.8, 0, 1.2])
+plt.legend(prop={'size': 15})
+plt.savefig(savepath2 + 't4_mov_corr', dpi=1000)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
