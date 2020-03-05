@@ -72,7 +72,10 @@ except:
     try:
         savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
     except:
-        savepath = ''; # os.chdir(savepath);
+        try:
+            savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
+        except:
+            savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 #
 
@@ -113,6 +116,7 @@ shamGroup = msGroup['shamGroup']
 adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 CFAgroup = msGroup['CFAgroup']
+chloroquineGroup = msGroup['chloroquineGroup']
 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -121,11 +125,20 @@ msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ig
 
 skiplist = restrictionGroup + lowGroup
 
-se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup
 pslset = pslGroup + shamGroup + adenosineGroup
 
 #painGroup = msGroup['highGroup'] + msGroup['ketoGroup'] + msGroup['midleGroup'] + msGroup['yohimbineGroup']
 #nonpainGroup = msGroup['salineGroup'] 
+
+def msGrouping_pain_vs_itch(msdata): # psl만 처리
+    msdata = np.array(msdata)
+    
+    df3 = pd.DataFrame(msdata[highGroup,1]) 
+    df3 = pd.concat([df3, pd.DataFrame(msdata[chloroquineGroup,1:3])], ignore_index=True, axis = 1)
+    df3 = np.array(df3)
+    
+    return df3
 
 grouped_total_list = []
 keylist = list(msGroup.keys())
@@ -388,7 +401,18 @@ project_list = []
 #project_list.append(['200226_0.75_segv2_1', 100, None])
 #project_list.append(['200226_0.75_segv2_2', 200, None])
 
+#project_list.append(['20200302_basevsitch_1', 100, None])
+#project_list.append(['20200302_basevsitch_2', 200, None])
 
+#project_list.append(['20200302_painitch_1', 100, None])
+#project_list.append(['20200302_painitch_2', 200, None])
+#project_list.append(['20200302_painitch_3', 300, None]) # acc_thr 증가
+#project_list.append(['20200302_painitch_4', 400, None])
+
+project_list.append(['20200304_basic_1', 100, None])
+project_list.append(['20200304_basic_2', 200, None]) 
+project_list.append(['20200304_basic_3', 300, None]) 
+project_list.append(['20200304_basic_4', 400, None]) 
 
 model_name = project_list 
              
@@ -502,8 +526,9 @@ Aprism_biRNN2_formalin = msGrouping_nonexclude(biRNN_long_subset)
 Aprism_biRNN2_capsaicin = biRNN_long_subset[capsaicinGroup,0:3]
 Aprism_biRNN2_CFA = biRNN_long_subset[CFAgroup,0:3]
 Aprism_biRNN2_psl = msGrouping_pslOnly(biRNN_long_subset)
+Aprism_biRNN2_pain_vs_itch = msGrouping_pain_vs_itch(biRNN_long_subset)
 
-
+# In[]
 # 통계처리 출력용
 # PSL
 ms_statistics = pd.DataFrame([])
