@@ -318,8 +318,8 @@ project_list.append(['20200304_basic_4', 400, None])
  
 #project_list.append(['20200302_painitch_1', 100, None])
 #project_list.append(['20200302_painitch_2', 200, None]) 
-project_list.append(['20200302_painitch_3', 300, None]) # acc_thr 증가
-project_list.append(['20200302_painitch_4', 400, None])
+#project_list.append(['20200302_painitch_3', 300, None]) # acc_thr 증가
+#project_list.append(['20200302_painitch_4', 400, None])
 
 q = project_list[0]
 for q in project_list:
@@ -628,7 +628,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = highGroup
+    wanted = highGroup + midleGroup + ketoGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -730,20 +730,20 @@ for q in project_list:
                     SE = test_mouseNum
                     for se in range(sessionNum):
                         init = False
-#                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2    
-#                        c1 = SE in set1 and se in [0,2]
-#                        c2 = SE in capsaicinGroup and se in [0,2]
-#                        c3 = SE in pslGroup and se in [0]
-#                        c4 = SE in shamGroup + adenosineGroup  and se in [0,1,2]
-#                        c5 = SE in salineGroup and se in [0,1,2,3,4]
-#                        c6 = SE in CFAgroup and se in [0]
-#                        c7 = SE in chloroquineGroup and se in [0]
-                        c14 = SE in chloroquineGroup and se in [1]
+                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2    
+                        c1 = SE in set1 and se in [0,2]
+                        c2 = SE in capsaicinGroup and se in [0,2]
+                        c3 = SE in pslGroup and se in [0]
+                        c4 = SE in shamGroup + adenosineGroup  and se in [0,1,2]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
+                        c6 = SE in CFAgroup and se in [0]
+                        c7 = SE in chloroquineGroup and se in [0]
+#                        c14 = SE in chloroquineGroup and se in [1]
                         # dev set에 pain / nonpain 설정은 되도록 하는게 좋음. training에는 영향을 주지 않음.
                         # 어쩃든 acc가 찍혀야 뭘 판단할태니..
                                         
-#                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
-                        if c14: #
+                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
+#                        if c14: #
                             msclass = 0; init = True
                         
                         set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
@@ -752,7 +752,7 @@ for q in project_list:
                         c13 = SE in pslGroup and se in [1,2]
                         c14 = SE in chloroquineGroup and se in [1]
                         
-                        if c11 or c12 or c13: #
+                        if c11 or c12 or c13 or c14: #
                             msclass = 1; init = True
                             
                         if init:
