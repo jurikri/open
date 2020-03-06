@@ -240,8 +240,8 @@ epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
 # 6 for normal
 # 10 for +cfa
 
@@ -251,7 +251,7 @@ layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regularization
-l2_rate = 0.3 # regularization 상수
+l2_rate = 0.0 # regularization 상수 # 0.1
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
@@ -272,8 +272,8 @@ if True and c1:
     trainingsw = True
     testsw2 = False
 
-acc_thr = 0.97 # 0.93 -> 0.94
-batch_size = 2**9 # 5000
+acc_thr = 0.99 # 0.93 -> 0.94
+batch_size = 2**10 # 5000
 ###############
 
 # constant 
@@ -321,7 +321,7 @@ project_list = []
 #project_list.append(['20200302_painitch_3', 300, None]) # acc_thr 증가
 #project_list.append(['20200302_painitch_4', 400, None])
 
-project_list.append(['20200305_badmove_1', 100, None])
+project_list.append(['20200305_badmove2_1', 111, None])
 
 q = project_list[0]
 for q in project_list:
@@ -630,7 +630,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = chloroquineGroup
+    wanted = [118, 120, 123, 125, 126] + highGroup + [62, 82, 83, 105]
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -748,13 +748,15 @@ for q in project_list:
 #                        if c14: #
                             msclass = 0; init = True
                         
-                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                        c11 = SE in set2 and se in [1]
+                        foramlineset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2
+                        
+                        c11 = SE in foramlineset and se in [1]
+                        c12 = SE in capsaicinGroup and se in [1]
                         c12 = SE in CFAgroup and se in [1,2]
                         c13 = SE in pslGroup and se in [1,2]
                         c14 = SE in chloroquineGroup and se in [1]
                         
-                        if c11 or c12 or c13: #
+                        if c11: # or c12 or c13: #
                             msclass = 1; init = True
                             
                         if init:
@@ -762,19 +764,20 @@ for q in project_list:
                             if signalss[test_mouseNum][se].shape[0] == full_sequence:
                                 binning = [0]
                             binNum = len(binning)
-                                
-                            for i in range(binNum):         
+                            
+                            for i in range(binNum):    
+                            # each ROI
                                 signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                signal_full_roi = np.mean(signalss_PSL_test, axis=1)
-                                mannual_signal = np.reshape(signal_full_roi, (signal_full_roi.shape[0], 1))
+                                ROInum = signalss_PSL_test.shape[1]
                                 
-                                signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                                mannual_signal2 = np.reshape(signal2, (signal2.shape[0], 1))
+                                for ROI in range(ROInum):
+                                    mannual_signal = signalss_PSL_test[:,ROI]
+                                    mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
 
-                                Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
-                                               Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
-                                
-                                X_tmp += Xtest; Y_tmp += Ytest
+                                    Xtest, Ytest, _, _ = dataGeneration(test_mouseNum, se, label=msclass, \
+                                                   Mannual=True, mannual_signal=mannual_signal, mannual_signal2=None)
+                                    
+                                    X_tmp += Xtest; Y_tmp += Ytest
                                          
                 if np.array(Y_tmp).shape[0] != 0:      
                     Xtest = array_recover(X_tmp); 
@@ -806,7 +809,7 @@ for q in project_list:
             
             starttime = time.time()
             while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-                if (cnt > maxepoch/epochs) or (current_acc < 0.70 and cnt > 300/epochs): # or ( current_acc < 0.70 and cnt > 50/epochs):
+                if (cnt > maxepoch/epochs) or (current_acc < 0.60 and cnt > 500/epochs) or ( current_acc < 0.51 and cnt > 100/epochs):
                     seed += 1
                     reset_keras(model)
                     model, idcode = keras_setup()        
