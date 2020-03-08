@@ -260,6 +260,7 @@ trainingsw = True # training 하려면 True
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 testsw2 = False
+testsw3 = True
 #if testsw2:
 ##    import os
 #    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -272,7 +273,7 @@ if True and c1:
     trainingsw = True
     testsw2 = False
 
-acc_thr = 0.80 # 0.93 -> 0.94
+acc_thr = 0.8 # 0.93 -> 0.94
 batch_size = 2**10 # 5000
 ###############
 
@@ -301,7 +302,7 @@ project_list = []
 #project_list.append(['202012_withCFA_3', 300, None]) # chroloquine 추가후 첫 test임.
 #project_list.append(['202012_withCFA_4', 400, None]) # chroloquine 추가후 첫 test임.
  
-#project_list.append(['202012_withCFA_3', 302, None])
+#project_list.append(['202012_withCFA_3', 302, None]) 
 #project_list.append(['202012_withCFA_4', 400, None])
  
 #project_list.append(['200224_half_nonseg_1', 100, None])
@@ -322,6 +323,9 @@ project_list = []
 #project_list.append(['20200302_painitch_4', 400, None])
 
 project_list.append(['20200308_itch_vs_before', 111, None])
+project_list.append(['20200308_itch_vs_before2', 222, None])
+project_list.append(['20200308_itch_vs_before3', 333, None])
+
 #project_list.append(['20200306_itch_vs_before_unit_6_1', 111, None])
 
 
@@ -582,6 +586,44 @@ for q in project_list:
     model.save_weights(initial_weightsave)
     print(model.summary())
     
+    def keras_setup_dummy():
+        #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        
+        dt = datetime.now()
+        idcode = dt.year * 10**4 + dt.month * 10**(4-2) + dt.day * 10**(4-4) + dt.hour * 10**(4-6)
+
+        #init = initializers.glorot_normal(seed=None)
+
+        init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
+        
+        input1 = []; [input1.append([]) for i in range(msunit *fn)] # 최초 input layer
+        input2 = []; [input2.append([]) for i in range(msunit *fn)] # input1을 받아서 끝까지 이어지는 변수
+        
+        for unit in range(msunit *fn):
+            input1[unit] = keras.layers.Input(shape=(inputsize[unit], n_in)) # 각 병렬 layer shape에 따라 input 받음
+            input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
+            input2[unit] = Dense(layer_1, kernel_initializer = init, \
+                  activation='relu')(input2[unit]) # fully conneted layers, relu
+            input2[unit] = Dropout(dropout_rate1)(input2[unit]) # dropout
+        
+        if msunit *fn == 1:
+            added = input2[0]
+        elif not(msunit *fn == 1):
+            added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
+        merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate),\
+                        activation='relu')(added) # fully conneted layers, relu
+        merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
+        merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
+                        activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
+        merge_3 = Dense(n_out, input_dim=n_out)(merge_2) # regularization 삭제
+        merge_4 = Activation('softmax')(merge_3) # activation as softmax function
+        
+        model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
+        model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=0, decay=1e-8, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
+        
+        #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        return model, idcode
+    
     if False: # 시각화 
         # 20190903, VS code로 옮긴뒤로 에러나는 중, 해결필요
         print(model.summary())
@@ -635,7 +677,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = chloroquineGroup
+    wanted = chloroquineGroup + salineGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -676,8 +718,8 @@ for q in project_list:
             csvwriter.writerow(save_hyper_parameters[row])
         csvfile.close()
         
-    def valid_generation(mousenum, only_class = None):
-        X_tmp = []; Y_tmp = []
+    def valid_generation(mousenum, only_se=None):
+        X_tmp = []; Y_tmp = []; valid = None
         testlist = [mouselist[sett]]
         
         if mouselist[sett] in np.array(msset_total)[:,0]:
@@ -694,40 +736,13 @@ for q in project_list:
             if test_mouseNum in se3set:
                 sessionNum = 3
             
-            SE = test_mouseNum
+#            SE = test_mouseNum
             for se in range(sessionNum):
-                init = False
-                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + highGroup2    
-                c1 = SE in set1 and se in [0,2]
-                c2 = SE in capsaicinGroup and se in [0,2]
-                c3 = SE in pslGroup and se in [0]
-                c4 = SE in shamGroup + adenosineGroup  and se in [0,1,2]
-                c5 = SE in salineGroup and se in [0,1,2,3,4]
-                c6 = SE in CFAgroup and se in [0]
-                c7 = SE in chloroquineGroup and se in [0]
-                c14 = SE in chloroquineGroup and se in [0]
-                # dev set에 pain / nonpain 설정은 되도록 하는게 좋음. training에는 영향을 주지 않음.
-                # 어쩃든 acc가 찍혀야 뭘 판단할태니..
-#                                        
-#                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
-                if c14 or c5: #
-                    msclass = 0; init = True
+                if only_se != None and only_se != se:
+                    continue
                 
-                foramlineset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2
-                
-                c11 = SE in foramlineset and se in [1]
-                c12 = SE in capsaicinGroup and se in [1]
-                c12 = SE in CFAgroup and se in [1,2]
-                c13 = SE in pslGroup and se in [1,2]
-                c14 = SE in chloroquineGroup and se in [1]
-                
-                if c14: # or c12 or c13: #
-                    msclass = 1; init = True
-                
-                if only_class == 1 or only_class == 2:
-                    if msclass != only_class:
-                        continue
-                
+                msclass = 1; init = True # 무적권 pain으로 취급
+                 
                 if init:
                     binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
                     if signalss[test_mouseNum][se].shape[0] == full_sequence:
@@ -916,6 +931,31 @@ for q in project_list:
         isfile2 = os.path.isfile(final_weightsave)
         print(final_weightsave)
         print('test를 위한 model 존재 유무', isfile2)
+
+        if isfile2 and testsw3:
+            for test_mouseNum in testlist:
+                picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'testsw3_' + str(test_mouseNum) + '.pickle'
+                if not(os.path.isfile(picklesavename)): # 만들어야될게 없으면 실행
+                    dummy_table = np.zeros((N,5))
+                    reset_keras(model)
+                    model, idcode = keras_setup_dummy()
+                    model.load_weights(final_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+                    
+                    sessionNum = 5
+                    if test_mouseNum in se3set:
+                        sessionNum = 3
+                    for se in range(sessionNum): 
+                        valid = valid_generation(test_mouseNum, only_se = se)
+                        print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+                        hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1, validation_data = valid)
+                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+                        
+                        dummy_table[test_mouseNum, se] = hist.history['val_accuracy'][-1]
+    
+                
+                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename, '저장되었습니다.')
 
         ####### test - binning 구문 입니다. ##########, test version 2
         # model load는 cv set 시작에서 무조건 하도록 되어 있음.
