@@ -628,7 +628,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = highGroup + midleGroup + ketoGroup
+    wanted = [116, 117]
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
