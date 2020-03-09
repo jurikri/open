@@ -409,10 +409,15 @@ project_list = []
 #project_list.append(['20200302_painitch_3', 300, None]) # acc_thr 증가
 #project_list.append(['20200302_painitch_4', 400, None])
 
-project_list.append(['20200304_basic_1', 100, None])
-project_list.append(['20200304_basic_2', 200, None]) 
-project_list.append(['20200304_basic_3', 300, None]) 
-project_list.append(['20200304_basic_4', 400, None]) 
+#project_list.append(['20200304_basic_1', 100, None])
+#project_list.append(['20200304_basic_2', 200, None]) 
+#project_list.append(['20200304_basic_3', 300, None]) 
+#project_list.append(['20200304_basic_4', 400, None]) 
+
+#project_list.append(['20200305_badmove_1', 111, None])
+
+project_list.append(['20200308_itch_vs_before3', 333, None])
+
 
 model_name = project_list 
              
@@ -423,6 +428,18 @@ for SE in range(N):
         movement[SE,se] = np.mean(bahavss[SE][se]>0) # binaryzation or not
         # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
 
+# In[] testsw3
+testsw3_mean = np.zeros((N,5,len(model_name)))
+for ix, p in enumerate(model_name):
+    for SE in range(N):
+        loadpath5 = savepath + 'result\\' + p[0] + '\\exp_raw\\' + 'testsw3_' + str(SE) + '.pickle'
+        if os.path.isfile(loadpath5):
+            with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                testsw3 = pickle.load(f)
+            testsw3_mean[SE,:,ix] = testsw3[SE,:]
+            
+testsw3_mean = np.mean(testsw3_mean, axis=2)
+np.mean(testsw3_mean[chloroquineGroup,:], axis = 0)
 # In[]
 min_mean_save = []; [min_mean_save.append([]) for k in range(N)]
 ROImean_save = []; [ROImean_save.append([]) for k in range(N)]
