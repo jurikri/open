@@ -314,7 +314,7 @@ project_list = []
 
 #project_list.append(['20200306_itch_vs_before_unit_6_1', 111, None])
  
-project_list.append(['20200309_new_test1', 111, None])
+project_list.append(['20200310_psloptimize_1', 111, None])
  
 q = project_list[0]
 for q in project_list:
@@ -625,7 +625,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = [77]
+    wanted = pslGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -689,7 +689,28 @@ for q in project_list:
                 if only_se != None and only_se != se:
                     continue
                 
-                msclass = 1; init = True # 무적권 pain으로 취급
+                if only_se != None:
+                    msclass = 1; init = True # 무적권 pain으로 취급
+                elif only_se == None:
+                    SE = test_mouseNum
+                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+                    c1 = SE in set1 and se in [0,2]
+                    c2 = SE in capsaicinGroup and se in [0,2]
+                    c3 = SE in pslGroup + adenosineGroup and se in [0]
+                    c4 = SE in shamGroup and se in [0,1,2]
+                    c5 = SE in salineGroup and se in [0,1,2,3,4]
+                    c6 = SE in CFAgroup and se in [0]
+                    c7 = SE in chloroquineGroup and se in [0]
+                    
+                    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+                    c11 = SE in set2 and se in [1]
+                    c12 = SE in capsaicinGroup and se in [1]
+                    c13 = SE in pslGroup and se in [1,2]
+                                       
+                    if c1 or c2 or c3 or c4 or c5 or c6 or c7:
+                        msclass = 0; init = True
+                    elif c11 or c12 or c13: #
+                        msclass = 1; init = True
                  
                 if init:
                     binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
@@ -763,7 +784,7 @@ for q in project_list:
 
             # dev set,
             if validation_sw:
-                valid = valid_generation(mouselist[sett], only_se=1)
+                valid = valid_generation(mouselist[sett])
                 
 #                valid = valid_generation(mouselist[sett], only_class = 1)
 #                model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
