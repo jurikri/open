@@ -170,13 +170,14 @@ def dataGeneration(SE, se, label, roiNum=None, bins=bins, GAN=False, Mannual=Fal
                 lastsave[unit] = frame
             else:
                 X_tmp[unit] = (calcium_signal[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
-                    
-        for unit in range(msunit):
-            if frame <= full_sequence - sequenceSize[unit]:
-                X_tmp[unit+msunit] = (behav_signal[frame : frame + sequenceSize[unit]])
-                lastsave[unit] = frame
-            else:
-                X_tmp[unit+msunit] = (behav_signal[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+        
+        if fn > 1:            
+            for unit in range(msunit):
+                if frame <= full_sequence - sequenceSize[unit]:
+                    X_tmp[unit+msunit] = (behav_signal[frame : frame + sequenceSize[unit]])
+                    lastsave[unit] = frame
+                else:
+                    X_tmp[unit+msunit] = (behav_signal[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
                     
         X.append(X_tmp)
         Y.append(label)
@@ -230,7 +231,7 @@ print('sequenceSize', sequenceSize)
 # learning intensity
 epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
-fn = 2
+fn = 1
 
 n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
 layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
@@ -259,7 +260,7 @@ if True and c1:
     testsw2 = False
 
 acc_thr = 0.99 # 0.93 -> 0.94
-batch_size = 2**8 # 5000
+batch_size = 2**10 # 5000
 ###############
 
 # constant 
@@ -313,7 +314,7 @@ project_list = []
 
 #project_list.append(['20200306_itch_vs_before_unit_6_1', 111, None])
  
-project_list.append(['20200309_new_with_Mmean', 111, None])
+project_list.append(['20200309_new_test1', 111, None])
  
 q = project_list[0]
 for q in project_list:
@@ -624,7 +625,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = chloroquineGroup + salineGroup + midleGroup
+    wanted = [77]
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -696,7 +697,7 @@ for q in project_list:
                         binning = [0]
                     binNum = len(binning)
                     
-                    mssignal2 = np.array(movement_syn[SE][se])
+                    mssignal2 = np.array(movement_syn[test_mouseNum][se])
                     for i in range(binNum):    
                     # each ROI
                         signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
@@ -708,6 +709,8 @@ for q in project_list:
                         for ROI in range(ROInum):
                             mannual_signal = signalss_PSL_test[:,ROI]
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+
+#                            print(mannual_signal2.shape)
 
                             Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
                                            Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
@@ -760,7 +763,7 @@ for q in project_list:
 
             # dev set,
             if validation_sw:
-                valid = valid_generation(mouselist[sett], only_se=0)
+                valid = valid_generation(mouselist[sett], only_se=1)
                 
 #                valid = valid_generation(mouselist[sett], only_class = 1)
 #                model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
@@ -886,7 +889,7 @@ for q in project_list:
         if isfile2 and testsw3:
             for test_mouseNum in testlist:
                 picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'testsw3_' + str(test_mouseNum) + '.pickle'
-                if not(os.path.isfile(picklesavename)): # 만들어야될게 없으면 실행
+                if not(os.path.isfile(picklesavename)) or True: # 만들어야될게 없으면 실행 or overwrite
                     dummy_table = np.zeros((N,5))
                     reset_keras(model)
                     model, idcode = keras_setup(lr=0)
