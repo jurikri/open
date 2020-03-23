@@ -281,13 +281,23 @@ classratio = 1 # class under sampling ratio
 project_list = []
  # proejct name, seed
 
-#project_list.append(['control_test_segment_adenosine_set1', 100, None])
-#project_list.append(['control_test_segment_adenosine_set2', 200, None])
-#project_list.append(['control_test_segment_adenosine_set3', 300, None])
-#project_list.append(['control_test_segment_adenosine_set4', 400, None])
-#project_list.append(['control_test_segment_adenosine_set5', 500, None])
- 
-project_list.append(['20200318_basic_updated_1', 100, None])
+project_list.append(['control_test_segment_adenosine_set1', 100, None])
+project_list.append(['control_test_segment_adenosine_set2', 200, None])
+project_list.append(['control_test_segment_adenosine_set3', 300, None])
+project_list.append(['control_test_segment_adenosine_set4', 400, None])
+project_list.append(['control_test_segment_adenosine_set5', 500, None])
+project_list.append(['control_test_segment_adenosine_set6', 600, None])
+project_list.append(['control_test_segment_adenosine_set7', 700, None])
+project_list.append(['control_test_segment_adenosine_set8', 800, None])
+project_list.append(['control_test_segment_adenosine_set9', 900, None])
+project_list.append(['control_test_segment_adenosine_set10', 1000, None])
+project_list.append(['control_test_segment_adenosine_set11', 1100, None])
+# 
+#project_list.append(['20200318_basic_updated_1', 100, None]) # acc 0.91
+#project_list.append(['20200318_basic_updated_2', 200, None]) # acc 0.85
+#project_list.append(['20200318_basic_updated_3', 300, None]) # acc 0.85
+#project_list.append(['20200318_basic_updated_4', 400, None]) # acc 0.85
+
 #project_list.append(['20200304_basic_2', 200, None]) 
 #project_list.append(['20200304_basic_3', 300, None]) 
 #project_list.append(['20200304_basic_4', 400, None]) 
@@ -318,7 +328,7 @@ project_list.append(['20200318_basic_updated_1', 100, None])
 #project_list.append(['20200302_painitch_4', 400, None])
 
 q = project_list[0]
-for q in project_list:
+for nix, q in enumerate(project_list):
     settingID = q[0]; seed = q[1]; seed2 = int(seed+1)
     continueSW = q[2]
     
@@ -661,7 +671,6 @@ for q in project_list:
                 
         from keras.utils import plot_model
         plot_model(model, to_file='model.png')
-        
              
     ##
         
@@ -686,9 +695,9 @@ for q in project_list:
                 trainingset.remove(u)
                 print('subset 포함을 위한 제거', u)
                 
-#        if SE in chloroquineGroup and SE in trainingset: # chloroquineGroup을 training에만 사용하고, test하지 않음
-#            trainingset.remove(SE)
-#            print('chloroquineGroup 평가하지 않음', SE)
+        if SE in chloroquineGroup and SE in trainingset: # chloroquineGroup을 training에만 사용하고, test하지 않음
+            trainingset.remove(SE)
+            print('chloroquineGroup 평가하지 않음', SE)
 
     mouselist = trainingset # 사용 중지 
     mouselist.sort()
@@ -702,7 +711,8 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = pslset
+    wanted = pslset + capsaicinGroup + CFAgroup
+    # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
@@ -808,13 +818,13 @@ for q in project_list:
             starttime = time.time()
             while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
                 acc_thr_sw = True
-                if (cnt > maxepoch/epochs) or (current_acc < 0.70 and cnt > 300/epochs): # or ( current_acc < 0.70 and cnt > 50/epochs):
+                if (cnt > maxepoch/epochs) or (current_acc < 0.70 and cnt > 300/epochs) or ( current_acc < 0.51 and cnt > 50/epochs):
                     seed += 1
                     reset_keras(model)
                     nseed(seed)
                     tf.random.set_seed(seed)   
                     model, idcode = keras_setup() 
-                    model.load_weights(initial_weightsave)      
+#                    model.load_weights(initial_weightsave)      
                     current_acc = -np.inf; cnt = -1
                     print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
 
@@ -829,15 +839,6 @@ for q in project_list:
                     
                 valid = valid_generation(mouselist[sett], only_se=None)
                 
-                for _ in range(10):
-                    if acc_thr_sw:
-                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs)
-                        cnt += 1
-                        hist_save_loss += list(np.array(hist.history['loss']))
-                        hist_save_acc += list(np.array(hist.history['accuracy']))
-                        if hist_save_acc[-1] > acc_thr:
-                            acc_thr_sw = False
-                    
                 if acc_thr_sw:
                     hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
                     cnt += 1
@@ -847,7 +848,16 @@ for q in project_list:
                     hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
                     if hist_save_acc[-1] > acc_thr:
                             acc_thr_sw = False
-                     
+                
+                for _ in range(10):
+                    if acc_thr_sw:
+                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs)
+                        cnt += 1
+                        hist_save_loss += list(np.array(hist.history['loss']))
+                        hist_save_acc += list(np.array(hist.history['accuracy']))
+                        if hist_save_acc[-1] > acc_thr:
+                            acc_thr_sw = False
+                    
                 model.save_weights(current_weightsave)
                 # 종료조건: 
                 current_acc = hist_save_acc[-1] 
