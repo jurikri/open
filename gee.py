@@ -67,7 +67,7 @@ def msGrouping_yohimbine(msdata):
 
 
 try:
-    savepath = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
+    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
 except:
     try:
         savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
@@ -381,11 +381,14 @@ project_list = []
 #project_list.append(['control2_roiroi', 200, None])
 #project_list.append(['control2_roiroi', 100, None])
 ##
-#project_list.append(['control_test_segment_adenosine_set1', 100, None])
-#project_list.append(['control_test_segment_adenosine_set2', 200, None])
-#project_list.append(['control_test_segment_adenosine_set3', 300, None])
-#project_list.append(['control_test_segment_adenosine_set4', 400, None])
-#project_list.append(['control_test_segment_adenosine_set5', 500, None])
+project_list.append(['control_test_segment_adenosine_set1', 100, None])
+project_list.append(['control_test_segment_adenosine_set2', 200, None])
+project_list.append(['control_test_segment_adenosine_set3', 300, None])
+project_list.append(['control_test_segment_adenosine_set4', 400, None])
+project_list.append(['control_test_segment_adenosine_set5', 500, None])
+project_list.append(['control_test_segment_adenosine_set6', 600, None])
+#project_list.append(['control_test_segment_adenosine_set7', 700, None])
+#project_list.append(['control_test_segment_adenosine_set8', 800, None])
 
 #project_list.append(['202012_withCFA_1', 100, None])
 #project_list.append(['202012_withCFA_2', 200, None])
@@ -416,8 +419,10 @@ project_list = []
 
 #project_list.append(['20200305_badmove_1', 111, None])
 
-project_list.append(['20200308_itch_vs_before3', 333, None])
-
+#project_list.append(['20200308_itch_vs_before', 333, None])
+#project_list.append(['20200308_itch_vs_before2', 333, None])
+#project_list.append(['20200308_itch_vs_before3', 333, None])
+#
 
 model_name = project_list 
              
@@ -429,6 +434,15 @@ for SE in range(N):
         # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
 
 # In[] testsw3
+        
+def msGrouping_base_vs_itch(msdata): # psl만 처리
+    msdata = np.array(msdata)
+    
+    df3 = pd.DataFrame(msdata[salineGroup,:]) 
+    df3 = pd.concat([df3, pd.DataFrame(msdata[chloroquineGroup,0:3])], ignore_index=True, axis = 1)
+    df3 = np.array(df3)
+    return df3
+        
 testsw3_mean = np.zeros((N,5,len(model_name)))
 for ix, p in enumerate(model_name):
     for SE in range(N):
@@ -439,7 +453,11 @@ for ix, p in enumerate(model_name):
             testsw3_mean[SE,:,ix] = testsw3[SE,:]
             
 testsw3_mean = np.mean(testsw3_mean, axis=2)
-np.mean(testsw3_mean[chloroquineGroup,:], axis = 0)
+
+biRNN_short = testsw3_mean
+
+Aprism_biRNN2_pain_vs_itch = msGrouping_base_vs_itch(testsw3_mean)
+
 # In[]
 min_mean_save = []; [min_mean_save.append([]) for k in range(N)]
 ROImean_save = []; [ROImean_save.append([]) for k in range(N)]
@@ -496,7 +514,10 @@ for SE in range(N):
  
         if len(current_value) > 0:
             current_value = np.mean(np.array(current_value), axis=0) # mean by project
-            min_mean_save[SE][se] = current_value # [BINS][bins]  
+            if sw == 'binarization':
+                min_mean_save[SE][se] = current_value # [BINS][bins]
+            elif sw == 'probability':
+                min_mean_save[SE][se] = current_value > 0.5 # [BINS][bins]
         elif len(current_value) == 0:
             min_mean_save[SE][se] = np.nan
             
@@ -528,7 +549,7 @@ for SE in range(N):
     for se in range(sessionNum):
 #        if [SE, se] in shortlist:
         biRNN_short[SE,se]  = np.mean(calc_target[SE][se]) # [BINS][bins]
-        
+        # In[]
 biRNN_long_subset = np.zeros((N,5)); biRNN_long_subset[:] = np.nan
 for SE in range(N):
     if SE in np.array(msset_total)[:,0]:
@@ -545,7 +566,7 @@ Aprism_biRNN2_CFA = biRNN_long_subset[CFAgroup,0:3]
 Aprism_biRNN2_psl = msGrouping_pslOnly(biRNN_long_subset)
 Aprism_biRNN2_pain_vs_itch = msGrouping_pain_vs_itch(biRNN_long_subset)
 
-# In[]
+# In
 # 통계처리 출력용
 # PSL
 ms_statistics = pd.DataFrame([])
@@ -668,7 +689,7 @@ ix2 = np.concatenate((ix0[-32:], ix1), axis=0)
 plt.figure(1, figsize=(9.7*1, 6*1))
 plt.imshow(resultsave[ix2], cmap='hot')
 plt.colorbar()
-savepath2 = 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
 plt.savefig(savepath2 + str(SE) + '_heatmap.png', dpi=1000)
 
 # In[]
@@ -704,8 +725,8 @@ def msacc(class0, class1, mslabel='None', figsw=False):
         plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate', fontsize=20)
-        plt.ylabel('True Positive Rate', fontsize=20)
+#        plt.xlabel('False Positive Rate', fontsize=20)
+#        plt.ylabel('True Positive Rate', fontsize=20)
 #        plt.title('ROC')
         plt.legend(loc="lower right", prop={'size': 15})
 #        plt.show()
@@ -722,14 +743,21 @@ nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) 
 roc_auc, _, _ = msacc(nonpain, pain, mslabel='Mean activity, AUC:', figsw=True)   
 
 with open('formalin_event_detection.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
-    formalin_event_detection = pickle.load(f)
-    formalin_event_detection = formalin_event_detection['Aprism_amplitude_formalin']
+    formalin_event = pickle.load(f)
+    formalin_event_detection = formalin_event['Aprism_amplitude_formalin']
+    formalin_frequency_detection = formalin_event['Aprism_frequency_formalin']
 
 target = np.array(formalin_event_detection)
 pain = list(target[:,5]) + list(target[:,9])
 nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) \
 + list(target[:,8]) + list(target[:,10]) 
-roc_auc, _, _ = msacc(nonpain, pain, mslabel='Event amplitude, AUC:', figsw=True)  
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='Event amplitude, AUC:', figsw=True)
+
+target = np.array(formalin_frequency_detection)
+pain = list(target[:,5]) + list(target[:,9])
+nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) \
++ list(target[:,8]) + list(target[:,10]) 
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='Event frequency, AUC:', figsw=True)  
 
 plt.savefig(savepath2 + 'ROC_fig1.png', dpi=1000)
 
@@ -763,19 +791,36 @@ plt.scatter(nonpaindata, nonpaindata2, s=3) # x:mov, y:t4
 m, b = mslinear_regression(nonpaindata, nonpaindata2)
 plt.plot(xaxis, xaxis*m+b, label='nonpain')
 
-plt.xlabel('Movement ratio', fontsize=20)
-plt.ylabel('Mean activity (df/f0)', fontsize=20)
+#plt.xlabel('Movement ratio', fontsize=20)
+#plt.ylabel('Mean activity (df/f0)', fontsize=20)
 plt.axis([0, 0.8, 0, 1.2])
 plt.legend(prop={'size': 15})
 plt.savefig(savepath2 + 't4_mov_corr', dpi=1000)
 
+from scipy import stats
+print('t4, movement corr', stats.pearsonr(nonpaindata, nonpaindata2))
 
 
+# event amplitude, frequency를 movement와 corr 비교
 
+target = np.array(formalin_event_detection)
+corr_t = np.concatenate((target[:-1,4], target[:-1,6], target[:8,8], target[:8,10]), axis=0).flatten()
+tmp1 = np.array(movement)[highGroup + highGroup2 + midleGroup, 0]
+tmp2 = np.array(movement)[highGroup + highGroup2 + midleGroup, 2]
+corr_m = np.concatenate((tmp1, tmp2), axis=0)
+print('amp, movement corr', stats.pearsonr(corr_t, corr_m))
+plt.figure()
+plt.scatter(corr_t, corr_m)
 
-
-
-
+target = np.array(formalin_frequency_detection)
+corr_t = np.concatenate((target[:-1,4], target[:-1,6], target[:8,8], target[:8,10]), axis=0).flatten()
+tmp1 = np.array(movement)[highGroup + highGroup2 + midleGroup, 0]
+tmp2 = np.array(movement)[highGroup + highGroup2 + midleGroup, 2]
+corr_m = np.concatenate((tmp1, tmp2), axis=0)
+print('amp, movement corr', stats.pearsonr(corr_t, corr_m))
+plt.figure()
+plt.scatter(corr_t, corr_m)
+# '안나오네..'
 
 
 
