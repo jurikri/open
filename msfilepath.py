@@ -6,7 +6,7 @@ Created on Sat Apr 20 20:58:38 2019
 """
 def msfilepath1(session):
 
-    mainpath = 'E:\\mscore\\syncbackup\\paindecoder\\data\\'
+    mainpath = 'D:\\mscore\\syncbackup\\paindecoder\\data\\'
 
     endsw = False
     
@@ -1279,6 +1279,108 @@ def msfilepath1(session):
         path = mainpath + 's0130_2_Chloroquine'
         behav_data = list()
         raw_filepath = 's0130_2_Chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 124: 
+        path = mainpath + 's0205_1_chloroquine'
+        behav_data = list()
+        raw_filepath = 's0205_1_chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 125: 
+        path = mainpath + 's0205_2_chloroquine'
+        behav_data = list()
+        raw_filepath = 's0205_2_chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 126: 
+        path = mainpath + 's0206_1_chloroquine'
+        behav_data = list()
+        raw_filepath = 's0206_1_chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 127: 
+        path = mainpath + 's0206_2_chloroquine'
+        behav_data = list()
+        raw_filepath = 's0206_2_chloroquine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+       
+        ### 20200324
+        
+    elif session == 128: 
+        path = mainpath + 's0214_1_PSL_itSaline'
+        behav_data = list()
+        raw_filepath = 's0214_1_PSL_itSaline.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 129: 
+        path = mainpath + 's0214_2_PSL_itSaline'
+        behav_data = list()
+        raw_filepath = 's0214_2_PSL_itSaline.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 130: 
+        path = mainpath + 's0228_PSL_itSaline'
+        behav_data = list()
+        raw_filepath = 's0228_PSL_itSaline.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 131: 
+        path = mainpath + 's0215_2_PSL_clonidine'
+        behav_data = list()
+        raw_filepath = 's0215_2_PSL_clonidine.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 132: 
+        path = mainpath + 's0215_PSL_clonidine_saline'
+        behav_data = list()
+        raw_filepath = 's0215_PSL_clonidine_saline.xlsx'
+        behav_data.append('001000.csv')
+        behav_data.append('002000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        behav_data.append('003000.csv')
+        
+    elif session == 133: 
+        path = mainpath + 's0218_PSL_clonidine'
+        behav_data = list()
+        raw_filepath = 's0218_PSL_clonidine.xlsx'
         behav_data.append('001000.csv')
         behav_data.append('002000.csv')
         behav_data.append('003000.csv')
