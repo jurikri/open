@@ -65,6 +65,8 @@ adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 CFAgroup = msGroup['CFAgroup']
 chloroquineGroup = msGroup['chloroquineGroup']
+itSaline = msGroup['itSaline']
+itChlorodine = msGroup['itChlorodine']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -72,7 +74,7 @@ del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup # for test only
-pslset = pslGroup + shamGroup + adenosineGroup
+pslset = pslGroup + shamGroup + adenosineGroup + itSaline + itChlorodine
 
 # In[]
 
@@ -400,7 +402,7 @@ for nix, q in enumerate(project_list):
             
         # nonpain     
         msclass = 0 # nonpain
-        X_tmp = []; Y_tmp = []; Z_tmp = []; T_tmp = []
+        X_tmp = []; Y_tmp = []; Z_tmp = []
         for SE in range(N):
             if SE in trainingset:
                 if SE in reducing_test_list:
@@ -414,9 +416,12 @@ for nix, q in enumerate(project_list):
                         c5 = SE in salineGroup and se in [0,1,2,3,4]
                         c6 = SE in CFAgroup and se in [0]
                         c7 = SE in chloroquineGroup and se in [0]
+                        c8 = SE in itSaline and se in [0,1,2]
+                        c9 = SE in itChlorodine and se in [0]
+                        
 #                        c13 = SE in chloroquineGroup and se in [1]
                                         
-                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
+                        if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
 #                        if c13: #
                             # msset 만 baseline을 제외시킴, total set 아님 
                             exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
@@ -616,15 +621,17 @@ for nix, q in enumerate(project_list):
                     c5 = SE in salineGroup and se in [0,1,2,3,4]
                     c6 = SE in CFAgroup and se in [0]
                     c7 = SE in chloroquineGroup and se in [0]
-                    
+                    c8 = SE in itSaline and se in [0,1,2]
+                    c9 = SE in itChlorodine and se in [0]
+
                     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
-                    c11 = SE in set2 and se in [1]
-                    c12 = SE in capsaicinGroup and se in [1]
-                    c13 = SE in pslGroup and se in [1,2]
+                    c101 = SE in set2 and se in [1]
+                    c102 = SE in capsaicinGroup and se in [1]
+                    c103 = SE in pslGroup and se in [1,2]
                                        
-                    if c1 or c2 or c3 or c4 or c5 or c6 or c7:
+                    if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
                         msclass = 0; init = True
-                    elif c11 or c12 or c13: #
+                    elif c101 or c102 or c103: #
                         msclass = 1; init = True
                  
                 if init:
