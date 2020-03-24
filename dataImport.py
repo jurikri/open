@@ -22,13 +22,16 @@ ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
 capsaicinGroup =    [60,61,62,64,65,82,83,104,105]
 yohimbineGroup =    [63,66,67,68,69,74]
-pslGroup =          [70,71,72,75,76,77,78,79,80,84,85,86,87,88,93,94] # 73 제외, activitiy가 전반적으로 높음. cell 상태가 안좋기 때문에 제외하기로 함
+pslGroup =          [70,71,72,73,75,76,77,78,79,80,84,85,86,87,88,93,94] 
+# 73 제외, activitiy가 전반적으로 높음. cell 상태가 안좋기 때문에 제외하기로 함
 # 73 다시 넣을까? 
 shamGroup =         [81,89,90,91,92,97]
 adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
 CFAgroup =          [106,107,108,109,116,117]
 highGroup2 =        [95,96] # 학습용, late ,recovery는 애초에 분석되지 않음, base movement data 없음
-chloroquineGroup =  [118,119,120,121,122,123]
+chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
+itSaline =          [128,129,130]
+itChlorodine =      [131,132,133] # 132 3일차는 it saline으로 분류되어야함.
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115]] # baseline 독립, training 때 base를 skip 하지 않음.
@@ -58,7 +61,7 @@ import numpy as np
 import pandas as pd
 import os
 import sys
-msdir = 'E:\\mscore\\code_lab'; sys.path.append(msdir)
+msdir = 'D:\\mscore\\code_lab'; sys.path.append(msdir)
 import msfilepath
 import pickle
 import hdf5storage
@@ -373,6 +376,10 @@ def msMovementExtraction(list1):
                 thr = 1
             if N == 116 and i in [0]:
                 thr = 0.9
+            if N == 127 and i in [1]:
+                thr = 1
+            if N == 128 and i in [2]:
+                thr = 1
                    
             aline = np.zeros(diffplot.shape[0]); aline[:] = thr
 #            movement_thr_save[SE,se] = thr
