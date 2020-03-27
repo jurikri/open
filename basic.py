@@ -65,8 +65,8 @@ adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 CFAgroup = msGroup['CFAgroup']
 chloroquineGroup = msGroup['chloroquineGroup']
-itSaline = msGroup['itSaline']
-itChlorodine = msGroup['itChlorodine']
+itSalineGroup = msGroup['itSalineGroup']
+itClonidineGroup = msGroup['itClonidineGroup']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -74,7 +74,7 @@ del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup # for test only
-pslset = pslGroup + shamGroup + adenosineGroup + itSaline + itChlorodine
+pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
 
 # In[]
 
@@ -247,8 +247,8 @@ layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6
 #acitivityThr = 0.4
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
-# regularization
-l2_rate = 0.3 # regularization 상수
+# regulariza3 # regularization 상수
+l2_rate = 0.3
 dropout_rate1 = 0.20 # dropout late
 dropout_rate2 = 0.10 # 
 
@@ -265,10 +265,6 @@ testsw3 = True
 #    import tensorflow as tf
 
 # 집 컴퓨터, test 전용으로 수정
-c1 = savepath == 'D:\\painDecorder\\save\\tensorData\\' or savepath == 'E:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'
-if True and c1:
-    trainingsw = True
-    testsw2 = False
 
 acc_thr = 0.91 # 0.93 -> 0.94
 batch_size = 2**9 # 5000
@@ -283,17 +279,19 @@ classratio = 1 # class under sampling ratio
 project_list = []
  # proejct name, seed
 
-project_list.append(['control_test_segment_adenosine_set1', 100, None])
-project_list.append(['control_test_segment_adenosine_set2', 200, None])
-project_list.append(['control_test_segment_adenosine_set3', 300, None])
-project_list.append(['control_test_segment_adenosine_set4', 400, None])
-project_list.append(['control_test_segment_adenosine_set5', 500, None])
-project_list.append(['control_test_segment_adenosine_set6', 600, None])
-project_list.append(['control_test_segment_adenosine_set7', 700, None])
-project_list.append(['control_test_segment_adenosine_set8', 800, None])
-project_list.append(['control_test_segment_adenosine_set9', 900, None])
-project_list.append(['control_test_segment_adenosine_set10', 1000, None])
-project_list.append(['control_test_segment_adenosine_set11', 1100, None])
+#project_list.append(['control_test_segment_adenosine_set1', 100, None])
+#project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#project_list.append(['control_test_segment_adenosine_set4', 400, None])
+#project_list.append(['control_test_segment_adenosine_set5', 500, None])
+#project_list.append(['control_test_segment_adenosine_set6', 600, None])
+#project_list.append(['control_test_segment_adenosine_set7', 700, None])
+#project_list.append(['control_test_segment_adenosine_set8', 800, None])
+#project_list.append(['control_test_segment_adenosine_set9', 900, None])
+ 
+#project_list.append(['with_itset_1', 1100, None])
+#project_list.append(['with_itset_2', 1200, None])
+project_list.append(['with_itset_3', 1300, None])
 # 
 #project_list.append(['20200318_basic_updated_1', 100, None]) # acc 0.91
 #project_list.append(['20200318_basic_updated_2', 200, None]) # acc 0.85
@@ -375,7 +373,7 @@ for nix, q in enumerate(project_list):
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -416,9 +414,9 @@ for nix, q in enumerate(project_list):
                         c5 = SE in salineGroup and se in [0,1,2,3,4]
                         c6 = SE in CFAgroup and se in [0]
                         c7 = SE in chloroquineGroup and se in [0]
-                        c8 = SE in itSaline and se in [0,1,2]
-                        c9 = SE in itChlorodine and se in [0]
-                        
+                        c8 = SE in itSalineGroup and se in [0,1,2]
+                        c9 = SE in itClonidineGroup and se in [0]
+  
 #                        c13 = SE in chloroquineGroup and se in [1]
                                         
                         if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
@@ -588,77 +586,67 @@ for nix, q in enumerate(project_list):
     
     def valid_generation(mousenum, only_se=None):
         X_tmp = []; Y_tmp = []; valid = None
-        testlist = [mouselist[sett]]
+        test_mouseNum = mousenum
         
-        if mouselist[sett] in np.array(msset_total)[:,0]:
-            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
-                testlist.append(u)
- 
-        if not(len(etc) == 0):
-            if etc[0] == mouselist[sett]:
-                print('test ssesion, etc group 입니다.') 
-                testlist = list(etc)
+        sessionNum = 5
+        if test_mouseNum in se3set:
+            sessionNum = 3
         
-        for test_mouseNum in testlist:
-            sessionNum = 5
-            if test_mouseNum in se3set:
-                sessionNum = 3
-            
 #            SE = test_mouseNum
-            for se in range(sessionNum):
-                if only_se != None and only_se != se:
-                    continue
-                
-                if only_se != None:
-                    msclass = 1; init = True # 무적권 pain으로 취급
-                elif only_se == None:
-                    SE = test_mouseNum
-                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
-                    c1 = SE in set1 and se in [0,2]
-                    c2 = SE in capsaicinGroup and se in [0,2]
-                    c3 = SE in pslGroup + adenosineGroup and se in [0]
-                    c4 = SE in shamGroup and se in [0,1,2]
-                    c5 = SE in salineGroup and se in [0,1,2,3,4]
-                    c6 = SE in CFAgroup and se in [0]
-                    c7 = SE in chloroquineGroup and se in [0]
-                    c8 = SE in itSaline and se in [0,1,2]
-                    c9 = SE in itChlorodine and se in [0]
+        for se in range(sessionNum):
+            if only_se != None and only_se != se:
+                continue
+            
+            if only_se != None:
+                msclass = 1; init = True # 무적권 pain으로 취급
+            elif only_se == None:
+                SE = test_mouseNum
+                set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+                c1 = SE in set1 and se in [0,2]
+                c2 = SE in capsaicinGroup and se in [0,2]
+                c3 = SE in pslGroup + adenosineGroup and se in [0]
+                c4 = SE in shamGroup and se in [0,1,2]
+                c5 = SE in salineGroup and se in [0,1,2,3,4]
+                c6 = SE in CFAgroup and se in [0]
+                c7 = SE in chloroquineGroup and se in [0]
+                c8 = SE in itSalineGroup and se in [0,1,2]
+                c9 = SE in itClonidineGroup and se in [0]
 
-                    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
-                    c101 = SE in set2 and se in [1]
-                    c102 = SE in capsaicinGroup and se in [1]
-                    c103 = SE in pslGroup and se in [1,2]
-                                       
-                    if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
-                        msclass = 0; init = True
-                    elif c101 or c102 or c103: #
-                        msclass = 1; init = True
-                 
-                if init:
-                    binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
-                    if signalss[test_mouseNum][se].shape[0] == full_sequence:
-                        binning = [0]
-                    binNum = len(binning)
-                    
+                set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+                c101 = SE in set2 and se in [1]
+                c102 = SE in capsaicinGroup and se in [1]
+                c103 = SE in pslGroup and se in [1,2]
+                                   
+                if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
+                    msclass = 0; init = True
+                elif c101 or c102 or c103: #
+                    msclass = 1; init = True
+             
+            if init:
+                binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                    binning = [0]
+                binNum = len(binning)
+                
 #                    mssignal2 = np.array(movement_syn[test_mouseNum][se])
-                    for i in range(binNum):    
-                    # each ROI
-                        signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
-                        ROInum = signalss_PSL_test.shape[1]
-                        
+                for i in range(binNum):    
+                # each ROI
+                    signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                    ROInum = signalss_PSL_test.shape[1]
+                    
 #                        mannual_signal2 = mssignal2[binning[i]:binning[i]+full_sequence]
 #                        mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                        
-                        for ROI in range(ROInum):
-                            mannual_signal = signalss_PSL_test[:,ROI]
-                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                    
+                    for ROI in range(ROInum):
+                        mannual_signal = signalss_PSL_test[:,ROI]
+                        mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
 
 #                            print(mannual_signal2.shape)
 
-                            Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
-                                           Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                            
-                            X_tmp += Xtest; Y_tmp += Ytest
+                        Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
+                                       Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                        
+                        X_tmp += Xtest; Y_tmp += Ytest
                                  
         if np.array(Y_tmp).shape[0] != 0:      
             Xtest = array_recover(X_tmp); 
@@ -717,7 +705,11 @@ for nix, q in enumerate(project_list):
         mouselist.append(etc[0])
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
-    
+#    tmp = []
+#    for t in mouselist:
+#        if not t in pslset + capsaicinGroup + CFAgroup:
+#            tmp.append(t)
+            
     wanted = pslset + capsaicinGroup + CFAgroup
     # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
@@ -931,7 +923,7 @@ for nix, q in enumerate(project_list):
         if isfile2 and testsw3:
             for test_mouseNum in testlist:
                 picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'testsw3_' + str(test_mouseNum) + '.pickle'
-                if not(os.path.isfile(picklesavename)): # 만들어야될게 없으면 실행 or overwrite
+                if not(os.path.isfile(picklesavename)) or False: # 만들어야될게 없으면 실행 or overwrite
                     dummy_table = np.zeros((N,5))
                     reset_keras(model)
                     model, idcode = keras_setup(lr=0)
