@@ -278,20 +278,20 @@ classratio = 1 # class under sampling ratio
 
 project_list = []
  # proejct name, seed
-
+#
 #project_list.append(['control_test_segment_adenosine_set1', 100, None])
 #project_list.append(['control_test_segment_adenosine_set2', 200, None])
 #project_list.append(['control_test_segment_adenosine_set3', 300, None])
 #project_list.append(['control_test_segment_adenosine_set4', 400, None])
 #project_list.append(['control_test_segment_adenosine_set5', 500, None])
-#project_list.append(['control_test_segment_adenosine_set6', 600, None])
-#project_list.append(['control_test_segment_adenosine_set7', 700, None])
-#project_list.append(['control_test_segment_adenosine_set8', 800, None])
-#project_list.append(['control_test_segment_adenosine_set9', 900, None])
+project_list.append(['control_test_segment_adenosine_set6', 600, None])
+project_list.append(['control_test_segment_adenosine_set7', 700, None])
+project_list.append(['control_test_segment_adenosine_set8', 800, None])
+project_list.append(['control_test_segment_adenosine_set9', 900, None])
  
 #project_list.append(['with_itset_1', 1100, None])
 #project_list.append(['with_itset_2', 1200, None])
-project_list.append(['with_itset_3', 1300, None])
+#project_list.append(['with_itset_3', 1300, None])
 # 
 #project_list.append(['20200318_basic_updated_1', 100, None]) # acc 0.91
 #project_list.append(['20200318_basic_updated_2', 200, None]) # acc 0.85
@@ -414,7 +414,7 @@ for nix, q in enumerate(project_list):
                         c5 = SE in salineGroup and se in [0,1,2,3,4]
                         c6 = SE in CFAgroup and se in [0]
                         c7 = SE in chloroquineGroup and se in [0]
-                        c8 = SE in itSalineGroup and se in [0,1,2]
+                        c8 = SE in itSalineGroup and se in [0]
                         c9 = SE in itClonidineGroup and se in [0]
   
 #                        c13 = SE in chloroquineGroup and se in [1]
@@ -609,7 +609,7 @@ for nix, q in enumerate(project_list):
                 c5 = SE in salineGroup and se in [0,1,2,3,4]
                 c6 = SE in CFAgroup and se in [0]
                 c7 = SE in chloroquineGroup and se in [0]
-                c8 = SE in itSalineGroup and se in [0,1,2]
+                c8 = SE in itSalineGroup and se in [0]
                 c9 = SE in itClonidineGroup and se in [0]
 
                 set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
@@ -710,7 +710,7 @@ for nix, q in enumerate(project_list):
 #        if not t in pslset + capsaicinGroup + CFAgroup:
 #            tmp.append(t)
             
-    wanted = pslset + capsaicinGroup + CFAgroup
+    wanted = itSalineGroup
     # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
