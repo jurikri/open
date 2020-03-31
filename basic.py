@@ -24,6 +24,7 @@ from keras.layers.wrappers import Bidirectional
 from keras.optimizers import Adam
 from numpy.random import seed as nseed
 import tensorflow as tf
+from keras.layers import BatchNormalization
 
 
 # set pathway
@@ -281,13 +282,24 @@ project_list = []
  # proejct name, seed
 #
 #project_list.append(['control_test_segment_adenosine_set1', 100, None])
-project_list.append(['control_test_segment_adenosine_set2', 200, None])
-#project_list.append(['control_test_segment_adenosine_set3', 300, None])
-#project_list.append(['control_test_segment_adenosine_set4', 400, None])
-#project_list.append(['control_test_segment_adenosine_set5', 500, None])
+#project_list.append(['control_test_segment_adenosine_set2', 200, None])
+project_list.append(['control_test_segment_adenosine_set3', 300, None])
+project_list.append(['control_test_segment_adenosine_set4', 400, None])
+project_list.append(['control_test_segment_adenosine_set5', 500, None])
+ 
+#project_list.append(['0330_batchnorm_1', 100, None])
+#project_list.append(['0330_batchnorm_2', 200, None])
+#project_list.append(['0330_batchnorm_3', 300, None])
 
 q = project_list[0]
 for nix, q in enumerate(project_list):
+#    if nix == 1:
+#        l2_rate = 0.1
+#    if nix == 2:
+#        l2_rate = 0
+    
+    print(nix, l2_rate)
+    
     settingID = q[0]; seed = q[1]; seed2 = int(seed+1)
     continueSW = q[2]
     
@@ -526,6 +538,7 @@ for nix, q in enumerate(project_list):
             added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
         merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate),\
                         activation='relu')(added) # fully conneted layers, relu
+#        merge_1 = BatchNormalization()(merge_1)
         merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
         merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
                         activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
@@ -676,7 +689,7 @@ for nix, q in enumerate(project_list):
 #        if not t in pslset + capsaicinGroup + CFAgroup:
 #            tmp.append(t)
             
-    wanted = [etc[0]]
+    wanted = mouselist
     # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
@@ -780,9 +793,21 @@ for nix, q in enumerate(project_list):
             hist_save_val_loss = []
             hist_save_val_acc = []
             
+            testlist = [mouselist[sett]]
+            if mouselist[sett] in np.array(msset_total)[:,0]:
+                for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == mouselist[sett])[0][0],:][1:]:
+                    testlist.append(u)
+            
+            if not(len(etc) == 0):
+                if etc[0] == mouselist[sett]:
+                    print('test ssesion, etc group 입니다.') 
+                    testlist = list(etc)
+            
+            
             starttime = time.time()
+            grade_acc = 0.86
             while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-                acc_thr_sw = True
+                acc_thr_sw = False
                 if (cnt > maxepoch/epochs) or (current_acc < 0.70 and cnt > 300/epochs) or ( current_acc < 0.51 and cnt > 50/epochs):
                     seed += 1
                     reset_keras(model)
@@ -796,40 +821,63 @@ for nix, q in enumerate(project_list):
                 current_weightsave = RESULT_SAVE_PATH + 'tmp/'+ str(idcode) + '_' + str(mouselist[sett]) + '_my_model_weights.h5'
                 
                 isfile1 = os.path.isfile(current_weightsave)
-                if isfile1 and cnt > 0:
-                    model.load_weights(current_weightsave)
-                    print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
-                else:
-                    print('학습 진행중인 model 없음. 새로 시작합니다')
+#                if isfile1 and cnt > 0:
+#                    model.load_weights(current_weightsave)
+#                    print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
+#                else:
+#                    print('학습 진행중인 model 없음. 새로 시작합니다')
                 
                 if mouselist[sett] == etc[0]:
                     valid = valid_generation(etc, only_se=None)
                 else:
                     valid = valid_generation([mouselist[sett]], only_se=None)
-                
-                if acc_thr_sw:
-                    hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs, validation_data = valid)
-                    cnt += 1
-                    hist_save_loss += list(np.array(hist.history['loss']))
-                    hist_save_acc += list(np.array(hist.history['accuracy']))
-                    hist_save_val_loss += list(np.array(hist.history['val_loss']))
-                    hist_save_val_acc += list(np.array(hist.history['val_accuracy']))
-                    if hist_save_acc[-1] > acc_thr:
-                            acc_thr_sw = False
-                
-                for _ in range(20):
-                    if acc_thr_sw:
-                        hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs)
-                        cnt += 1
-                        hist_save_loss += list(np.array(hist.history['loss']))
-                        hist_save_acc += list(np.array(hist.history['accuracy']))
-                        if hist_save_acc[-1] > acc_thr:
-                            acc_thr_sw = False
+                  
+                if isfile1 and cnt > 0:
+                    reset_keras(model)
+                    model, idcode = keras_setup(lr=lr)
+                    model.load_weights(current_weightsave)
+                    print('mouse #', [mouselist[sett]], cnt, '번째 이어서 학습합니다.')
                     
+                hist = model.fit(tr_x, tr_y_shuffle, batch_size = batch_size, epochs = epochs)
+                cnt += 1
+                hist_save_loss += list(np.array(hist.history['loss']))
+                hist_save_acc += list(np.array(hist.history['accuracy']))
+                if hist_save_acc[-1] > grade_acc:
+                    acc_thr_sw = True
+                    print(grade_acc)
+                    grade_acc += 0.02
+                                          
                 model.save_weights(current_weightsave)
+                
                 # 종료조건: 
                 current_acc = hist_save_acc[-1] 
+                
+                
+                if acc_thr_sw:
+                    dummy_table = np.zeros((N,5))
+                    for test_mouseNum in testlist:
                         
+                        reset_keras(model)
+                        model, idcode = keras_setup(lr=0)
+                        model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+                        
+                        sessionNum = 5
+                        if test_mouseNum in se3set:
+                            sessionNum = 3
+                        for se in range(sessionNum): 
+                            valid = valid_generation([test_mouseNum], only_se=se)
+                            print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+                            hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+    #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+                            dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+
+                    # 최적화용 저장
+                    tmp = 'l2_rate_' + str(l2_rate) +  '_current_acc_' + str(round(current_acc,3)) 
+                    picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'valid_' + tmp + '.pickle'
+                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename, '저장되었습니다.')  
+                           
             model.save_weights(final_weightsave)   
             print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
 
@@ -853,23 +901,23 @@ for nix, q in enumerate(project_list):
             csvwriter.writerow([spendingtime, spendingtime/60, spendingtime/60**2])
             csvfile.close()
 
-            if validation_sw:
-                plt.figure();
-                mouseNum = mouselist[sett]
-                hist_save_val_loss_plot = np.array(hist_save_val_loss)/np.max(hist_save_val_loss)
-                
-                plt.plot(hist_save_val_loss_plot, label= '# ' + str(mouseNum) + ' loss')
-                plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
-                plt.legend()
-                plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.png')
-                plt.close()
-
-                savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.csv'
-                csvfile = open(savename, 'w', newline='')
-                csvwriter = csv.writer(csvfile)
-                csvwriter.writerow(hist_save_val_acc)
-                csvwriter.writerow(hist_save_val_loss)
-                csvfile.close()
+#            if validation_sw:
+#                plt.figure();
+#                mouseNum = mouselist[sett]
+#                hist_save_val_loss_plot = np.array(hist_save_val_loss)/np.max(hist_save_val_loss)
+#                
+#                plt.plot(hist_save_val_loss_plot, label= '# ' + str(mouseNum) + ' loss')
+#                plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
+#                plt.legend()
+#                plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.png')
+#                plt.close()
+#
+#                savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.csv'
+#                csvfile = open(savename, 'w', newline='')
+#                csvwriter = csv.writer(csvfile)
+#                csvwriter.writerow(hist_save_val_acc)
+#                csvwriter.writerow(hist_save_val_loss)
+#                csvfile.close()
 
         ####### test 구문 입니다. ##########        
         # testlist는 위에 작성한 dev set의 testlist 변수를 그대로 이어 받는다.
@@ -887,7 +935,7 @@ for nix, q in enumerate(project_list):
         final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
         isfile2 = os.path.isfile(final_weightsave)
         print(final_weightsave)
-        print('test를 위한 model 존재 유무', isfile2)
+        print('test를 위한 model 존재 유무', isfile2)    
         
         if isfile2 and testsw3:
             for test_mouseNum in testlist:
