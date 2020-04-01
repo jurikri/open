@@ -236,11 +236,11 @@ print('sequenceSize', sequenceSize)
  
 # learning intensity
 epochs = 1 # epoch 종료를 결정할 최소 단위.
-lr = 1e-3 # learning rate
+lr = 5e-4 # learning rate
 fn = 1
 
-n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 10) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8 # 원래 6 
 # 6 for normal
 # 10 for +cfa
 
@@ -557,11 +557,17 @@ for nix, q in enumerate(project_list):
             added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
         merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate),\
                         activation='relu')(added) # fully conneted layers, relu
-        merge_1 = BatchNormalization()(merge_1)
+#        merge_1 = BatchNormalization()(merge_1)
+#        merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
+#        merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
+#                        activation='relu')(merge_2) # fully conneted layers, sigmoid
+##        merge_2 = BatchNormalization()(merge_2)
+        
         merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
         merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
                         activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
-        merge_2 = BatchNormalization()(merge_2)
+#        merge_2 = BatchNormalization()(merge_2)
+        
         merge_3 = Dense(n_out, input_dim=n_out)(merge_2) # regularization 삭제
         merge_4 = Activation('softmax')(merge_3) # activation as softmax function
         
@@ -683,8 +689,10 @@ for nix, q in enumerate(project_list):
     
     while True:
         Ylist = list(range(len(Y)))
-        msmin = 200 # 조합 최소 갯수    
+        msmin = 50 # 조합 최소 갯수    
+        random.seed(None)
         rn = random.randrange(msmin, len(Ylist))
+        rn = 50
         print('sample min', msmin, 'sample max', len(Ylist), 'rn', rn)
         rlist = random.sample(Ylist, rn)
         X_elite=[]; [X_elite.append([]) for u in range(len(X))]
@@ -694,7 +702,7 @@ for nix, q in enumerate(project_list):
         Z_elite = np.array(indexer)[rlist]
     
         trX, trY, trZ = upsampling(X_elite, Y_elite, Z_elite)
-    
+           
         testlist = highGroup + midleGroup
         testlist.remove(8); testlist.remove(26)
         valid = valid_generation(testlist, only_se=None)
@@ -710,22 +718,11 @@ for nix, q in enumerate(project_list):
         starttime = time.time(); current_acc = -np.inf; cnt=0
         s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
         grade_acc = 0.6
-        while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
-            acc_thr_sw = False
+        while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
             if (cnt > maxepoch/epochs) or \
-            (current_acc < 0.70 and cnt > 600/epochs) or (current_acc < 0.51 and cnt > 200/epochs):
-                
+            (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
                 break
-            
-    #            seed += 1
-    #            reset_keras(model)
-    #            nseed(seed)
-    #            tf.random.set_seed(seed)   
-    #            model, idcode = keras_setup() 
-    ##                    model.load_weights(initial_weightsave)      
-    #            current_acc = -np.inf; cnt = -1
-    #            print('seed 변경, model reset 후 처음부터 다시 학습합니다.')
-    
+
             current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
             isfile1 = os.path.isfile(current_weightsave)
       
@@ -755,7 +752,7 @@ for nix, q in enumerate(project_list):
                 sval_loss += list(np.array(hist.history['val_loss']))
                 sval_acc += list(np.array(hist.history['val_accuracy']))
             
-                if s_acc[-1] - 0.02 > sval_acc[-1]:
+                if s_acc[-1] - 0.04 > sval_acc[-1]:
                     print('overfit 판단, 종료')
                     break
             
@@ -763,21 +760,34 @@ for nix, q in enumerate(project_list):
             # 종료조건: 
             current_acc = s_acc[-1] 
         
-        mssave.append([grade_acc-0.05, trZ])
+#        if sval_acc[-1] > 0.55:
+        mssave.append([grade_acc-0.05, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
+        print('len(mssave)', len(mssave))
         with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
-        
-        
-        
-        
-        
-        
+
 # In[]      # mean signal 처리
-       
+#np.mean(np.array(mssave)[:,-1])
 
+index_value_save = np.zeros(np.max(indexer, axis=0)+1)
+index_value_save[:] = np.nan
+
+mssave2 = np.array(mssave)
+
+for i in range(len(mssave2)):
+    acctmp = mssave2[i][5][-1]
+#    print(acctmp)
+    for j in mssave2[i][1]:
+        tmp = index_value_save[j[0], j[1], j[2]]
+        index_value_save[j[0], j[1], j[2]] = np.nanmean([tmp, acctmp])
+#        print(index_value_save[j[0], j[1], j[2]])
+        
+print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
+
+
+plt.hist(index_value_save.flatten())
+np.where(index_value_save>0.73)
 # In[]
-
-
 
 
 
