@@ -911,7 +911,7 @@ with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
     print(picklesavename, '저장되었습니다.')  
 
-
+# In[]
 picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin_psl.pickle'
 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
     dummy_table_fcp = pickle.load(f)
@@ -933,27 +933,21 @@ base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
 print('base_vs_3', base_vs_3)
 print('base_vs_10', base_vs_10)
 
+# In[]
+picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin.pickle'
+with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+    dummy_table_fcp = pickle.load(f)
+psl0 = nanex(dummy_table_fcp[pslGroup,0])
+psl1 = nanex(dummy_table_fcp[pslGroup,1])
+psl2 = nanex(dummy_table_fcp[pslGroup,2])
+
+base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+
+print('base_vs_3', base_vs_3)
+print('base_vs_10', base_vs_10)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
 
 
 
