@@ -888,7 +888,7 @@ while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, ep
 final_weightsave = RESULT_SAVE_PATH + 'model/' + 'final_my_model_weights_final.h5'
 model.save_weights(final_weightsave) 
         
-dummy_table = np.zeros((N,5))
+dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
 for test_mouseNum in testlist:
     
     reset_keras(model)
@@ -910,6 +910,37 @@ picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin_psl.pickle
 with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
     print(picklesavename, '저장되었습니다.')  
+
+
+picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin_psl.pickle'
+with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+    dummy_table_fcp = pickle.load(f)
+
+from scipy import stats
+
+def nanex(array1):
+    array1 = np.array(array1)
+    array1 = array1[np.isnan(array1)==0]
+    return array1
+
+psl0 = nanex(dummy_table_fcp[pslGroup,0])
+psl1 = nanex(dummy_table_fcp[pslGroup,1])
+psl2 = nanex(dummy_table_fcp[pslGroup,2])
+
+base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+
+print('base_vs_3', base_vs_3)
+print('base_vs_10', base_vs_10)
+
+
+
+
+
+
+
+
+
 
 
 
