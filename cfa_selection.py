@@ -370,7 +370,7 @@ for nix, q in enumerate(project_list):
         # nonpain     
         msclass = 0 # nonpain
         X_tmp = []; Y_tmp = []; Z_tmp = []
-        for SE in range(forlist):
+        for SE in forlist:
             if SE in trainingset:
                 if SE in reducing_test_list:
                     for se in range(5):      
@@ -399,7 +399,7 @@ for nix, q in enumerate(project_list):
                                 msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                                 
                                 for u in msbins:
-                                    if cfa_set != None:
+                                    if type(cfa_set) != 'NoneType' and SE in CFAgroup:
                                         if not [SE, se, u] in cfa_set:
                                             continue
                                     
@@ -420,7 +420,7 @@ for nix, q in enumerate(project_list):
         
         msclass = 1 # pain
         X_tmp = []; Y_tmp = []; Z_tmp = []
-        for SE in range(forlist):
+        for SE in forlist:
             if SE in trainingset:
                 if SE in reducing_test_list:
                     for se in range(5):      
@@ -440,7 +440,7 @@ for nix, q in enumerate(project_list):
                             msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
                             for u in msbins:
-                                if cfa_set != None:
+                                if type(cfa_set) != 'NoneType' and SE in CFAgroup:
                                     if not [SE, se, u] in cfa_set:
                                         continue
 
@@ -456,11 +456,12 @@ for nix, q in enumerate(project_list):
                                 
         datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp                        
         sampleNum[msclass] = len(datasetX[msclass])
-        print('pain_sampleNum', sampleNum[msclass])
-                    
+        print('pain_sampleNum', sampleNum[msclass])          
+       
         return datasetX, datasetY, datasetZ
 
     def upsampling(X_elite, Y_elite, Z_elite):
+        
         X = np.array(X_elite)
         Y = np.array(Y_elite)
         Z = np.array(Z_elite)
@@ -518,8 +519,7 @@ for nix, q in enumerate(project_list):
     #        print(np.array(trX[u])[rix3].shape)
         trY = np.array(trY)[rix3]
         trZ = np.array(trZ)[rix3]
-        
-        
+
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
     # In[]
@@ -643,7 +643,7 @@ for nix, q in enumerate(project_list):
                     binNum = len(binning)
                     
     #                    mssignal2 = np.array(movement_syn[test_mouseNum][se])
-                    for i in range(np.min([2, binNum])):    
+                    for i in range(binNum): # range(np.min([2, binNum])):    
                     # each ROI
                         signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
                         ROInum = signalss_PSL_test.shape[1]
@@ -792,14 +792,18 @@ for i in range(len(mssave2)):
         
 print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
 
-
 plt.hist(index_value_save.flatten())
-elite_cfa = np.where(index_value_save>0.73)
+elite_cfa = np.where(index_value_save>0.70)
+elite_cfa = np.array(elite_cfa); elite_cfa2=[]
+for i in range(elite_cfa.shape[1]):
+    elite_cfa2.append(list(elite_cfa[:,i]))
 # In[] Formalin or F + CFA로 psl test
 
 # traning set
-X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa)
+X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
+X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup), cfa_set=None)
     
+
 X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
 for i in range(1,n_out):
     X = np.concatenate((X,X_save2[i]), axis = 0)
@@ -813,10 +817,20 @@ Z = np.array(Z)
 trX, trY, trZ = upsampling(X, Y, Z)
 
 # val set
-testlist = shamGroup + pslGroup
+testlist = pslGroup
 valid = valid_generation(testlist, only_se=None)
-validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
-valid = tuple([validX, validY])
+#validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
+#valid = tuple([validX, validY])
+# In[]
+
+lr = 1e-3 # learning rate
+
+n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 6) #
+
+l2_rate = 0.3
+dropout_rate1 = 0.2 # dropout late
+dropout_rate2 = 0.1 # 
 
 # model reset
 reset_keras(model)
@@ -828,7 +842,8 @@ model.load_weights(initial_weightsave)
 # traning 
 starttime = time.time(); current_acc = -np.inf; cnt=0
 s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
-grade_acc = 0.6
+grade_acc = [0.6,0.7,0.8,0.85,0.9,0.95]
+gix = 0
 while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
     if (cnt > maxepoch/epochs) or \
     (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
@@ -850,9 +865,9 @@ while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, ep
     s_loss += list(np.array(hist.history['loss']))
     s_acc += list(np.array(hist.history['accuracy']))
                              
-    if s_acc[-1] > grade_acc:
-        print(grade_acc)
-        grade_acc += 0.05
+    if s_acc[-1] > grade_acc[gix]:
+        print(grade_acc[gix])
+        gix += 1
         
         hist = model.fit(trX, trY, batch_size = batch_size, epochs = epochs, \
                          validation_data = valid)
@@ -863,9 +878,9 @@ while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, ep
         sval_loss += list(np.array(hist.history['val_loss']))
         sval_acc += list(np.array(hist.history['val_accuracy']))
     
-        if s_acc[-1] - 0.04 > sval_acc[-1]:
-            print('overfit 판단, 종료')
-            break
+#        if s_acc[-1] - 0.04 > sval_acc[-1]:
+#            print('overfit 판단, 종료')
+#            break
         
     # 종료조건: 
     current_acc = s_acc[-1] 
