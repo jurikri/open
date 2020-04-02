@@ -360,7 +360,7 @@ for nix, q in enumerate(project_list):
               reducing_test_list += list(tmp)
     print('selected mouse #', len(reducing_test_list))          
 #    print(reducing_test_list)
-    def ms_sampling():
+    def ms_sampling(forlist=range(N), cfa_set=None):
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
         datasetX = []; datasetY = []; datasetZ = []
@@ -370,14 +370,14 @@ for nix, q in enumerate(project_list):
         # nonpain     
         msclass = 0 # nonpain
         X_tmp = []; Y_tmp = []; Z_tmp = []
-        for SE in range(N):
+        for SE in range(forlist):
             if SE in trainingset:
                 if SE in reducing_test_list:
                     for se in range(5):      
                         # pain Group에 들어갈 수 있는 모든 경우의 수 
-#                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
-#                        c1 = SE in set1 and se in [0,2]
-#                        c2 = SE in capsaicinGroup and se in [0,2]
+                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+                        c1 = SE in set1 and se in [0,2]
+                        c2 = SE in capsaicinGroup and se in [0,2]
 #                        c3 = SE in pslGroup + adenosineGroup and se in [0]
 #                        c4 = SE in shamGroup and se in [0,1,2]
 #                        c5 = SE in salineGroup and se in [0,1,2,3,4]
@@ -389,7 +389,7 @@ for nix, q in enumerate(project_list):
 #                        c13 = SE in chloroquineGroup and se in [1]
                                         
 #                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
-                        if c6:
+                        if c1 or c2 or c6:
 #                        if c13: #
                             # msset 만 baseline을 제외시킴, total set 아님 
                             exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
@@ -399,6 +399,10 @@ for nix, q in enumerate(project_list):
                                 msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                                 
                                 for u in msbins:
+                                    if cfa_set != None:
+                                        if not [SE, se, u] in cfa_set:
+                                            continue
+                                    
                                     mannual_signal = mssignal[u:u+full_sequence]
                                     mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                                     
@@ -416,26 +420,30 @@ for nix, q in enumerate(project_list):
         
         msclass = 1 # pain
         X_tmp = []; Y_tmp = []; Z_tmp = []
-        for SE in range(N):
+        for SE in range(forlist):
             if SE in trainingset:
                 if SE in reducing_test_list:
                     for se in range(5):      
                         # pain Group에 들어갈 수 있는 모든 경우의 수 
-#                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-#                        c11 = SE in set2 and se in [1]
+                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                        c11 = SE in set2 and se in [1]
                         c12 = SE in CFAgroup and se in [1,2]
 #                        c13 = SE in chloroquineGroup and se in [1]
                           
-                        if c12: # 
-#                            if not(0.15 < movement[SE,se]):
-#                                print(SE, se, 'movement 부족, pain session에서 제외.')
-#                                continue
+                        if c11 or c12: # 
+                            if not(0.15 < movement[SE,se]):
+                                print(SE, se, 'movement 부족, pain session에서 제외.')
+                                continue
                         
                             mssignal = np.mean(signalss[SE][se], axis=1)
 #                            mssignal2 = np.array(movement_syn[SE][se])
                             msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
                             for u in msbins:
+                                if cfa_set != None:
+                                    if not [SE, se, u] in cfa_set:
+                                        continue
+
                                 mannual_signal = mssignal[u:u+full_sequence]
                                 mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                                 
@@ -515,7 +523,7 @@ for nix, q in enumerate(project_list):
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
     # In[]
-    X_save2, Y_save2, Z_save2 = ms_sampling()
+    X_save2, Y_save2, Z_save2 = ms_sampling(forlist=CFAgroup)
     
     X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
     for i in range(1,n_out):
@@ -786,8 +794,91 @@ print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
 
 
 plt.hist(index_value_save.flatten())
-np.where(index_value_save>0.73)
-# In[]
+elite_cfa = np.where(index_value_save>0.73)
+# In[] Formalin or F + CFA로 psl test
+
+# traning set
+X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa)
+    
+X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
+for i in range(1,n_out):
+    X = np.concatenate((X,X_save2[i]), axis = 0)
+    Y = np.concatenate((Y,Y_save2[i]), axis = 0)
+    Z = np.concatenate((Z,Z_save2[i]), axis = 0)
+
+X = array_recover(X)
+Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
+Z = np.array(Z)
+
+trX, trY, trZ = upsampling(X, Y, Z)
+
+# val set
+testlist = shamGroup + pslGroup
+valid = valid_generation(testlist, only_se=None)
+validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
+valid = tuple([validX, validY])
+
+# model reset
+reset_keras(model)
+nseed(seed)
+tf.random.set_seed(seed)   
+model, idcode = keras_setup() 
+model.load_weights(initial_weightsave) 
+
+# traning 
+starttime = time.time(); current_acc = -np.inf; cnt=0
+s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
+grade_acc = 0.6
+while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
+    if (cnt > maxepoch/epochs) or \
+    (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
+        break
+
+    current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
+    isfile1 = os.path.isfile(current_weightsave)
+  
+    if isfile1 and cnt > 0:
+        reset_keras(model)
+        model, idcode = keras_setup(lr=lr)
+        model.load_weights(current_weightsave)
+        
+    hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
+    cnt += 1; model.save_weights(current_weightsave)
+    if cnt % 20 == 0 and cnt != 0:
+        print('cnt', cnt)
+                     
+    s_loss += list(np.array(hist.history['loss']))
+    s_acc += list(np.array(hist.history['accuracy']))
+                             
+    if s_acc[-1] > grade_acc:
+        print(grade_acc)
+        grade_acc += 0.05
+        
+        hist = model.fit(trX, trY, batch_size = batch_size, epochs = epochs, \
+                         validation_data = valid)
+        cnt += 1; model.save_weights(current_weightsave)
+    
+        s_loss += list(np.array(hist.history['loss']))
+        s_acc += list(np.array(hist.history['accuracy']))
+        sval_loss += list(np.array(hist.history['val_loss']))
+        sval_acc += list(np.array(hist.history['val_accuracy']))
+    
+        if s_acc[-1] - 0.04 > sval_acc[-1]:
+            print('overfit 판단, 종료')
+            break
+        
+    # 종료조건: 
+    current_acc = s_acc[-1] 
+        
+
+
+
+
+
+
+
+
+
 
 
 
