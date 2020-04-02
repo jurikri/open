@@ -884,9 +884,32 @@ while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, ep
         
     # 종료조건: 
     current_acc = s_acc[-1] 
+
+final_weightsave = RESULT_SAVE_PATH + 'model/' + 'final_my_model_weights_final.h5'
+model.save_weights(final_weightsave) 
         
+dummy_table = np.zeros((N,5))
+for test_mouseNum in testlist:
+    
+    reset_keras(model)
+    model, idcode = keras_setup(lr=0)
+    model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+    
+    sessionNum = 5
+    if test_mouseNum in se3set:
+        sessionNum = 3
+    for se in range(sessionNum): 
+        valid = valid_generation([test_mouseNum], only_se=se)
+        print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+        hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+#                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+        dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
 
-
+# 최적화용 저장
+picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin.pickle'
+with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+    print(picklesavename, '저장되었습니다.')  
 
 
 
