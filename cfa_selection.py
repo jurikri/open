@@ -801,7 +801,7 @@ for i in range(elite_cfa.shape[1]):
 
 # traning set
 X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
-X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup), cfa_set=None)
+#X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup), cfa_set=None)
     
 
 X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
@@ -821,7 +821,7 @@ testlist = pslGroup
 valid = valid_generation(testlist, only_se=None)
 #validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
 #valid = tuple([validX, validY])
-# In[]
+# In
 
 lr = 1e-3 # learning rate
 
@@ -906,13 +906,10 @@ for test_mouseNum in testlist:
         dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
 
 # 최적화용 저장
-picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin.pickle'
+picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin_psl.pickle'
 with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
     print(picklesavename, '저장되었습니다.')  
-
-
-
 
 
 
