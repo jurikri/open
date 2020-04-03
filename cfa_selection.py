@@ -399,7 +399,7 @@ for nix, q in enumerate(project_list):
                                 msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                                 
                                 for u in msbins:
-                                    if type(cfa_set) != 'NoneType' and SE in CFAgroup:
+                                    if not(cfa_set is None) and SE in CFAgroup:
                                         if not [SE, se, u] in cfa_set:
                                             continue
                                     
@@ -440,7 +440,7 @@ for nix, q in enumerate(project_list):
                             msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
                             
                             for u in msbins:
-                                if type(cfa_set) != 'NoneType' and SE in CFAgroup:
+                                if not(cfa_set is None) and SE in CFAgroup:
                                     if not [SE, se, u] in cfa_set:
                                         continue
 
@@ -793,125 +793,148 @@ for i in range(len(mssave2)):
 print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
 
 plt.hist(index_value_save.flatten())
-elite_cfa = np.where(index_value_save>0.70)
-elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-for i in range(elite_cfa.shape[1]):
-    elite_cfa2.append(list(elite_cfa[:,i]))
-# In[] Formalin or F + CFA로 psl test
-
-# traning set
-X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
-#X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup), cfa_set=None)
-    
-
-X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
-for i in range(1,n_out):
-    X = np.concatenate((X,X_save2[i]), axis = 0)
-    Y = np.concatenate((Y,Y_save2[i]), axis = 0)
-    Z = np.concatenate((Z,Z_save2[i]), axis = 0)
-
-X = array_recover(X)
-Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
-Z = np.array(Z)
-
-trX, trY, trZ = upsampling(X, Y, Z)
-
-# val set
-testlist = pslGroup
-valid = valid_generation(testlist, only_se=None)
-#validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
-#valid = tuple([validX, validY])
-# In
-
-lr = 1e-3 # learning rate
-
-n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 6) #
-
-l2_rate = 0.3
-dropout_rate1 = 0.2 # dropout late
-dropout_rate2 = 0.1 # 
-
-# model reset
-reset_keras(model)
-nseed(seed)
-tf.random.set_seed(seed)   
-model, idcode = keras_setup() 
-model.load_weights(initial_weightsave) 
-
-# traning 
-starttime = time.time(); current_acc = -np.inf; cnt=0
-s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
-grade_acc = [0.6,0.7,0.8,0.85,0.9,0.95]
-gix = 0
-while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
-    if (cnt > maxepoch/epochs) or \
-    (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
-        break
-
-    current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
-    isfile1 = os.path.isfile(current_weightsave)
-  
-    if isfile1 and cnt > 0:
-        reset_keras(model)
-        model, idcode = keras_setup(lr=lr)
-        model.load_weights(current_weightsave)
-        
-    hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
-    cnt += 1; model.save_weights(current_weightsave)
-    if cnt % 20 == 0 and cnt != 0:
-        print('cnt', cnt)
-                     
-    s_loss += list(np.array(hist.history['loss']))
-    s_acc += list(np.array(hist.history['accuracy']))
-                             
-    if s_acc[-1] > grade_acc[gix]:
-        print(grade_acc[gix])
-        gix += 1
-        
-        hist = model.fit(trX, trY, batch_size = batch_size, epochs = epochs, \
-                         validation_data = valid)
-        cnt += 1; model.save_weights(current_weightsave)
-    
-        s_loss += list(np.array(hist.history['loss']))
-        s_acc += list(np.array(hist.history['accuracy']))
-        sval_loss += list(np.array(hist.history['val_loss']))
-        sval_acc += list(np.array(hist.history['val_accuracy']))
-    
-#        if s_acc[-1] - 0.04 > sval_acc[-1]:
-#            print('overfit 판단, 종료')
-#            break
-        
-    # 종료조건: 
-    current_acc = s_acc[-1] 
-
-final_weightsave = RESULT_SAVE_PATH + 'model/' + 'final_my_model_weights_final.h5'
-model.save_weights(final_weightsave) 
-        
-dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
-for test_mouseNum in testlist:
-    
-    reset_keras(model)
-    model, idcode = keras_setup(lr=0)
-    model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
-    
-    sessionNum = 5
-    if test_mouseNum in se3set:
-        sessionNum = 3
-    for se in range(sessionNum): 
-        valid = valid_generation([test_mouseNum], only_se=se)
-        print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
-        hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
-#                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
-        dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
-
-# 최적화용 저장
-picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin_psl.pickle'
-with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
-    print(picklesavename, '저장되었습니다.')  
 
 # In[]
+
+for si in range(6):
+    if si == 0:
+        savename = 'fc_control'
+    elif si == 1:
+        savename = 'fcp_total_control'
+    elif si == 2:
+        savename = 'fcp_thr_0.65'; thr = 0.55
+    elif si == 3:
+        savename = 'fcp_thr_0.7'; thr = 0.60
+    elif si == 4:
+        savename = 'fcp_thr_0.75'; thr = 0.65
+    elif si == 5:
+        savename = 'fcp_thr_0'; thr = 0
+
+    if si in [0,1]:
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup), cfa_set=None)
+        
+    elif si in [2,3,4.5]:
+        elite_cfa = np.where(index_value_save>thr)
+        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
+        for i in range(elite_cfa.shape[1]):
+            elite_cfa2.append(list(elite_cfa[:,i]))
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
+        
+    for ti in range(5):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        print('index', savename2)
+        
+        X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
+        for i in range(1,n_out):
+            X = np.concatenate((X,X_save2[i]), axis = 0)
+            Y = np.concatenate((Y,Y_save2[i]), axis = 0)
+            Z = np.concatenate((Z,Z_save2[i]), axis = 0)
+        
+        X = array_recover(X)
+        Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
+        Z = np.array(Z)
+        
+        trX, trY, trZ = upsampling(X, Y, Z)
+        
+        # val set
+        testlist = pslGroup
+        valid = valid_generation(testlist, only_se=None)
+        #validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
+        #valid = tuple([validX, validY])
+        # In
+        
+        lr = 1e-3 # learning rate
+        
+        n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+        layer_1 = int(8 * 6) #
+        
+        l2_rate = 0.3
+        dropout_rate1 = 0.2 # dropout late
+        dropout_rate2 = 0.1 # 
+        
+        # model reset
+        reset_keras(model)
+        nseed(seed)
+        tf.random.set_seed(seed)   
+        model, idcode = keras_setup() 
+#        model.load_weights(initial_weightsave) 
+        
+        # traning 
+        starttime = time.time(); current_acc = -np.inf; cnt=0
+        s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
+        grade_acc = [0.6,0.7,0.8,0.85,0.9,0.95]
+        gix = 0
+        while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
+            if (cnt > maxepoch/epochs) or \
+            (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
+                break
+        
+            current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
+            isfile1 = os.path.isfile(current_weightsave)
+          
+            if isfile1 and cnt > 0:
+                reset_keras(model)
+                model, idcode = keras_setup(lr=lr)
+                model.load_weights(current_weightsave)
+                
+            hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
+            cnt += 1; model.save_weights(current_weightsave)
+            if cnt % 20 == 0 and cnt != 0:
+                print('cnt', cnt)
+                             
+            s_loss += list(np.array(hist.history['loss']))
+            s_acc += list(np.array(hist.history['accuracy']))
+                                     
+            if s_acc[-1] > grade_acc[gix]:
+                print(grade_acc[gix])
+                gix += 1
+                
+                hist = model.fit(trX, trY, batch_size = batch_size, epochs = epochs, \
+                                 validation_data = valid)
+                cnt += 1; model.save_weights(current_weightsave)
+            
+                s_loss += list(np.array(hist.history['loss']))
+                s_acc += list(np.array(hist.history['accuracy']))
+                sval_loss += list(np.array(hist.history['val_loss']))
+                sval_acc += list(np.array(hist.history['val_accuracy']))
+            
+        #        if s_acc[-1] - 0.04 > sval_acc[-1]:
+        #            print('overfit 판단, 종료')
+        #            break
+                
+            # 종료조건: 
+            current_acc = s_acc[-1] 
+        
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+        model.save_weights(final_weightsave) 
+        
+        dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
+        for test_mouseNum in testlist:
+            
+            reset_keras(model)
+            model, idcode = keras_setup(lr=0)
+            model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+            
+            sessionNum = 5
+            if test_mouseNum in se3set:
+                sessionNum = 3
+            for se in range(sessionNum): 
+                valid = valid_generation([test_mouseNum], only_se=se)
+                print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+                hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+        #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+                dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+        
+        # 최적화용 저장      
+        picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + savename2
+        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+            print(picklesavename, '저장되었습니다.')  
+
+# In[]
+import sys
+sys.exit()
+    
 picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin_psl.pickle'
 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
     dummy_table_fcp = pickle.load(f)
