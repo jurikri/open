@@ -691,11 +691,11 @@ for nix, q in enumerate(project_list):
     print('maxepoch', maxepoch)
 
     # In[]
-    picklesavename = RESULT_SAVE_PATH + 'mssave.pickle'
+    picklesavename = RESULT_SAVE_PATH + 'mssave3.pickle'
     with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
         mssave = pickle.load(f)
     
-    while True:
+    while False:
         Ylist = list(range(len(Y)))
         msmin = 50 # 조합 최소 갯수    
         random.seed(None)
@@ -795,34 +795,40 @@ print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
 plt.hist(index_value_save.flatten())
 
 # In[]
-
-for si in range(6):
+savename2list=[]
+for si in [1,2,3]:
     if si == 0:
         savename = 'fc_control'
-    elif si == 1:
-        savename = 'fcp_total_control'
-    elif si == 2:
-        savename = 'fcp_thr_0.65'; thr = 0.55
-    elif si == 3:
-        savename = 'fcp_thr_0.7'; thr = 0.60
-    elif si == 4:
-        savename = 'fcp_thr_0.75'; thr = 0.65
-    elif si == 5:
-        savename = 'fcp_thr_0'; thr = 0
-
-    if si in [0,1]:
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup), cfa_set=None)
         
-    elif si in [2,3,4.5]:
+    if si == 1:
+        savename = 'fc_control_cap'
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + capsaicinGroup), cfa_set=None)
+        
+    if si == 2:
+        savename = 'fcp_thr_v2_0.68'; thr = 0.68
         elite_cfa = np.where(index_value_save>thr)
         elite_cfa = np.array(elite_cfa); elite_cfa2=[]
         for i in range(elite_cfa.shape[1]):
             elite_cfa2.append(list(elite_cfa[:,i]))
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
         
+    if si == 3:
+        savename = 'fcp_thr_v2_cap_0.66'; thr = 0.68
+        elite_cfa = np.where(index_value_save>thr)
+        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
+        for i in range(elite_cfa.shape[1]):
+            elite_cfa2.append(list(elite_cfa[:,i]))
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + capsaicinGroup + CFAgroup), cfa_set=elite_cfa2)
+
     for ti in range(5):
         savename2 = savename + '_t' + str(ti) + '.pickle'
         print('index', savename2)
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+        
+        if os.path.isfile(final_weightsave):
+            continue
+        savename2list.append(savename2)
         
         X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
         for i in range(1,n_out):
@@ -867,7 +873,13 @@ for si in range(6):
         while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
             if (cnt > maxepoch/epochs) or \
             (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
-                break
+                cnt = 0
+                seed += 1
+                random.seed(seed)
+                reset_keras(model)
+                nseed(seed)
+                tf.random.set_seed(seed)   
+                model, idcode = keras_setup() 
         
             current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
             isfile1 = os.path.isfile(current_weightsave)
@@ -884,37 +896,165 @@ for si in range(6):
                              
             s_loss += list(np.array(hist.history['loss']))
             s_acc += list(np.array(hist.history['accuracy']))
-                                     
-            if s_acc[-1] > grade_acc[gix]:
-                print(grade_acc[gix])
-                gix += 1
-                
-                hist = model.fit(trX, trY, batch_size = batch_size, epochs = epochs, \
-                                 validation_data = valid)
-                cnt += 1; model.save_weights(current_weightsave)
-            
-                s_loss += list(np.array(hist.history['loss']))
-                s_acc += list(np.array(hist.history['accuracy']))
-                sval_loss += list(np.array(hist.history['val_loss']))
-                sval_acc += list(np.array(hist.history['val_accuracy']))
-            
-        #        if s_acc[-1] - 0.04 > sval_acc[-1]:
-        #            print('overfit 판단, 종료')
-        #            break
-                
+                                                     
             # 종료조건: 
             current_acc = s_acc[-1] 
         
-        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
         model.save_weights(final_weightsave) 
         
+
+# In 다시 테스트 후 저장 
+# In[]        
+
+# In[]
+from scipy import stats
+from sklearn import metrics
+
+def nanex(array1):
+    array1 = np.array(array1)
+    array1 = array1[np.isnan(array1)==0]
+    return array1
+
+# In[]
+mssave = []
+# In[]
+
+for si in [0,1]:
+    if si == 0:
+        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
+        elite_cfa = np.where(index_value_save>thr)
+        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
+        for i in range(elite_cfa.shape[1]):
+            elite_cfa2.append(list(elite_cfa[:,i]))
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
+
+    if si == 1:
+        savename = 'fc+keto_0.65'; thr = 0.65
+        elite_cfa = np.where(index_value_save>thr)
+        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
+        for i in range(elite_cfa.shape[1]):
+            elite_cfa2.append(list(elite_cfa[:,i]))
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup + ketoGroup), cfa_set=elite_cfa2)
+        
+    for ti in range(5):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        print('index', savename2)
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+        
+        if os.path.isfile(final_weightsave):
+            continue
+        
+        X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
+        for i in range(1,n_out):
+            X = np.concatenate((X,X_save2[i]), axis = 0)
+            Y = np.concatenate((Y,Y_save2[i]), axis = 0)
+            Z = np.concatenate((Z,Z_save2[i]), axis = 0)
+        
+        X = array_recover(X)
+        Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
+        Z = np.array(Z)
+        
+        trX, trY, trZ = upsampling(X, Y, Z)
+        
+        # val set
+        testlist = pslGroup
+        valid = valid_generation(testlist, only_se=None)
+        
+        acc_thr = 0.93
+        lr = 1e-3 # learning rate
+        
+        n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+        layer_1 = int(8 * 6) #
+        
+        l2_rate = 0.3
+        dropout_rate1 = 0.2 # dropout late
+        dropout_rate2 = 0.1 # 
+        
+        # model reset
+        reset_keras(model)
+        nseed(seed)
+        tf.random.set_seed(seed)   
+        model, idcode = keras_setup() 
+#        model.load_weights(initial_weightsave) 
+        
+        # traning 
+        starttime = time.time(); current_acc = -np.inf; cnt=0
+        s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
+        grade_acc = [0.93]
+        gix = 0
+        while current_acc < acc_thr and cnt < 2000: # 0.93: # 목표 최대 정확도, epoch limit
+            if (cnt > maxepoch/epochs) or \
+            (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
+                cnt = 0
+                seed += 1
+                random.seed(seed)
+                reset_keras(model)
+                nseed(seed)
+                tf.random.set_seed(seed)   
+                model, idcode = keras_setup() 
+        
+            current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
+            isfile1 = os.path.isfile(current_weightsave)
+          
+            if isfile1 and cnt > 0:
+                reset_keras(model)
+                model, idcode = keras_setup(lr=lr)
+                model.load_weights(current_weightsave)
+                
+            hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
+            cnt += 1; model.save_weights(current_weightsave)
+            if cnt % 20 == 0 and cnt != 0:
+                print('cnt', cnt)
+                             
+            s_loss += list(np.array(hist.history['loss']))
+            s_acc += list(np.array(hist.history['accuracy']))
+                                                     
+            # 종료조건: 
+            current_acc = s_acc[-1] 
+            
+#            if grade_acc[gix] < current_acc:
+#                gix += 1
+#                reset_keras(model)
+#                model, idcode = keras_setup(lr=0)
+#                model.load_weights(current_weightsave) 
+#                
+#                testlist = pslGroup + shamGroup + itSalineGroup
+#                
+#                dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
+#                for test_mouseNum in testlist:        
+#                    sessionNum = 5
+#                    if test_mouseNum in se3set:
+#                        sessionNum = 3
+#                    for se in range(sessionNum): 
+#                        valid = valid_generation([test_mouseNum], only_se=se)
+#                        print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+#                        hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+#                #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+#                        dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+#                        
+#                mssave.append([savename2, grade_acc[gix-1], dummy_table])
+        model.save_weights(final_weightsave) 
+# In[]
+for si in [0,1]:
+    if si == 0:
+        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
+
+    if si == 1:
+        savename = 'fc+keto_0.65'; thr = 0.65
+        
+    for ti in range(5):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        print('index', savename2)
+            
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+        reset_keras(model)
+        model, idcode = keras_setup(lr=0)
+        model.load_weights(final_weightsave) 
+        
+        testlist = pslGroup + shamGroup + itSalineGroup
+    
         dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
-        for test_mouseNum in testlist:
-            
-            reset_keras(model)
-            model, idcode = keras_setup(lr=0)
-            model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
-            
+        for test_mouseNum in testlist:        
             sessionNum = 5
             if test_mouseNum in se3set:
                 sessionNum = 3
@@ -924,7 +1064,7 @@ for si in range(6):
                 hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
         #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
                 dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
-        
+            
         # 최적화용 저장      
         picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + savename2
         with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
@@ -932,45 +1072,117 @@ for si in range(6):
             print(picklesavename, '저장되었습니다.')  
 
 # In[]
-import sys
-sys.exit()
+for si in [0,1]:
+    if si == 0:
+        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
+
+    if si == 1:
+        savename = 'fc+keto_0.65'; thr = 0.65
     
-picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin_psl.pickle'
-with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-    dummy_table_fcp = pickle.load(f)
-
-from scipy import stats
-
-def nanex(array1):
-    array1 = np.array(array1)
-    array1 = array1[np.isnan(array1)==0]
-    return array1
-
-psl0 = nanex(dummy_table_fcp[pslGroup,0])
-psl1 = nanex(dummy_table_fcp[pslGroup,1])
-psl2 = nanex(dummy_table_fcp[pslGroup,2])
-
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
-
+    dummy_table_avg = []
+    for ti in range(5):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        picklesavename =  RESULT_SAVE_PATH + 'exp_raw\\' + savename2
+        
+        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+            dummy_table = pickle.load(f)
+            dummy_table_avg.append(dummy_table)
+            
+    dummy_table_avg = np.array(dummy_table_avg)
+    dummy_table_avg2 = np.mean(dummy_table_avg, axis=0)
+            
+print(np.mean(dummy_table_avg2[itSalineGroup,:], axis=0))    
+    
+        
+        
+        
+        
 # In[]
-picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'formalin_capsaicin.pickle'
-with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-    dummy_table_fcp = pickle.load(f)
-psl0 = nanex(dummy_table_fcp[pslGroup,0])
-psl1 = nanex(dummy_table_fcp[pslGroup,1])
-psl2 = nanex(dummy_table_fcp[pslGroup,2])
+matrixsave = []
+[matrixsave.append([]) for u in range(2)]
+#for i in range(2):
+#    [matrixsave[i].append([]) for u in range(4)]
+    
+for i in range(len(mssave)):
+    savename = mssave[i][0]
+    cacc = mssave[i][1]
+    
+    ix = None; ix2 = None
+    pname = savename[:-8]
+    if pname == 'fcp_thr_v3_0.67_t_t':
+        ix = 0
+    elif  pname == 'fcp_thr_v3_0.65_t_t':
+        ix = 1
 
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
 
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
+#    if cacc >= 0.91 and cacc <= 0.93:
+#        ix2 = 0
+#    if cacc >= 0.93 and cacc <= 0.95:
+#        ix2 = 1
+#    if cacc >= 0.95 and cacc <= 0.97:
+#        ix2 = 2
+#    if cacc >= 0.97:
+#        ix2 = 3
+#        
+#    if ix is None or ix2 is None:
+#        continue
+    
+    avg_matrix2 = np.array(mssave[i][2])
+    matrixsave[ix].append(avg_matrix2)
+    
+    
+    # In[]
 
-
-
-
+for ix in [0,1]:
+    for ix2 in [1]:
+        print(ix, ix2)
+        
+        avg_matrix2 = np.mean(np.array(matrixsave[ix]), axis=0)
+        
+        avg_matrix3 = np.zeros(avg_matrix2.shape); avg_matrix3[:] = np.nan
+        for SE in range(N):
+            if SE in np.array(msset_total)[:,0]:
+                settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
+                avg_matrix3[SE,:] = np.nanmean(avg_matrix2[settmp,:],axis=0)
+        #            print('set averaging', settmp)
+            elif SE not in np.array(msset_total).flatten(): 
+                avg_matrix3[SE,:] = avg_matrix2[SE,:]
+        
+                
+        psl0 = nanex(avg_matrix3[pslGroup,0])
+        psl1 = nanex(avg_matrix3[pslGroup,1])
+        psl2 = nanex(avg_matrix3[pslGroup,2])
+        
+        sham0 = nanex(avg_matrix3[shamGroup,0])
+        sham1 = nanex(avg_matrix3[shamGroup,1])
+        sham2 = nanex(avg_matrix3[shamGroup,2])
+        
+        itsaline1 = nanex(avg_matrix3[itSalineGroup,0])
+        
+        
+        
+        zeroby = stats.ttest_ind(np.zeros(psl0.shape), (psl2-psl0))[1]
+        
+        base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+        base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+        sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
+        sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
+        
+        pain = np.concatenate((psl1, psl2), axis=0)
+        nonpain = np.concatenate((sham0, sham1, sham2, psl0), axis=0)
+        anstable = list(np.ones(pain.shape[0])) + list(np.zeros(nonpain.shape[0]))
+        predictValue = np.array(list(pain)+list(nonpain)); predictAns = np.array(anstable)  
+        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=1)
+        base_vs_10_roc = metrics.auc(fpr,tpr)
+        
+        print('========================')
+        #    print('base_vs_3', base_vs_3)
+        print('base_vs_10_roc', base_vs_10_roc)
+        print('zeroby', zeroby)
+        #    print('sham3_vs_psl3', sham3_vs_psl3)
+        #    print('sham10_vs_psl10', sham10_vs_psl10)
+        print(np.mean(avg_matrix2[pslGroup,:], axis=0))
+        print(np.mean(avg_matrix2[itSalineGroup,:], axis=0))
+        print('========================')
+        
 
