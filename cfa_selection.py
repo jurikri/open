@@ -78,6 +78,9 @@ se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chl
 + itSalineGroup + itClonidineGroup # for test only
 
 pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
+fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+baseonly = lowGroup + lidocaineGroup + restrictionGroup
+        
 # In[]
 
 def downsampling(msssignal, wanted_size):
@@ -360,105 +363,56 @@ for nix, q in enumerate(project_list):
               reducing_test_list += list(tmp)
     print('selected mouse #', len(reducing_test_list))          
 #    print(reducing_test_list)
-    def ms_sampling(forlist=range(N), cfa_set=None):
+    
+    def ms_sampling(forlist=range(N), estimated_set=None, estimated_label=None, searching=None):
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
         datasetX = []; datasetY = []; datasetZ = []
         for classnum in range(n_out):
             datasetX.append([]); datasetY.append([]); datasetZ.append([])
             
-        # nonpain     
-        msclass = 0 # nonpain
+        # nonpain
+#        msclass = 0 # nonpain
         X_tmp = []; Y_tmp = []; Z_tmp = []
         for SE in forlist:
             if SE in trainingset:
                 if SE in reducing_test_list:
-                    for se in range(5):      
-                        # pain Group에 들어갈 수 있는 모든 경우의 수 
-                        set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
-                        c1 = SE in set1 and se in [0,2]
-                        c2 = SE in capsaicinGroup and se in [0,2]
-#                        c3 = SE in pslGroup + adenosineGroup and se in [0]
-#                        c4 = SE in shamGroup and se in [0,1,2]
-#                        c5 = SE in salineGroup and se in [0,1,2,3,4]
-                        c6 = SE in CFAgroup and se in [0]
-#                        c7 = SE in chloroquineGroup and se in [0]
-#                        c8 = SE in itSalineGroup and se in [0]
-#                        c9 = SE in itClonidineGroup and se in [0]
-  
-#                        c13 = SE in chloroquineGroup and se in [1]
-                                        
-#                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
-                        if c1 or c2 or c6:
-#                        if c13: #
-                            # msset 만 baseline을 제외시킴, total set 아님 
-                            exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
-                            if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
-                                mssignal = np.mean(signalss[SE][se], axis=1)
-#                                mssignal2 = np.array(movement_syn[SE][se])
-                                msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
-                                
-                                for u in msbins:
-                                    if not(cfa_set is None) and SE in CFAgroup:
-                                        if not [SE, se, u] in cfa_set:
-                                            continue
+                    sessionNum = 5
+                    if SE in se3set:
+                        sessionNum = 3
+
+                    for se in range(sessionNum):   
+                        msclass = None
+                        if SE in fset + baseonly and se in [0,2]:
+                            msclass = 0 
+                        elif SE in fset and se in [1] and movement[SE,se] > 0.15:
+                            msclass = 1
+                            
+                        mssignal = np.mean(signalss[SE][se], axis=1)
+                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
+                        for u in msbins:
+                            if not(estimated_set is None) and SE in CFAgroup + capsaicinGroup + pslGroup + shamGroup:
+                                if [SE, se, u] in estimated_set:
+                                    msclass = estimated_label[SE, se, u]  
                                     
-                                    mannual_signal = mssignal[u:u+full_sequence]
-                                    mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                            if not(searching is None):
+                                random.seed(None)
+                                msclass = random.choice([0,1])
                                     
-#                                    mannual_signal2 = mssignal2[u:u+full_sequence]
-#                                    mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-    
-                                    X, Y, Z = dataGeneration(SE, se, label=msclass, \
-                                                   Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                                    
-                                    X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [u]]#; T_tmp += t4_save 
-                    
-        datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
-        sampleNum[msclass] = len(datasetX[msclass])
-        print('nonpain_sampleNum', sampleNum[msclass])
-        
-        msclass = 1 # pain
-        X_tmp = []; Y_tmp = []; Z_tmp = []
-        for SE in forlist:
-            if SE in trainingset:
-                if SE in reducing_test_list:
-                    for se in range(5):      
-                        # pain Group에 들어갈 수 있는 모든 경우의 수 
-                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
-                        c11 = SE in set2 and se in [1]
-                        c12 = SE in CFAgroup and se in [1,2]
-#                        c13 = SE in chloroquineGroup and se in [1]
-                          
-                        if c11 or c12: # 
-                            if not(0.15 < movement[SE,se]):
-                                print(SE, se, 'movement 부족, pain session에서 제외.')
+                            if msclass is None:
                                 continue
                         
-                            mssignal = np.mean(signalss[SE][se], axis=1)
-#                            mssignal2 = np.array(movement_syn[SE][se])
-                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                            mannual_signal = mssignal[u:u+full_sequence]
+                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                             
-                            for u in msbins:
-                                if not(cfa_set is None) and SE in CFAgroup:
-                                    if not [SE, se, u] in cfa_set:
-                                        continue
+                            X, Y, Z = dataGeneration(SE, se, label=msclass, \
+                                           Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                            
+                            X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [u]]#; T_tmp += t4_save 
+                
+        print('nonpain vs pain_sample distribution', np.mean(Y_tmp, axis=0))      
 
-                                mannual_signal = mssignal[u:u+full_sequence]
-                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                                
-#                                mannual_signal2 = mssignal2[u:u+full_sequence]
-#                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                                
-                                X, Y, Z = dataGeneration(SE, se, label=msclass, \
-                                               Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                                X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [u]] #; T_tmp += t4_save 
-                                
-        datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp                        
-        sampleNum[msclass] = len(datasetX[msclass])
-        print('pain_sampleNum', sampleNum[msclass])          
-       
-        return datasetX, datasetY, datasetZ
+        return X_tmp, Y_tmp, Z_tmp
 
     def upsampling(X_elite, Y_elite, Z_elite):
         
@@ -523,17 +477,12 @@ for nix, q in enumerate(project_list):
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
     # In[]
-    X_save2, Y_save2, Z_save2 = ms_sampling(forlist=CFAgroup)
+    X_save2, Y_save2, Z_save2 = ms_sampling(forlist=CFAgroup+pslGroup+shamGroup, searching=True)
     
-    X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
-    for i in range(1,n_out):
-        X = np.concatenate((X,X_save2[i]), axis = 0)
-        Y = np.concatenate((Y,Y_save2[i]), axis = 0)
-        Z = np.concatenate((Z,Z_save2[i]), axis = 0)
-
-    X = array_recover(X)
-    Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
-    indexer = np.array(Z)
+    X = array_recover(X_save2)
+    Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
+    Y_treu_label = np.array(Y)
+    indexer = np.array(Z_save2)
 
     inputsize = np.zeros(msunit *fn, dtype=int) 
     for unit in range(msunit *fn):
@@ -643,7 +592,7 @@ for nix, q in enumerate(project_list):
                     binNum = len(binning)
                     
     #                    mssignal2 = np.array(movement_syn[test_mouseNum][se])
-                    for i in range(binNum): # range(np.min([2, binNum])):    
+                    for i in range(np.min([2, binNum])):    
                     # each ROI
                         signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
                         ROInum = signalss_PSL_test.shape[1]
@@ -691,17 +640,24 @@ for nix, q in enumerate(project_list):
     print('maxepoch', maxepoch)
 
     # In[]
-    picklesavename = RESULT_SAVE_PATH + 'mssave3.pickle'
-    with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-        mssave = pickle.load(f)
+    while True:
+        picklesavename = RESULT_SAVE_PATH + 'mssave.pickle'
+        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+            mssave = pickle.load(f)
+        ylen = Y.shape[0]
     
-    while False:
+        print('len(mssave)', len(mssave))
+        # label blind
+        Y_blind=[]
+        for u in range(ylen):
+            Y_blind.append(random.choice([[1,0],[0,1]]))
+        Y = np.array(Y_blind)
+        
         Ylist = list(range(len(Y)))
-        msmin = 50 # 조합 최소 갯수    
+#        msmin = 50 # 조합 최소 갯수    
         random.seed(None)
-        rn = random.randrange(msmin, len(Ylist))
-        rn = 50
-        print('sample min', msmin, 'sample max', len(Ylist), 'rn', rn)
+        rn = random.randrange(50, 200)
+        print('sample max', len(Ylist), 'rn', rn)
         rlist = random.sample(Ylist, rn)
         X_elite=[]; [X_elite.append([]) for u in range(len(X))]
         for u in range(len(X)):
@@ -711,7 +667,7 @@ for nix, q in enumerate(project_list):
     
         trX, trY, trZ = upsampling(X_elite, Y_elite, Z_elite)
            
-        testlist = highGroup + midleGroup
+        testlist = list(fset)
         testlist.remove(8); testlist.remove(26)
         valid = valid_generation(testlist, only_se=None)
         validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
@@ -769,143 +725,118 @@ for nix, q in enumerate(project_list):
             current_acc = s_acc[-1] 
         
 #        if sval_acc[-1] > 0.55:
-        mssave.append([grade_acc-0.05, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
-        print('len(mssave)', len(mssave))
-        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-            pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
+        if len(sval_acc) > 0:
+            mssave.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
+            print('len(mssave)', len(mssave))
+            with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
 
 # In[]      # mean signal 처리
 #np.mean(np.array(mssave)[:,-1])
+            
+#            # blind Y 보면서 처리 방법좀.. 
+#mssave2 = []
+#for i in range(len(mssave)):
+#    if len(mssave[i][6]) == 0:
+#        mssave2.append(mssave[i])
 
-index_value_save = np.zeros(np.max(indexer, axis=0)+1)
+index_value_save = np.zeros(list(np.max(indexer, axis=0)+1)+[2]) # 0 nonpain; 1 pain
 index_value_save[:] = np.nan
 
 mssave2 = np.array(mssave)
 
+cnt = 0
 for i in range(len(mssave2)):
-    acctmp = mssave2[i][5][-1]
+    if len(mssave2[i][6]) == 0:
+        continue
+    
+    acctmp = mssave2[i][6][-1]
+    cnt += 1
 #    print(acctmp)
-    for j in mssave2[i][1]:
-        tmp = index_value_save[j[0], j[1], j[2]]
-        index_value_save[j[0], j[1], j[2]] = np.nanmean([tmp, acctmp])
+    for j in range(len(mssave2[i][2])):
+        label = np.argmax(mssave2[i][1][j])
+        
+        SE_se_bin = mssave2[i][2][j]
+        tmp = index_value_save[mssave2[i][2][j][0], mssave2[i][2][j][1], mssave2[i][2][j][2], label]
+        index_value_save[mssave2[i][2][j][0], mssave2[i][2][j][1], mssave2[i][2][j][2], label] = np.nanmean([tmp, acctmp])
 #        print(index_value_save[j[0], j[1], j[2]])
         
-print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
+print(cnt)        
+print('np.nanmean(index_value_save)', np.nanmean(index_value_save[:,:,:,0]))
+print('np.nanmean(index_value_save)', np.nanmean(index_value_save[:,:,:,1]))
 
-plt.hist(index_value_save.flatten())
+plt.hist(index_value_save[:,:,:,0].flatten()) # nonpain
+plt.hist(index_value_save[:,:,:,1].flatten()) # pain
 
 # In[]
-savename2list=[]
-for si in [1,2,3]:
-    if si == 0:
-        savename = 'fc_control'
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup), cfa_set=None)
-        
-    if si == 1:
-        savename = 'fc_control_cap'
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + capsaicinGroup), cfa_set=None)
-        
-    if si == 2:
-        savename = 'fcp_thr_v2_0.68'; thr = 0.68
-        elite_cfa = np.where(index_value_save>thr)
-        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-        for i in range(elite_cfa.shape[1]):
-            elite_cfa2.append(list(elite_cfa[:,i]))
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
-        
-    if si == 3:
-        savename = 'fcp_thr_v2_cap_0.66'; thr = 0.68
-        elite_cfa = np.where(index_value_save>thr)
-        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-        for i in range(elite_cfa.shape[1]):
-            elite_cfa2.append(list(elite_cfa[:,i]))
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + capsaicinGroup + CFAgroup), cfa_set=elite_cfa2)
 
-    for ti in range(5):
-        savename2 = savename + '_t' + str(ti) + '.pickle'
-        print('index', savename2)
-        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
-        
-        if os.path.isfile(final_weightsave):
-            continue
-        savename2list.append(savename2)
-        
-        X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
-        for i in range(1,n_out):
-            X = np.concatenate((X,X_save2[i]), axis = 0)
-            Y = np.concatenate((Y,Y_save2[i]), axis = 0)
-            Z = np.concatenate((Z,Z_save2[i]), axis = 0)
-        
-        X = array_recover(X)
-        Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
-        Z = np.array(Z)
-        
-        trX, trY, trZ = upsampling(X, Y, Z)
-        
-        # val set
-        testlist = pslGroup
-        valid = valid_generation(testlist, only_se=None)
-        #validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
-        #valid = tuple([validX, validY])
-        # In
-        
-        lr = 1e-3 # learning rate
-        
-        n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-        layer_1 = int(8 * 6) #
-        
-        l2_rate = 0.3
-        dropout_rate1 = 0.2 # dropout late
-        dropout_rate2 = 0.1 # 
-        
-        # model reset
-        reset_keras(model)
-        nseed(seed)
-        tf.random.set_seed(seed)   
-        model, idcode = keras_setup() 
-#        model.load_weights(initial_weightsave) 
-        
-        # traning 
-        starttime = time.time(); current_acc = -np.inf; cnt=0
-        s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
-        grade_acc = [0.6,0.7,0.8,0.85,0.9,0.95]
-        gix = 0
-        while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
-            if (cnt > maxepoch/epochs) or \
-            (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
-                cnt = 0
-                seed += 1
-                random.seed(seed)
-                reset_keras(model)
-                nseed(seed)
-                tf.random.set_seed(seed)   
-                model, idcode = keras_setup() 
-        
-            current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
-            isfile1 = os.path.isfile(current_weightsave)
-          
-            if isfile1 and cnt > 0:
-                reset_keras(model)
-                model, idcode = keras_setup(lr=lr)
-                model.load_weights(current_weightsave)
-                
-            hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
-            cnt += 1; model.save_weights(current_weightsave)
-            if cnt % 20 == 0 and cnt != 0:
-                print('cnt', cnt)
-                             
-            s_loss += list(np.array(hist.history['loss']))
-            s_acc += list(np.array(hist.history['accuracy']))
-                                                     
-            # 종료조건: 
-            current_acc = s_acc[-1] 
-        
-        model.save_weights(final_weightsave) 
-        
+thr = 0.8
+elite_cfa = np.where(index_value_save[:,:,:,0]>thr)
+elite_cfa = np.array(elite_cfa); elite_cfa2_nonpain=[]
+for i in range(elite_cfa.shape[1]):
+    elite_cfa2_nonpain.append(list(elite_cfa[:,i]))
 
-# In 다시 테스트 후 저장 
-# In[]        
+elite_cfa = np.where(index_value_save[:,:,:,1]>thr)
+elite_cfa = np.array(elite_cfa); elite_cfa2_pain=[]
+for i in range(elite_cfa.shape[1]):
+    elite_cfa2_pain.append(list(elite_cfa[:,i]))
 
+
+target = elite_cfa2_nonpain
+label_ratio = []
+for i in range(len(target)):
+    SE = target[i][0]
+    se = target[i][1]
+    
+    c1 = SE in shamGroup and se in [0,1,2]
+    c2 = SE in pslGroup + CFAgroup and se in [0]
+    c100 = SE in pslGroup + CFAgroup and se in [1,2]
+    
+    if c1 or c2:
+        treulabel = 0  
+    elif c100:
+        treulabel = 1
+    else:
+        print('e', SE, se)
+
+    label_ratio.append(treulabel)
+print('selected as nonpain label, true ratio', np.mean(label_ratio))
+print('sample #', len(target))
+    
+target = elite_cfa2_pain
+label_ratio = []
+for i in range(len(target)):
+    SE = target[i][0]
+    se = target[i][1]
+    
+    c1 = SE in shamGroup and se in [0,1,2]
+    c2 = SE in pslGroup + CFAgroup and se in [0]
+    c100 = SE in pslGroup + CFAgroup and se in [1,2]
+    
+    if c1 or c2:
+        treulabel = 0  
+    elif c100:
+        treulabel = 1
+    else:
+        print('e', SE, se)
+
+    label_ratio.append(treulabel)
+print('selected as pain label, true ratio', np.mean(label_ratio))
+print('sample #', len(target))
+
+  # In[] label save
+label_save = np.zeros(list(np.max(indexer, axis=0)+1)) # 0 nonpain; 1 pain
+label_save[:] = np.nan
+
+for i in elite_cfa2_nonpain:
+    label_save[i[0], i[1], i[2]] = 0
+for i in elite_cfa2_pain:
+    if not(np.isnan(label_save[i[0], i[1], i[2]])):
+        print(i[0], i[1], i[2], 'label 겹침!?')
+    label_save[i[0], i[1], i[2]] = 1
+
+
+elite_cfa_total = elite_cfa2_nonpain + elite_cfa2_pain
 # In[]
 from scipy import stats
 from sklearn import metrics
@@ -916,26 +847,16 @@ def nanex(array1):
     return array1
 
 # In[]
-mssave = []
-# In[]
 
-for si in [0,1]:
+for si in [0]:
     if si == 0:
-        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
-        elite_cfa = np.where(index_value_save>thr)
-        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-        for i in range(elite_cfa.shape[1]):
-            elite_cfa2.append(list(elite_cfa[:,i]))
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup), cfa_set=elite_cfa2)
+        savename = 'all'; thr = thr
 
-    if si == 1:
-        savename = 'fc+keto_0.65'; thr = 0.65
-        elite_cfa = np.where(index_value_save>thr)
-        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-        for i in range(elite_cfa.shape[1]):
-            elite_cfa2.append(list(elite_cfa[:,i]))
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=(highGroup + midleGroup + CFAgroup + ketoGroup), cfa_set=elite_cfa2)
-        
+        tset = fset + baseonly + CFAgroup + capsaicinGroup + pslGroup + shamGroup
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset, estimated_set=elite_cfa_total, estimated_label=label_save)
+
+
+
     for ti in range(5):
         savename2 = savename + '_t' + str(ti) + '.pickle'
         print('index', savename2)
@@ -943,16 +864,10 @@ for si in [0,1]:
         
         if os.path.isfile(final_weightsave):
             continue
-        
-        X = np.array(X_save2[0]); Y = np.array(Y_save2[0]); Z = np.array(Z_save2[0])
-        for i in range(1,n_out):
-            X = np.concatenate((X,X_save2[i]), axis = 0)
-            Y = np.concatenate((Y,Y_save2[i]), axis = 0)
-            Z = np.concatenate((Z,Z_save2[i]), axis = 0)
-        
-        X = array_recover(X)
-        Y = np.array(Y); Y = np.reshape(Y, (Y.shape[0], n_out))
-        Z = np.array(Z)
+
+        X = array_recover(X_save2)
+        Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
+        Z = np.array(Z_save2)
         
         trX, trY, trZ = upsampling(X, Y, Z)
         
@@ -1012,27 +927,6 @@ for si in [0,1]:
             # 종료조건: 
             current_acc = s_acc[-1] 
             
-#            if grade_acc[gix] < current_acc:
-#                gix += 1
-#                reset_keras(model)
-#                model, idcode = keras_setup(lr=0)
-#                model.load_weights(current_weightsave) 
-#                
-#                testlist = pslGroup + shamGroup + itSalineGroup
-#                
-#                dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
-#                for test_mouseNum in testlist:        
-#                    sessionNum = 5
-#                    if test_mouseNum in se3set:
-#                        sessionNum = 3
-#                    for se in range(sessionNum): 
-#                        valid = valid_generation([test_mouseNum], only_se=se)
-#                        print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
-#                        hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
-#                #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
-#                        dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
-#                        
-#                mssave.append([savename2, grade_acc[gix-1], dummy_table])
         model.save_weights(final_weightsave) 
 # In[]
 for si in [0,1]:
@@ -1092,46 +986,6 @@ for si in [0,1]:
     dummy_table_avg2 = np.mean(dummy_table_avg, axis=0)
             
 print(np.mean(dummy_table_avg2[itSalineGroup,:], axis=0))    
-    
-        
-        
-        
-        
-# In[]
-matrixsave = []
-[matrixsave.append([]) for u in range(2)]
-#for i in range(2):
-#    [matrixsave[i].append([]) for u in range(4)]
-    
-for i in range(len(mssave)):
-    savename = mssave[i][0]
-    cacc = mssave[i][1]
-    
-    ix = None; ix2 = None
-    pname = savename[:-8]
-    if pname == 'fcp_thr_v3_0.67_t_t':
-        ix = 0
-    elif  pname == 'fcp_thr_v3_0.65_t_t':
-        ix = 1
-
-
-#    if cacc >= 0.91 and cacc <= 0.93:
-#        ix2 = 0
-#    if cacc >= 0.93 and cacc <= 0.95:
-#        ix2 = 1
-#    if cacc >= 0.95 and cacc <= 0.97:
-#        ix2 = 2
-#    if cacc >= 0.97:
-#        ix2 = 3
-#        
-#    if ix is None or ix2 is None:
-#        continue
-    
-    avg_matrix2 = np.array(mssave[i][2])
-    matrixsave[ix].append(avg_matrix2)
-    
-    
-    # In[]
 
 for ix in [0,1]:
     for ix2 in [1]:
@@ -1184,5 +1038,5 @@ for ix in [0,1]:
         print(np.mean(avg_matrix2[pslGroup,:], axis=0))
         print(np.mean(avg_matrix2[itSalineGroup,:], axis=0))
         print('========================')
-        
+
 
