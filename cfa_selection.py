@@ -81,7 +81,7 @@ pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGrou
 fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
 baseonly = lowGroup + lidocaineGroup + restrictionGroup
         
-# In[]
+# In
 
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
@@ -340,7 +340,7 @@ for nix, q in enumerate(project_list):
             trainingset.remove(u)
         except:
             pass
-# In[]    
+# In    
     # initiate
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
@@ -476,7 +476,7 @@ for nix, q in enumerate(project_list):
 
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
-    # In[]
+    # In
     X_save2, Y_save2, Z_save2 = ms_sampling(forlist=CFAgroup+pslGroup+shamGroup, searching=True)
     
     X = array_recover(X_save2)
@@ -716,7 +716,7 @@ for nix, q in enumerate(project_list):
                 sval_loss += list(np.array(hist.history['val_loss']))
                 sval_acc += list(np.array(hist.history['val_accuracy']))
             
-                if s_acc[-1] - 0.04 > sval_acc[-1]:
+                if s_acc[-1] - 0.03 > sval_acc[-1]:
                     print('overfit 판단, 종료')
                     break
             
@@ -727,7 +727,7 @@ for nix, q in enumerate(project_list):
 #        if sval_acc[-1] > 0.55:
         if len(sval_acc) > 0:
             mssave.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
-            print('len(mssave)', len(mssave))
+#            print('len(mssave)', len(mssave))
             with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
 
@@ -735,15 +735,13 @@ for nix, q in enumerate(project_list):
 #np.mean(np.array(mssave)[:,-1])
             
 #            # blind Y 보면서 처리 방법좀.. 
-#mssave2 = []
-#for i in range(len(mssave)):
-#    if len(mssave[i][6]) == 0:
-#        mssave2.append(mssave[i])
+
 
 index_value_save = np.zeros(list(np.max(indexer, axis=0)+1)+[2]) # 0 nonpain; 1 pain
 index_value_save[:] = np.nan
 
-mssave2 = np.array(mssave)
+
+mssave2 = list(mssave)
 
 cnt = 0
 for i in range(len(mssave2)):
@@ -769,61 +767,67 @@ plt.hist(index_value_save[:,:,:,0].flatten()) # nonpain
 plt.hist(index_value_save[:,:,:,1].flatten()) # pain
 
 # In[]
-
-thr = 0.8
-elite_cfa = np.where(index_value_save[:,:,:,0]>thr)
-elite_cfa = np.array(elite_cfa); elite_cfa2_nonpain=[]
-for i in range(elite_cfa.shape[1]):
-    elite_cfa2_nonpain.append(list(elite_cfa[:,i]))
-
-elite_cfa = np.where(index_value_save[:,:,:,1]>thr)
-elite_cfa = np.array(elite_cfa); elite_cfa2_pain=[]
-for i in range(elite_cfa.shape[1]):
-    elite_cfa2_pain.append(list(elite_cfa[:,i]))
-
-
-target = elite_cfa2_nonpain
-label_ratio = []
-for i in range(len(target)):
-    SE = target[i][0]
-    se = target[i][1]
+axiss=[]; [axiss.append([]) for u in range(3)]
+for thr in np.arange(0.3,0.751,0.01):
+    axiss[2].append(thr)
+    elite_cfa = np.where(index_value_save[:,:,:,0]>thr)
+    elite_cfa = np.array(elite_cfa); elite_cfa2_nonpain=[]
+    for i in range(elite_cfa.shape[1]):
+        elite_cfa2_nonpain.append(list(elite_cfa[:,i]))
     
-    c1 = SE in shamGroup and se in [0,1,2]
-    c2 = SE in pslGroup + CFAgroup and se in [0]
-    c100 = SE in pslGroup + CFAgroup and se in [1,2]
+    elite_cfa = np.where(index_value_save[:,:,:,1]>thr)
+    elite_cfa = np.array(elite_cfa); elite_cfa2_pain=[]
+    for i in range(elite_cfa.shape[1]):
+        elite_cfa2_pain.append(list(elite_cfa[:,i]))
     
-    if c1 or c2:
-        treulabel = 0  
-    elif c100:
-        treulabel = 1
-    else:
-        print('e', SE, se)
+    
+    target = elite_cfa2_nonpain
+    label_ratio = []
+    for i in range(len(target)):
+        SE = target[i][0]
+        se = target[i][1]
+        
+        c1 = SE in shamGroup and se in [0,1,2]
+        c2 = SE in pslGroup + CFAgroup and se in [0]
+        c100 = SE in pslGroup + CFAgroup and se in [1,2]
+        
+        if c1 or c2:
+            treulabel = 0  
+        elif c100:
+            treulabel = 1
+        else:
+            print('e', SE, se)
+    
+        label_ratio.append(treulabel)
+    print(thr, 'selected as nonpain label, true ratio', np.mean(label_ratio))
+    axiss[0].append(np.mean(label_ratio))
+    print('sample #', len(target))
+        
+    target = elite_cfa2_pain
+    label_ratio = []
+    for i in range(len(target)):
+        SE = target[i][0]
+        se = target[i][1]
+        
+        c1 = SE in shamGroup and se in [0,1,2]
+        c2 = SE in pslGroup + CFAgroup and se in [0]
+        c100 = SE in pslGroup + CFAgroup and se in [1,2]
+        
+        if c1 or c2:
+            treulabel = 0  
+        elif c100:
+            treulabel = 1
+        else:
+            print('e', SE, se)
+    
+        label_ratio.append(treulabel)
+    print(thr, 'selected as pain label, true ratio', np.mean(label_ratio))
+    axiss[1].append(np.mean(label_ratio))
+    print('sample #', len(target))
 
-    label_ratio.append(treulabel)
-print('selected as nonpain label, true ratio', np.mean(label_ratio))
-print('sample #', len(target))
-    
-target = elite_cfa2_pain
-label_ratio = []
-for i in range(len(target)):
-    SE = target[i][0]
-    se = target[i][1]
-    
-    c1 = SE in shamGroup and se in [0,1,2]
-    c2 = SE in pslGroup + CFAgroup and se in [0]
-    c100 = SE in pslGroup + CFAgroup and se in [1,2]
-    
-    if c1 or c2:
-        treulabel = 0  
-    elif c100:
-        treulabel = 1
-    else:
-        print('e', SE, se)
-
-    label_ratio.append(treulabel)
-print('selected as pain label, true ratio', np.mean(label_ratio))
-print('sample #', len(target))
-
+plt.figure()
+plt.plot(axiss[2], axiss[0])
+plt.plot(axiss[2], axiss[1])
   # In[] label save
 label_save = np.zeros(list(np.max(indexer, axis=0)+1)) # 0 nonpain; 1 pain
 label_save[:] = np.nan
@@ -1040,3 +1044,66 @@ for ix in [0,1]:
         print('========================')
 
 
+"""
+sample # 221
+0.6500000000000004 selected as pain label, true ratio 0.5888888888888889
+sample # 180
+0.6600000000000004 selected as nonpain label, true ratio 0.5138121546961326
+sample # 181
+0.6600000000000004 selected as pain label, true ratio 0.6099290780141844
+sample # 141
+0.6700000000000004 selected as nonpain label, true ratio 0.5185185185185185
+sample # 135
+0.6700000000000004 selected as pain label, true ratio 0.5877192982456141
+sample # 114
+0.6800000000000004 selected as nonpain label, true ratio 0.5567010309278351
+sample # 97
+0.6800000000000004 selected as pain label, true ratio 0.6136363636363636
+sample # 88
+0.6900000000000004 selected as nonpain label, true ratio 0.5416666666666666
+sample # 72
+0.6900000000000004 selected as pain label, true ratio 0.6349206349206349
+sample # 63
+0.7000000000000004 selected as nonpain label, true ratio 0.5370370370370371
+sample # 54
+0.7000000000000004 selected as pain label, true ratio 0.6428571428571429
+sample # 42
+0.7100000000000004 selected as nonpain label, true ratio 0.575
+sample # 40
+0.7100000000000004 selected as pain label, true ratio 0.6071428571428571
+sample # 28
+0.7200000000000004 selected as nonpain label, true ratio 0.5384615384615384
+sample # 26
+0.7200000000000004 selected as pain label, true ratio 0.5625
+sample # 16
+0.7300000000000004 selected as nonpain label, true ratio 0.42857142857142855
+sample # 14
+0.7300000000000004 selected as pain label, true ratio 0.5
+sample # 10
+0.7400000000000004 selected as nonpain label, true ratio 0.2222222222222222
+sample # 9
+0.7400000000000004 selected as pain label, true ratio 0.4
+sample # 5
+0.7500000000000004 selected as nonpain label, true ratio 0.25
+sample # 8
+0.7500000000000004 selected as pain label, true ratio 0.0
+sample # 2
+Out[239]: [<matplotlib.lines.Line2D at 0x21a0349b288>]
+"""
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
