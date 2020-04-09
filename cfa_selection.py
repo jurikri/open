@@ -38,8 +38,9 @@ except:
             savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
         except:
             savepath = ''; # os.chdir(savepath);
+            
 print('savepath', savepath)
-
+pickleload = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'
 # var import
 with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
@@ -740,8 +741,11 @@ for nix, q in enumerate(project_list):
 index_value_save = np.zeros(list(np.max(indexer, axis=0)+1)+[2]) # 0 nonpain; 1 pain
 index_value_save[:] = np.nan
 
-
-mssave2 = list(mssave)
+picklesavename = RESULT_SAVE_PATH + 'mssave_titan.pickle'
+with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+    mssave_titan = pickle.load(f)
+            
+mssave2 = list(mssave + mssave_titan)
 
 cnt = 0
 for i in range(len(mssave2)):
@@ -828,7 +832,19 @@ for thr in np.arange(0.3,0.751,0.01):
 plt.figure()
 plt.plot(axiss[2], axiss[0])
 plt.plot(axiss[2], axiss[1])
-  # In[] label save
+
+# In[]
+thr = 0.68
+elite_cfa = np.where(index_value_save[:,:,:,0]>thr)
+elite_cfa = np.array(elite_cfa); elite_cfa2_nonpain=[]
+for i in range(elite_cfa.shape[1]):
+    elite_cfa2_nonpain.append(list(elite_cfa[:,i]))
+
+elite_cfa = np.where(index_value_save[:,:,:,1]>thr)
+elite_cfa = np.array(elite_cfa); elite_cfa2_pain=[]
+for i in range(elite_cfa.shape[1]):
+    elite_cfa2_pain.append(list(elite_cfa[:,i]))
+  # In label save
 label_save = np.zeros(list(np.max(indexer, axis=0)+1)) # 0 nonpain; 1 pain
 label_save[:] = np.nan
 
@@ -838,7 +854,6 @@ for i in elite_cfa2_pain:
     if not(np.isnan(label_save[i[0], i[1], i[2]])):
         print(i[0], i[1], i[2], 'label 겹침!?')
     label_save[i[0], i[1], i[2]] = 1
-
 
 elite_cfa_total = elite_cfa2_nonpain + elite_cfa2_pain
 # In[]
@@ -858,8 +873,6 @@ for si in [0]:
 
         tset = fset + baseonly + CFAgroup + capsaicinGroup + pslGroup + shamGroup
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset, estimated_set=elite_cfa_total, estimated_label=label_save)
-
-
 
     for ti in range(5):
         savename2 = savename + '_t' + str(ti) + '.pickle'
