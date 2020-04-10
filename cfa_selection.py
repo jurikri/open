@@ -489,7 +489,7 @@ for nix, q in enumerate(project_list):
     for unit in range(msunit *fn):
         inputsize[unit] = X[unit].shape[1] # size 정보는 계속사용하므로, 따로 남겨놓는다.
         
-    def keras_setup(lr=lr):
+    def keras_setup(lr=lr, batchnmr=False):
         #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
         
         dt = datetime.now()
@@ -507,6 +507,8 @@ for nix, q in enumerate(project_list):
             input2[unit] = Bidirectional(LSTM(n_hidden))(input1[unit]) # biRNN -> 시계열에서 단일 value로 나감
             input2[unit] = Dense(layer_1, kernel_initializer = init, \
                   activation='relu')(input2[unit]) # fully conneted layers, relu
+            if  batchnmr:
+                input2[unit] = BatchNormalization()(input2[unit])
             input2[unit] = Dropout(dropout_rate1)(input2[unit]) # dropout
         
         if msunit *fn == 1:
@@ -515,17 +517,12 @@ for nix, q in enumerate(project_list):
             added = keras.layers.Add()(input2) # 병렬구조를 여기서 모두 합침
         merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate),\
                         activation='relu')(added) # fully conneted layers, relu
-#        merge_1 = BatchNormalization()(merge_1)
-#        merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
-#        merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
-#                        activation='relu')(merge_2) # fully conneted layers, sigmoid
-##        merge_2 = BatchNormalization()(merge_2)
-        
+        if batchnmr:
+            merge_1 = BatchNormalization()(merge_1)
         merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
-        merge_2 = Dense(n_out, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
-                        activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
-#        merge_2 = BatchNormalization()(merge_2)
         
+        merge_2 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), \
+                        activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
         merge_3 = Dense(n_out, input_dim=n_out)(merge_2) # regularization 삭제
         merge_4 = Activation('softmax')(merge_3) # activation as softmax function
         
@@ -869,12 +866,113 @@ def nanex(array1):
 
 for si in [0]:
     if si == 0:
+        savename = 'basic'
+        tset = fset + baseonly
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset)
+    
+    if si == 1:
         savename = 'all'; thr = thr
 
         tset = fset + baseonly + CFAgroup + capsaicinGroup + pslGroup + shamGroup
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset, estimated_set=elite_cfa_total, estimated_label=label_save)
 
-    for ti in range(5):
+    for ti in range(1):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        print('index', savename2)
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+        
+#        if os.path.isfile(final_weightsave):
+#            continue
+
+        X = array_recover(X_save2)
+        Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
+        Z = np.array(Z_save2) 
+        trX, trY, trZ = upsampling(X, Y, Z)
+        
+        # val set
+        testlist = pslGroup + shamGroup
+        valid = valid_generation(testlist, only_se=None)
+        
+        epochs = 50
+        acc_thr = 0.93
+        lr = 1e-3 # learning rate
+        
+        n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+        layer_1 = int(8 * 6) #
+        
+        l2_rate = 0.3
+        dropout_rate1 = 0.2 # dropout late
+        dropout_rate2 = 0.1 # 
+        
+        # model reset
+        reset_keras(model)
+        nseed(seed)
+        tf.random.set_seed(seed)   
+        model, idcode = keras_setup(lr=lr, batchnmr=True) 
+#        model.load_weights(initial_weightsave) 
+        
+        # traning 
+        starttime = time.time(); current_acc = -np.inf; cnt=0
+        s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
+        grade_acc = [0.93]
+        gix = 0
+        
+        current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
+        isfile1 = os.path.isfile(current_weightsave)
+  
+        hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
+            
+        s_loss += list(np.array(hist.history['loss']))
+        s_acc += list(np.array(hist.history['accuracy']))
+    
+        model.save_weights(final_weightsave) 
+#        model.load_weights(final_weightsave) 
+        
+        test_matrix = np.zeros((N,5)); test_matrix[:] = np.nan
+        for tSE in testlist:
+            for tse in range(3):
+                valid = valid_generation([tSE], only_se=tse)
+                score = model.evaluate(valid[0], valid[1])
+                pain = score[1]
+                test_matrix[tSE, tse] = pain
+                
+        psl0 = nanex(test_matrix[pslGroup,0])
+        psl1 = nanex(test_matrix[pslGroup,1])
+        psl2 = nanex(test_matrix[pslGroup,2])
+        
+        sham0 = nanex(test_matrix[shamGroup,0])
+        sham1 = nanex(test_matrix[shamGroup,1])
+        sham2 = nanex(test_matrix[shamGroup,2])
+        
+        base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+        base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+        sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
+        sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
+        
+        print('base_vs_3', base_vs_3)
+        print('base_vs_10', base_vs_10)
+        print('sham3_vs_psl3', sham3_vs_psl3)
+        print('sham10_vs_psl10', sham10_vs_psl10)
+        
+"""
+base_vs_3 0.34231266455974674
+base_vs_10 0.2656319367719819
+sham3_vs_psl3 0.09739328685871235
+sham10_vs_psl10 0.05421274251456136
+"""
+# In[]
+for si in [0,1]:
+    if si == 0:
+        savename = 'high_midle'
+        tset = highGroup + midleGroup
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset)
+        
+    if si == 1:
+        savename = 'basic_old'
+        tset = fset + baseonly
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset)
+    
+    for ti in range(2):
         savename2 = savename + '_t' + str(ti) + '.pickle'
         print('index', savename2)
         final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
@@ -889,10 +987,11 @@ for si in [0]:
         trX, trY, trZ = upsampling(X, Y, Z)
         
         # val set
-        testlist = pslGroup
+        testlist = pslGroup + shamGroup
         valid = valid_generation(testlist, only_se=None)
         
-        acc_thr = 0.93
+        epochs = 1
+        acc_thr = 0.91
         lr = 1e-3 # learning rate
         
         n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
@@ -944,7 +1043,43 @@ for si in [0]:
             # 종료조건: 
             current_acc = s_acc[-1] 
             
-        model.save_weights(final_weightsave) 
+        model.save_weights(final_weightsave)
+        
+        # In[]
+        
+        test_matrix = np.zeros((N,5)); test_matrix[:] = np.nan
+        for tSE in testlist:
+            for tse in range(3):
+                valid = valid_generation([tSE], only_se=tse)
+                score = model.evaluate(valid[0], valid[1])
+                pain = score[1]
+                test_matrix[tSE, tse] = pain
+                
+        psl0 = nanex(test_matrix[pslGroup,0])
+        psl1 = nanex(test_matrix[pslGroup,1])
+        psl2 = nanex(test_matrix[pslGroup,2])
+        
+        sham0 = nanex(test_matrix[shamGroup,0])
+        sham1 = nanex(test_matrix[shamGroup,1])
+        sham2 = nanex(test_matrix[shamGroup,2])
+        
+        base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+        base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+        sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
+        sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
+        
+        print('base_vs_3', base_vs_3)
+        print('base_vs_10', base_vs_10)
+        print('sham3_vs_psl3', sham3_vs_psl3)
+        print('sham10_vs_psl10', sham10_vs_psl10)
+        
+"""
+base_vs_3 0.20899769289520562
+base_vs_10 0.2228891067168212
+sham3_vs_psl3 0.08354878798789862
+sham10_vs_psl10 0.0794040903778463
+"""
+        
 # In[]
 for si in [0,1]:
     if si == 0:
