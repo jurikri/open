@@ -71,6 +71,7 @@ CFAgroup = msGroup['CFAgroup']
 chloroquineGroup = msGroup['chloroquineGroup']
 itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
+ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -367,7 +368,7 @@ for nix, q in enumerate(project_list):
     print('selected mouse #', len(reducing_test_list))          
 #    print(reducing_test_list)
     
-    def ms_sampling(forlist=range(N), estimated_set=None, estimated_label=None, searching=None, ex=[]):
+    def ms_sampling(forlist=range(N), ex=[], addset=None, addset2=[]):
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
         datasetX = []; datasetY = []; datasetZ = []
@@ -389,25 +390,33 @@ for nix, q in enumerate(project_list):
 
                     for se in range(sessionNum):   
                         msclass = None
-                        if SE in fset + baseonly and se in [0,2]:
+                        
+                        c1 = SE in fset + baseonly and se in [0,2]
+                        c2 = SE in capsaicinGroup and se in [0]
+                        c3 = SE in CFAgroup and se in [0]
+                        c4 = SE in pslGroup and se in [0]
+                        c5 = SE in shamGroup and se in [0,1,2]
+                        
+                        if c1 or c2 or c3 or c4 or c5:
                             msclass = 0 
-                        elif SE in fset and se in [1] and movement[SE,se] > 0.15:
+                              
+                        c101 = SE in fset and se in [1] and movement[SE,se] > 0.15
+                        c102 = SE in CFAgroup and se in [1,2]
+                        c103 = SE in pslGroup and se in [1,2]
+                            
+                        if c101 or c102 or c103:
                             msclass = 1
+                            
+                        if msclass is None:
+                            continue
                             
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
                         for u in msbins:
-                            if not(estimated_set is None) and SE in CFAgroup + capsaicinGroup + pslGroup + shamGroup:
-                                if [SE, se, u] in estimated_set:
-                                    msclass = estimated_label[SE, se, u]
-                                    
-                            if not(searching is None):
-                                random.seed(None)
-                                msclass = random.choice([0,1])
-                                    
-                            if msclass is None or np.isnan(msclass):
-                                continue
-                        
+                            if not(addset is None) and SE in addset2:
+                                if not [SE, se, u] in addset:
+                                    continue
+                            
                             mannual_signal = mssignal[u:u+full_sequence]
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                             
@@ -415,13 +424,8 @@ for nix, q in enumerate(project_list):
                                            Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
                             
                             X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [u]]#; T_tmp += t4_save 
-#                            print(Y)
-#                            if len(Y[0]) == 1:
-#                                import sys
-#                                sys.exit()
                 
         print('nonpain vs pain_sample distribution', np.mean(Y_tmp, axis=0))      
-        
         return X_tmp, Y_tmp, Z_tmp
 
     def upsampling(X_elite, Y_elite, Z_elite):
@@ -487,7 +491,7 @@ for nix, q in enumerate(project_list):
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
     # In
-    X_save2, Y_save2, Z_save2 = ms_sampling(forlist=CFAgroup+pslGroup+shamGroup, searching=True)
+    X_save2, Y_save2, Z_save2 = ms_sampling(forlist = CFAgroup + capsaicinGroup)
     
     X = array_recover(X_save2)
     Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
@@ -651,15 +655,10 @@ for nix, q in enumerate(project_list):
         picklesavename = gsync + 'mssave.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
             mssave = pickle.load(f)
-        ylen = Y.shape[0]
     
         print('len(mssave)', len(mssave))
         # label blind
-        Y_blind=[]
-        for u in range(ylen):
-            Y_blind.append(random.choice([[1,0],[0,1]]))
-        Y = np.array(Y_blind)
-        
+
         Ylist = list(range(len(Y)))
 #        msmin = 50 # 조합 최소 갯수    
         random.seed(None)
@@ -738,135 +737,25 @@ for nix, q in enumerate(project_list):
             with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
 
-# In[]      # mean signal 처리
-#np.mean(np.array(mssave)[:,-1])
-            
-#            # blind Y 보면서 처리 방법좀.. 
+# In[]     
 
-
-index_value_save = np.zeros(list(np.max(indexer, axis=0)+1)+[2]) # 0 nonpain; 1 pain
+index_value_save = np.zeros(np.max(indexer, axis=0)+1)
 index_value_save[:] = np.nan
 
-picklesavename = gsync + 'mssave.pickle'
-with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-    mssave = pickle.load(f)
+mssave2 = np.array(mssave)
 
-picklesavename = gsync + 'mssave_titan.pickle'
-with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-    mssave_titan = pickle.load(f)
-            
-mssave2 = list(mssave + mssave_titan)
-
-cnt = 0
 for i in range(len(mssave2)):
-    if len(mssave2[i][6]) == 0:
-        continue
-    
     acctmp = mssave2[i][6][-1]
-    cnt += 1
 #    print(acctmp)
-    for j in range(len(mssave2[i][2])):
-        label = np.argmax(mssave2[i][1][j])
-        
-        SE_se_bin = mssave2[i][2][j]
-        tmp = index_value_save[mssave2[i][2][j][0], mssave2[i][2][j][1], mssave2[i][2][j][2], label]
-        index_value_save[mssave2[i][2][j][0], mssave2[i][2][j][1], mssave2[i][2][j][2], label] = np.nanmean([tmp, acctmp])
+    for j in mssave2[i][2]:
+        tmp = index_value_save[j[0], j[1], j[2]]
+        index_value_save[j[0], j[1], j[2]] = np.nanmean([tmp, acctmp])
 #        print(index_value_save[j[0], j[1], j[2]])
         
-print(cnt)        
-print('np.nanmean(index_value_save)', np.nanmean(index_value_save[:,:,:,0]))
-print('np.nanmean(index_value_save)', np.nanmean(index_value_save[:,:,:,1]))
+print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
 
-plt.hist(index_value_save[:,:,:,0].flatten()) # nonpain
-plt.hist(index_value_save[:,:,:,1].flatten()) # pain
+plt.hist(index_value_save.flatten(), bins=20)
 
-# In[]
-axiss=[]; [axiss.append([]) for u in range(3)]
-for thr in np.arange(0.3,0.751,0.01):
-    axiss[2].append(thr)
-    elite_cfa = np.where(index_value_save[:,:,:,0]>thr)
-    elite_cfa = np.array(elite_cfa); elite_cfa2_nonpain=[]
-    for i in range(elite_cfa.shape[1]):
-        elite_cfa2_nonpain.append(list(elite_cfa[:,i]))
-    
-    elite_cfa = np.where(index_value_save[:,:,:,1]>thr)
-    elite_cfa = np.array(elite_cfa); elite_cfa2_pain=[]
-    for i in range(elite_cfa.shape[1]):
-        elite_cfa2_pain.append(list(elite_cfa[:,i]))
-    
-    
-    target = elite_cfa2_nonpain
-    label_ratio = []
-    for i in range(len(target)):
-        SE = target[i][0]
-        se = target[i][1]
-        
-        c1 = SE in shamGroup and se in [0,1,2]
-        c2 = SE in pslGroup + CFAgroup and se in [0]
-        c100 = SE in pslGroup + CFAgroup and se in [1,2]
-        
-        if c1 or c2:
-            treulabel = 0  
-        elif c100:
-            treulabel = 1
-        else:
-            print('e', SE, se)
-    
-        label_ratio.append(treulabel)
-    print(thr, 'selected as nonpain label, true ratio', np.mean(label_ratio))
-    axiss[0].append(np.mean(label_ratio))
-    print('sample #', len(target))
-        
-    target = elite_cfa2_pain
-    label_ratio = []
-    for i in range(len(target)):
-        SE = target[i][0]
-        se = target[i][1]
-        
-        c1 = SE in shamGroup and se in [0,1,2]
-        c2 = SE in pslGroup + CFAgroup and se in [0]
-        c100 = SE in pslGroup + CFAgroup and se in [1,2]
-        
-        if c1 or c2:
-            treulabel = 0  
-        elif c100:
-            treulabel = 1
-        else:
-            print('e', SE, se)
-    
-        label_ratio.append(treulabel)
-    print(thr, 'selected as pain label, true ratio', np.mean(label_ratio))
-    axiss[1].append(np.mean(label_ratio))
-    print('sample #', len(target))
-
-plt.figure()
-plt.plot(axiss[2], axiss[0])
-plt.plot(axiss[2], axiss[1])
-
-# In[]
-thr = 0.61
-elite_cfa = np.where(index_value_save[:,:,:,0]>thr)
-elite_cfa = np.array(elite_cfa); elite_cfa2_nonpain=[]
-for i in range(elite_cfa.shape[1]):
-    elite_cfa2_nonpain.append(list(elite_cfa[:,i]))
-
-elite_cfa = np.where(index_value_save[:,:,:,1]>thr)
-elite_cfa = np.array(elite_cfa); elite_cfa2_pain=[]
-for i in range(elite_cfa.shape[1]):
-    elite_cfa2_pain.append(list(elite_cfa[:,i]))
-  # In label save
-label_save = np.zeros(list(np.max(indexer, axis=0)+1)) # 0 nonpain; 1 pain
-label_save[:] = np.nan
-
-for i in elite_cfa2_nonpain:
-    label_save[i[0], i[1], i[2]] = 0
-for i in elite_cfa2_pain:
-    if not(np.isnan(label_save[i[0], i[1], i[2]])):
-        print(i[0], i[1], i[2], 'label 겹침!?')
-        label_save[i[0], i[1], i[2]] = np.nan; break
-    label_save[i[0], i[1], i[2]] = 1
-
-elite_cfa_total = elite_cfa2_nonpain + elite_cfa2_pain
 # In[]
 from scipy import stats
 from sklearn import metrics
@@ -877,92 +766,105 @@ def nanex(array1):
     return array1
 
 # In[]
-testlist = pslGroup + shamGroup
-test_matrix = np.zeros((N,5,2)); test_matrix[:] = np.nan
+testlist = pslGroup + shamGroup + ipsaline_pslGroup
+repeat = 2
+pathsave = []
 #valid = valid_generation(testlist, only_se=None)   
-for testmouse in testlist:
-    for si in [2]:    
-        if si == 2:
-            savename = 'all'
-            tset = fset + baseonly + CFAgroup + capsaicinGroup + pslGroup + shamGroup
-            X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset, estimated_set=elite_cfa_total, estimated_label=label_save, ex=[testmouse])
-        
-        for ti in range(2):
-            savename2 = savename + '_' + str(testmouse) + '_t' + str(ti) + '.pickle'
-            print('index', savename2)
-            final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
-            
-            if os.path.isfile(final_weightsave):
-                continue
+for si in [2]:    
+    test_matrix = np.zeros((N,5,repeat)); test_matrix[:] = np.nan
     
-            X = array_recover(X_save2)
-            Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
-            Z = np.array(Z_save2)
-            
-            trX, trY, trZ = upsampling(X, Y, Z)
-                
-            epochs = 1
-            acc_thr = 0.91
-            lr = 1e-3 # learning rate
-            
-            n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-            layer_1 = int(8 * 6) #
-            
-            l2_rate = 0.3
-            dropout_rate1 = 0.2 # dropout late
-            dropout_rate2 = 0.1 # 
-            
-            # model reset
-            reset_keras(model)
-            nseed(seed)
-            tf.random.set_seed(seed)   
-            model, idcode = keras_setup() 
-    #        model.load_weights(initial_weightsave) 
-            
-            # traning 
-            starttime = time.time(); current_acc = -np.inf; cnt=0
-            s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
-            grade_acc = [0.93]
-            gix = 0
-            while current_acc < acc_thr and cnt < 2000: # 0.93: # 목표 최대 정확도, epoch limit
-                if (cnt > maxepoch/epochs) or \
-                (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
-                    cnt = 0
-                    seed += 1
-                    random.seed(seed)
-                    reset_keras(model)
-                    nseed(seed)
-                    tf.random.set_seed(seed)   
-                    model, idcode = keras_setup() 
-            
-                current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
-                isfile1 = os.path.isfile(current_weightsave)
-              
-                if isfile1 and cnt > 0:
-                    reset_keras(model)
-                    model, idcode = keras_setup(lr=lr)
-                    model.load_weights(current_weightsave)
-                    
-                hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
-                cnt += 1; model.save_weights(current_weightsave)
-                if cnt % 20 == 0 and cnt != 0:
-                    print('cnt', cnt)
-                                 
-                s_loss += list(np.array(hist.history['loss']))
-                s_acc += list(np.array(hist.history['accuracy']))
-                                                         
-                # 종료조건: 
-                current_acc = s_acc[-1] 
-                
-            model.save_weights(final_weightsave)
+    if si == 2:
+        savename = 'fset + baseonly + CFAgroup + capsaicinGroup'
+        tset = fset + baseonly + CFAgroup + capsaicinGroup
+        thr = 0.65
+        elite_cfa = np.where(index_value_save>thr)
+        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
+        for i in range(elite_cfa.shape[1]):
+            elite_cfa2.append(list(elite_cfa[:,i]))
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset, addset= elite_cfa2, addset2= CFAgroup + capsaicinGroup)
         
+    
+    for ti in range(repeat):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        print('index', savename2)
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
         
+        if os.path.isfile(final_weightsave):
+            continue
+
+        X = array_recover(X_save2)
+        Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
+        Z = np.array(Z_save2)
+        
+        trX, trY, trZ = upsampling(X, Y, Z)
+        print('len(elite_cfa2)', len(elite_cfa2))
+        print('tr samples #', len(Z_save2))
+        print('tr samples after upsampling #', len(trZ))
+            
+        epochs = 1
+        acc_thr = 0.91
+        lr = 1e-3 # learning rate
+        
+        n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+        layer_1 = int(8 * 6) #
+        
+        l2_rate = 0.3
+        dropout_rate1 = 0.2 # dropout late
+        dropout_rate2 = 0.1 # 
+        
+        # model reset
+        reset_keras(model)
+        nseed(seed)
+        tf.random.set_seed(seed)   
+        model, idcode = keras_setup() 
+#        model.load_weights(initial_weightsave) 
+        
+        # traning 
+        starttime = time.time(); current_acc = -np.inf; cnt=0
+        s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[]
+        current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
+        isfile1 = os.path.isfile(current_weightsave)
+#        grade_acc = [0.93]
+#        gix = 0
+        while current_acc < acc_thr and cnt < 2000: # 0.93: # 목표 최대 정확도, epoch limit
+            if (cnt > maxepoch/epochs) or \
+            (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
+                cnt = 0
+                seed += 1
+                random.seed(seed)
+                reset_keras(model)
+                nseed(seed)
+                tf.random.set_seed(seed)   
+                model, idcode = keras_setup() 
+
+            if isfile1 and cnt > 0:
+                model.load_weights(current_weightsave)
+                
+            hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
+            cnt += 1; model.save_weights(current_weightsave)
+            if cnt % 20 == 0 and cnt != 0:
+                print('cnt', cnt)
+                             
+            s_loss += list(np.array(hist.history['loss']))
+            s_acc += list(np.array(hist.history['accuracy']))
+                                                     
+            # 종료조건: 
+            current_acc = s_acc[-1] 
+        model.save_weights(final_weightsave)
+    
+    
 #        for tSE in testlist:
-        for tse in range(3):
-            valid = valid_generation([testmouse], only_se=tse)
-            score = model.evaluate(valid[0], valid[1])
-            pain = score[1]
-            test_matrix[testmouse, tse, ti] = pain
+    for tse in range(3):
+        valid = valid_generation([testlist], only_se=tse)
+        score = model.evaluate(valid[0], valid[1])
+        pain = score[1]
+        test_matrix[testlist, tse, ti] = pain
+        
+    test_matrix_savename = RESULT_SAVE_PATH + 'exp_raw/' + savename + '_t' + str(ti) + '.h5'
+    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+        pickle.dump(test_matrix, f, pickle.HIGHEST_PROTOCOL)
+        
+    pathsave.apepnd([si, ti, final_weightsave, test_matrix_savename])
             # In[]    
             
 psl0 = nanex(test_matrix[pslGroup,0])
