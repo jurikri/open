@@ -368,7 +368,7 @@ for nix, q in enumerate(project_list):
     print('selected mouse #', len(reducing_test_list))          
 #    print(reducing_test_list)
     
-    def ms_sampling(forlist=range(N), ex=[], addset=None, addset2=[]):
+    def ms_sampling(forlist=range(N), ex=[], addset=None, addset2=[], passsw=False):
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
         datasetX = []; datasetY = []; datasetZ = []
@@ -415,11 +415,11 @@ for nix, q in enumerate(project_list):
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
                         for u in msbins:
-                            if not(addset is None) and SE in addset2 and msclass == 1:
+                            if not(addset is None) and SE in addset2 and msclass == 1 and not(passsw):
                                 if not [SE, se, u] in addset:
                                     continue
                                 
-                            elif (not SE in fset) and msclass == 1:
+                            elif (not SE in fset) and msclass == 1 and not(passsw):
                                 continue
                             
                             
@@ -498,7 +498,7 @@ for nix, q in enumerate(project_list):
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
     # In
-    X_save2, Y_save2, Z_save2 = ms_sampling(forlist = CFAgroup + capsaicinGroup)
+    X_save2, Y_save2, Z_save2 = ms_sampling(forlist = CFAgroup + capsaicinGroup, passsw=True)
     
     X = array_recover(X_save2)
     Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
@@ -658,8 +658,8 @@ for nix, q in enumerate(project_list):
     print('maxepoch', maxepoch)
 
     # In[]
-    while False:
-        picklesavename = gsync + 'mssave_titan.pickle'
+    while True:
+        picklesavename = gsync + 'mssave.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
             mssave = pickle.load(f)
     
@@ -746,7 +746,7 @@ for nix, q in enumerate(project_list):
 
 # In[]     
 
-picklesavename = 'C:\\Users\\skklab\\Google 드라이브\\google_syn\\mssave.pickle'
+picklesavename = gsync + 'mssave.pickle'
 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
     mssave = pickle.load(f)
 
@@ -781,15 +781,11 @@ def nanex(array1):
     array1 = array1[np.isnan(array1)==0]
     return array1
 
-#import sys
-#sys.exit()
-
 # In[]
 testlist = pslGroup + shamGroup + ipsaline_pslGroup
-repeat = 3
 pathsave = []
 #valid = valid_generation(testlist, only_se=None)   
-for si in [0,1,2,3,4,5,6,7]:    
+for si in range(2):    
     test_matrix = np.zeros((N,5,repeat)); test_matrix[:] = np.nan
     
     acc_thr = 0.91
@@ -801,61 +797,30 @@ for si in [0,1,2,3,4,5,6,7]:
     dropout_rate2 = 0.1 # 
             
     if si == 0:
-        savename = 'highGroup + midleGroup'
-        tset = highGroup + midleGroup
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset)
-    
-    if si == 1:
         savename = 'fset + baseonly'
         tset = fset + baseonly
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset)
-    
-    if si == 2:
-        savename = 'fset + baseonly + CFAgroup + capsaicinGroup'
-        tset = fset + baseonly + CFAgroup + capsaicinGroup
-        thr = 0.68
-        elite_cfa = np.where(index_value_save>thr)
-        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-        for i in range(elite_cfa.shape[1]):
-            elite_cfa2.append(list(elite_cfa[:,i]))
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset, addset= elite_cfa2, addset2= CFAgroup + capsaicinGroup)
-        
-    if si == 3:
-        base_pslset = []
-        savename = 'fset + baseonly + CFAgroup + capsaicinGroup_0.68'
-        tset = fset + baseonly + CFAgroup + capsaicinGroup
-        thr = 0.68
-        acc_thr = 0.895
-        elite_cfa = np.where(index_value_save>thr)
-        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-        for i in range(elite_cfa.shape[1]):
-            elite_cfa2.append(list(elite_cfa[:,i]))
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset + base_pslset, addset= elite_cfa2, addset2= CFAgroup + capsaicinGroup)
 
-    if si in [4,5,6,7]:
-        if si == 4:
-            thr = 0.68
-        elif si == 5:
-            thr = 0.72
-        elif si == 6:
-            thr = 0.74
-        elif si == 7:
-            thr = 0.70
-              
+    if si in [1,2]:
+        if si == 1:
+            thr = 0.7
+        elif si == 2:
+            thr = 0
+        
         base_pslset = []
         savename = 'fset + baseonly + CFAgroup + capsaicinGroup_' + str(thr) + '_0415'
         tset = fset + baseonly + CFAgroup + capsaicinGroup    
             
         acc_thr = 0.895
+        
         elite_cfa = np.where(index_value_save>thr)
         elite_cfa = np.array(elite_cfa); elite_cfa2=[]
         for i in range(elite_cfa.shape[1]):
             elite_cfa2.append(list(elite_cfa[:,i]))
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset + base_pslset, addset= elite_cfa2, addset2= CFAgroup + capsaicinGroup)
     
-    repeat = 3
-    if si == 7:
-        repeat = 5
+    ##
+    repeat = 5
     
     for ti in range(repeat):
         savename2 = savename + '_t' + str(ti) + '.pickle'
