@@ -21,7 +21,7 @@ salineGroup =       [12,13,14,15,16,17,18,19,47,48,52,53,56,58] # control
 ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
 capsaicinGroup =    [60,61,62,64,65,82,83,104,105]
-yohimbineGroup =    [63,66,67,68,69,74]
+yohimbineGroup =    [63,66,67,68,69,74] 
 pslGroup =          [70,71,72,73,75,76,77,78,79,80,84,85,86,87,88,93,94] 
 shamGroup =         [81,89,90,91,92,97]
 adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
@@ -30,6 +30,7 @@ highGroup2 =        [95,96] # 학습용, late ,recovery는 애초에 분석되�
 chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
 itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
+ipsaline_pslGroup = [141,142,143,144,145,146]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
@@ -53,6 +54,7 @@ msGroup['CFAgroup'] = CFAgroup
 msGroup['chloroquineGroup'] = chloroquineGroup
 msGroup['itSalineGroup'] = itSalineGroup
 msGroup['itClonidineGroup'] = itClonidineGroup
+msGroup['ipsaline_pslGroup'] = ipsaline_pslGroup
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -415,7 +417,8 @@ def msMovementExtraction(list1):
     return None
 
 # In[]
-runlist = [77,123,120,106] + list(range(139,N))
+#runlist = [77,123,120,106] + list(range(139,N))
+runlist = list(range(144, N))
 print('runlist', runlist, '<<<< 확인!!')
  
 mssignal_save(runlist)
@@ -458,29 +461,31 @@ for SE in range(N2):
 # In QC
 # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
 thr = 10
-
-def abnomarSignal(startSE):
-    for SE in range(startSE, N):
-        print(SE)
-        signals = signalss[SE]
-        for se in range(5):
-            signal = np.array(signals[se])
-            
+for SE in runlist:
+    print(SE)
+    signals = signalss[SE]
+    rois = np.zeros(signals[0].shape[1])
+     
+    for se in range(5):
+        wsw = True
+        while wsw:
+            wsw = False
+            signal = np.array(signalss[SE][se])
             for n in range(signal.shape[1]):
                 msplot = np.zeros(signal.shape[0]-1)
                 for frame in range(signal.shape[0]-1):
                     msplot[frame] = np.abs(signal[frame+1,n] - signal[frame,n])
     
-                    if msplot[frame] > thr:
+                    if msplot[frame] > thr and rois[n] < 20:
+                        wsw = True
+                        rois[n] += 1
                         print(SE, se, n, msplot[frame], frame+1)
                         signalss[SE][se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
-                        return 1, SE
-                    
-    return 0, SE
-
-sw = 1; startSE = 0
-while sw:
-    sw, startSE = abnomarSignal(startSE)
+        
+    for se in range(5):
+        signal = np.array(signalss[SE][se])
+        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
+        print('ROI delete', SE, se, np.where(rois==20)[0])
                     
 #                    print(signalss[SE][se][frame+1,n], signal[frame,n])
 
@@ -678,13 +683,7 @@ if True: # 시각화 저장
             plt.close(SE)
 
 
-try:
-    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
-except:
-    try:
-        savepath = 'C:\\Users\\msbak\\Documents\\tensor\\'; os.chdir(savepath);
-    except:
-        savepath = ''; # os.chdir(savepath);
+savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'
 print('savepath', savepath)
 
 msdata = {
@@ -697,7 +696,7 @@ msdata = {
         'signalss' : signalss
         }
 
-with open('mspickle.pickle', 'wb') as f:  # Python 3: open(..., 'wb')
+with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(msdata, f, pickle.HIGHEST_PROTOCOL)
     print('mspickle.pickle 저장되었습니다.')
 
