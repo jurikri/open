@@ -78,8 +78,7 @@ msset2 = msGroup['msset2']
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
-se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup \
-+ itSalineGroup + itClonidineGroup # for test only
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup + itClonidineGroup # for test only
 
 pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
 fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
@@ -590,7 +589,7 @@ for nix, q in enumerate(project_list):
                     c101 = SE in set2 and se in [1]
                     c102 = SE in capsaicinGroup and se in [1]
                     c103 = SE in pslGroup and se in [1,2]
-                    c104 = SE in itSalineGroup and se in [1,2]
+                    c104 = SE in itSalineGroup and se in [1,2,3,4]
                                        
                     if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
                         msclass = 0; init = True
@@ -658,7 +657,7 @@ for nix, q in enumerate(project_list):
     print('maxepoch', maxepoch)
 
     # In[]
-    while True:
+    while False:
         picklesavename = gsync + 'mssave.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
             mssave = pickle.load(f)
@@ -782,12 +781,10 @@ def nanex(array1):
     return array1
 
 # In[]
-testlist = pslGroup + shamGroup + ipsaline_pslGroup
+testlist = pslGroup + shamGroup + ipsaline_pslGroup + chloroquineGroup
 pathsave = []
 #valid = valid_generation(testlist, only_se=None)   
-for si in range(2):    
-    test_matrix = np.zeros((N,5,repeat)); test_matrix[:] = np.nan
-    
+for si in [1,2,3]:    
     acc_thr = 0.91
     n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
     layer_1 = int(8 * 6) #
@@ -801,12 +798,14 @@ for si in range(2):
         tset = fset + baseonly
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset)
 
-    if si in [1,2]:
+    if si in [1,2,3]:
         if si == 1:
-            thr = 0.7
-        elif si == 2:
-            thr = 0
-        
+            thr = 0.68
+        if si == 2:
+            thr = 0.69
+        if si == 3:
+            thr = 0.70
+  
         base_pslset = []
         savename = 'fset + baseonly + CFAgroup + capsaicinGroup_' + str(thr) + '_0415'
         tset = fset + baseonly + CFAgroup + capsaicinGroup    
@@ -817,81 +816,96 @@ for si in range(2):
         elite_cfa = np.array(elite_cfa); elite_cfa2=[]
         for i in range(elite_cfa.shape[1]):
             elite_cfa2.append(list(elite_cfa[:,i]))
+        print('len(elite_cfa2)', len(elite_cfa2))
         X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset + base_pslset, addset= elite_cfa2, addset2= CFAgroup + capsaicinGroup)
-    
-    ##
-    repeat = 5
-    
-    for ti in range(repeat):
-        savename2 = savename + '_t' + str(ti) + '.pickle'
-        print('index', savename2)
-        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
-        test_matrix_savename = RESULT_SAVE_PATH + 'exp_raw/' + savename + '_t' + str(ti) + '.h5'
-        pathsave.append([si, ti, final_weightsave, test_matrix_savename])
         
-        if not(os.path.isfile(final_weightsave)):
-            X = array_recover(X_save2)
-            Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
-            Z = np.array(Z_save2)
+        repeat = 5
+        
+        for ti in range(repeat):
+            savename2 = savename + '_t' + str(ti) + '.pickle'
+            print('index', savename2)
+            final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+            test_matrix_savename = RESULT_SAVE_PATH + 'exp_raw/' + savename + '_t' + str(ti) + '.h5'
+            pathsave.append([si, ti, final_weightsave, test_matrix_savename])
             
-            trX, trY, trZ = upsampling(X, Y, Z)
-            print('len(elite_cfa2)', len(elite_cfa2))
-            print('tr samples #', len(Z_save2))
-            print('tr samples after upsampling #', len(trZ))
-                
-            epochs = 1
-            lr = 1e-3 # learning rate
-
-            # model reset
             reset_keras(model)
             nseed(seed)
             tf.random.set_seed(seed)   
             model, idcode = keras_setup() 
-    #        model.load_weights(initial_weightsave) 
             
-            # traning 
-            starttime = time.time(); current_acc = -np.inf; cnt=0
-            s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[]
-            current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
-            isfile1 = os.path.isfile(current_weightsave)
-    #        grade_acc = [0.93]
-    #        gix = 0
-            while current_acc < acc_thr and cnt < 2000: # 0.93: # 목표 최대 정확도, epoch limit
-                if (cnt > maxepoch/epochs) or \
-                (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
-                    cnt = 0
-                    seed += 1
-                    random.seed(seed)
-                    reset_keras(model)
-                    nseed(seed)
-                    tf.random.set_seed(seed)   
-                    model, idcode = keras_setup() 
-    
-                if isfile1 and cnt > 0:
-                    model.load_weights(current_weightsave)
+            if not(os.path.isfile(final_weightsave)):
+                X = array_recover(X_save2)
+                Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
+                Z = np.array(Z_save2)
+                
+                trX, trY, trZ = upsampling(X, Y, Z)
+                print('len(elite_cfa2)', len(elite_cfa2))
+                print('tr samples #', len(Z_save2))
+                print('tr samples after upsampling #', len(trZ))
                     
-                hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
-                cnt += 1; model.save_weights(current_weightsave)
-                if cnt % 20 == 0 and cnt != 0:
-                    print('cnt', cnt)
-                                 
-                s_loss += list(np.array(hist.history['loss']))
-                s_acc += list(np.array(hist.history['accuracy']))
-                                                         
-                # 종료조건: 
-                current_acc = s_acc[-1] 
-            model.save_weights(final_weightsave)
+                epochs = 1
+                lr = 1e-3 # learning rate
     
-#        for tSE in testlist:
+                # model reset
+    
+        #        model.load_weights(initial_weightsave) 
+                
+                # traning 
+                starttime = time.time(); current_acc = -np.inf; cnt=0
+                s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[]
+                current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
+                isfile1 = os.path.isfile(current_weightsave)
+        #        grade_acc = [0.93]
+        #        gix = 0
+                while current_acc < acc_thr and cnt < 2000: # 0.93: # 목표 최대 정확도, epoch limit
+                    if (cnt > maxepoch/epochs) or \
+                    (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
+                        cnt = 0
+                        seed += 1
+                        random.seed(seed)
+                        reset_keras(model)
+                        nseed(seed)
+                        tf.random.set_seed(seed)   
+                        model, idcode = keras_setup() 
         
-        if not(os.path.isfile(test_matrix_savename)):
+                    if isfile1 and cnt > 0:
+                        model.load_weights(current_weightsave)
+                        
+                    hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
+                    cnt += 1; model.save_weights(current_weightsave)
+                    if cnt % 20 == 0 and cnt != 0:
+                        print('cnt', cnt)
+                                     
+                    s_loss += list(np.array(hist.history['loss']))
+                    s_acc += list(np.array(hist.history['accuracy']))
+                                                             
+                    # 종료조건: 
+                    current_acc = s_acc[-1] 
+                model.save_weights(final_weightsave)
+            model.load_weights(final_weightsave)
+    #        for tSE in testlist:
+            test_matrix = np.zeros((N,5)); test_matrix[:] = np.nan
+            
+            if os.path.isfile(test_matrix_savename):
+                with open(test_matrix_savename, 'rb') as f:  # Python 3: open(..., 'rb')
+                    tmatrix = pickle.load(f)
+                    try:
+                        tmp = np.nanmean(np.array(tmatrix),axis=2)
+                    except:
+                        tmp = np.array(tmatrix)
+                    test_matrix[:len(tmp),:] = tmp
+            
             for TSE in testlist:
-                for tse in range(3):
-                    valid = valid_generation([TSE], only_se=tse)
-                    score = model.evaluate(valid[0], valid[1], verbose=0)
-                    pain = score[1]
-                    print(TSE, tse, 'pain %', pain)
-                    test_matrix[TSE, tse, ti] = pain
+                senum = 3
+                if TSE in ipsaline_pslGroup:
+                    senum = 5
+                for tse in range(senum):
+                    if np.isnan(test_matrix[TSE, tse]):
+                        valid = valid_generation([TSE], only_se=tse)
+                        score = model.evaluate(valid[0], valid[1], verbose=0)
+                        pain = score[1]
+                        print(TSE, tse, 'pain %', pain)
+                        test_matrix[TSE, tse] = pain
                     
             with open(test_matrix_savename, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump(test_matrix, f, pickle.HIGHEST_PROTOCOL)
@@ -899,7 +913,7 @@ for si in range(2):
 # In[]
 def eval_ttset_roc(target):
     test_matrix = np.array(target)            
-    print('test')     
+    print('test')    
     psl0 = nanex(test_matrix[pslGroup,0])
     psl1 = nanex(test_matrix[pslGroup,1])
     psl2 = nanex(test_matrix[pslGroup,2])
@@ -925,30 +939,85 @@ def eval_ttset_roc(target):
     return None            
                 
 tmatrix_save = []; [tmatrix_save.append([]) for u in range(7)]
-for i in range(len(pathsave)-1):
+for i in range(len(pathsave)):
     with open(pathsave[i][3], 'rb') as f:  # Python 3: open(..., 'rb')
         tmatrix = pickle.load(f)
     tmatrix_save[pathsave[i][0]].append(tmatrix)
+    print(pathsave[i][0], tmatrix.shape)
+    
+ # In[] 
 
-  
-control2 = np.nanmean(np.nanmean(np.array(tmatrix_save[0]),axis=0),axis=2)      # high + midle only
-control = np.nanmean(np.nanmean(np.array(tmatrix_save[1]),axis=0),axis=2)       # fset + base
-test = np.nanmean(np.nanmean(np.array(tmatrix_save[2]),axis=0),axis=2)          # +cap+cfa, 0.68 구버전
-test2 = np.nanmean(np.nanmean(np.array(tmatrix_save[3]),axis=0),axis=2)         # +cap+cfa, 0.68 신버전
-
-test3 = np.nanmean(np.nanmean(np.array(tmatrix_save[4]),axis=0),axis=2)         # +cap+cfa, 0.68 v0416
-test4 = np.nanmean(np.nanmean(np.array(tmatrix_save[5]),axis=0),axis=2)         # +cap+cfa, 0.72 v0416
-test5 = np.nanmean(np.nanmean(np.array(tmatrix_save[6]),axis=0),axis=2)         # +cap+cfa, 0.74 v0416
-    # In[]
-eval_ttset_roc(control2)
-eval_ttset_roc(control) 
+test = np.nanmean(np.array(tmatrix_save[1]),axis=0)       # +cap+cfa, 0.7 v0416
 eval_ttset_roc(test) 
-eval_ttset_roc(test2)
-eval_ttset_roc(test3)
-eval_ttset_roc(test4)
-eval_ttset_roc(test5)
+
+test_matrix = np.array(test)
+psl0 = nanex(test_matrix[pslGroup,0])
+psl1 = nanex(test_matrix[pslGroup,1])
+psl2 = nanex(test_matrix[pslGroup,2])
+sham = nanex(test_matrix[shamGroup,:3].flatten())
+ipsaline0 = nanex(test_matrix[ipsaline_pslGroup,0])
+ipsaline1 = nanex(test_matrix[ipsaline_pslGroup,1])
+ipsaline2 = nanex(test_matrix[ipsaline_pslGroup,2])
+
+test_matrix = movement
+psl0m = nanex(test_matrix[pslGroup,0])
+psl1m = nanex(test_matrix[pslGroup,1])
+psl2m = nanex(test_matrix[pslGroup,2])
+shamm = nanex(test_matrix[shamGroup,:3].flatten())
+ipsaline0m = nanex(test_matrix[ipsaline_pslGroup,0])
+ipsaline1m = nanex(test_matrix[ipsaline_pslGroup,1])
+ipsaline2m = nanex(test_matrix[ipsaline_pslGroup,2])
+
+p_hat = np.concatenate((sham, psl0, ipsaline0), axis=0)
+mov = np.concatenate((shamm, psl0m, ipsaline0m), axis=0)
+
+plt.scatter(mov, p_hat)
+
+def mslinear_regression(x,y):
+    x = np.array(x); y = np.array(y); 
+    x = x[np.isnan(x)==0]; y = y[np.isnan(y)==0]
+    
+    n = x.shape[0]
+    r = (1/(n-1)) * np.sum(((x - np.mean(x))/np.std(x)) * ((y - np.mean(y))/np.std(y)))
+    m = r*(np.std(y)/np.std(x))
+    b = np.mean(y) - np.mean(x)*m
+
+    return m, b # bx+a
+
+m, b = mslinear_regression(mov, p_hat)
+
+
+test2 = np.array(test) - np.array(movement)*0.2
+eval_ttset_roc(test2) 
+
+test_matrix = np.array(test2)
+psl0 = nanex(test_matrix[pslGroup,0])
+psl1 = nanex(test_matrix[pslGroup,1])
+psl2 = nanex(test_matrix[pslGroup,2])
+sham = nanex(test_matrix[shamGroup,:3].flatten())
+ipsaline0 = nanex(test_matrix[ipsaline_pslGroup,0])
+ipsaline1 = nanex(test_matrix[ipsaline_pslGroup,1])
+ipsaline2 = nanex(test_matrix[ipsaline_pslGroup,2])
+
+p_hat = np.concatenate((sham, psl0, ipsaline0), axis=0)
+mov = np.concatenate((shamm, psl0m, ipsaline0m), axis=0)
+
+plt.scatter(mov, p_hat)
+ # In[] 
+
+
+test = np.nanmean(np.array(tmatrix_save[2]),axis=0)    # +cap+cfa, 0.7 v0416
+eval_ttset_roc(test) 
+
+    # In[]
+
+
 
 # In[]  
+
+
+import sys
+sys.exit()
 
 test_matrix = np.array(control)            
 print('control')
@@ -1187,7 +1256,7 @@ Out[239]: [<matplotlib.lines.Line2D at 0x21a0349b288>]
 
 
 
-#
+
 
 
 
