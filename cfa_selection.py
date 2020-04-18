@@ -78,7 +78,8 @@ msset2 = msGroup['msset2']
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
-se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup + itClonidineGroup # for test only
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup \
++ itSalineGroup + itClonidineGroup # for test only
 
 pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
 fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
@@ -247,13 +248,7 @@ fn = 1
 
 n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
 layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8 # 원래 6 
-# 6 for normal
-# 10 for +cfa
 
-#duplicatedNum = 1
-#mspainThr = 0.27
-#acitivityThr = 0.4
-# 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regulariza3 # regularization 상수
 l2_rate = 0.0
@@ -266,13 +261,7 @@ statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 testsw2 = False
 testsw3 = True
-#if testsw2:
-##    import os
-#    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-#    os.environ['CUDA_VISIBLE_DEVICES'] = ''
-#    import tensorflow as tf
 
-# 집 컴퓨터, test 전용으로 수정
 
 acc_thr = 0.91 # 0.93 -> 0.94
 batch_size = 2**10 # 5000
@@ -285,18 +274,7 @@ n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
 
 project_list = []
- # proejct name, seed
-#
-#project_list.append(['control_test_segment_adenosine_set1', 100, None])
-#project_list.append(['control_test_segment_adenosine_set2', 200, None])
-#project_list.append(['control_test_segment_adenosine_set3', 300, None])
-#project_list.append(['control_test_segment_adenosine_set4', 400, None])
-#project_list.append(['control_test_segment_adenosine_set5', 500, None])
-# 
-#project_list.append(['0330_batchnorm_1', 100, None])
-#project_list.append(['0330_batchnorm_2', 200, None])
-#project_list.append(['0330_batchnorm_3', 300, None])
- 
+
 project_list.append(['0331_CFA_selection', 100, None])
 
 q = project_list[0]
@@ -367,7 +345,7 @@ for nix, q in enumerate(project_list):
     print('selected mouse #', len(reducing_test_list))          
 #    print(reducing_test_list)
     
-    def ms_sampling(forlist=range(N), ex=[], addset=None, addset2=[], passsw=False):
+    def ms_sampling(forlist=range(N), ex=[], addset=None, forselection=False):
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
         datasetX = []; datasetY = []; datasetZ = []
@@ -393,17 +371,18 @@ for nix, q in enumerate(project_list):
                         c1 = SE in fset + baseonly and se in [0,2]
                         c2 = SE in capsaicinGroup and se in [0]
                         c3 = SE in CFAgroup and se in [0]
-                        c4 = SE in pslGroup and se in [0]
-                        c5 = SE in shamGroup and se in [0,1,2]
-                        c5 = SE in adenosineGroup + chloroquineGroup + itSalineGroup \
-                        + itClonidineGroup + ipsaline_pslGroup  and se in [0]
+#                        c4 = SE in pslGroup and se in [0]
+#                        c5 = SE in shamGroup and se in [0]
+                        c4 = SE in adenosineGroup + chloroquineGroup + itSalineGroup \
+                        + itClonidineGroup and se in [0]
+                        c5 = SE in salineGroup and se in [0,1,2,3,4]
                         
                         if c1 or c2 or c3 or c4 or c5:
                             msclass = 0 
                               
                         c101 = SE in fset and se in [1] and movement[SE,se] > 0.15
                         c102 = SE in CFAgroup and se in [1,2]
-                        c103 = SE in pslGroup and se in [1,2]
+                        c103 = SE in capsaicinGroup and se in [1]
                             
                         if c101 or c102 or c103:
                             msclass = 1
@@ -414,15 +393,18 @@ for nix, q in enumerate(project_list):
                         mssignal = np.mean(signalss[SE][se], axis=1)
                         msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
                         for u in msbins:
-                            if not(addset is None) and SE in addset2 and msclass == 1 and not(passsw):
-                                if not [SE, se, u] in addset:
-                                    continue
-                                
-                            elif (not SE in fset) and msclass == 1 and not(passsw):
+                            passw = False
+                            if forselection == True:
+                                if c1 or c3 or c102 or c2 or c103 or c4 or c5:
+                                    passw = True
+                            
+                            elif forselection == False:
+                                if c101 or [SE, se, u] in addset:
+                                    passw = True
+       
+                            if passw == False:
                                 continue
-                            
-                            
-                            
+
                             mannual_signal = mssignal[u:u+full_sequence]
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
                             
@@ -497,7 +479,10 @@ for nix, q in enumerate(project_list):
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
     # In
-    X_save2, Y_save2, Z_save2 = ms_sampling(forlist = CFAgroup + capsaicinGroup, passsw=True)
+    tset = CFAgroup + capsaicinGroup + salineGroup + adenosineGroup + chloroquineGroup + itSalineGroup + itClonidineGroup \
+    + fset + baseonly
+
+    X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset, forselection=True)
     
     X = array_recover(X_save2)
     Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
@@ -574,32 +559,30 @@ for nix, q in enumerate(project_list):
                     msclass = 1; init = True # 무적권 pain으로 취급
                 elif only_se == None:
                     SE = test_mouseNum
-                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
-                    c1 = SE in set1 and se in [0,2]
-                    c2 = SE in capsaicinGroup and se in [0,2]
-                    c3 = SE in pslGroup + adenosineGroup and se in [0]
-                    c4 = SE in shamGroup and se in [0,1,2]
-                    c5 = SE in salineGroup and se in [0,1,2,3,4]
-                    c6 = SE in CFAgroup and se in [0]
-                    c7 = SE in chloroquineGroup and se in [0]
-                    c8 = SE in itSalineGroup and se in [0]
-                    c9 = SE in itClonidineGroup and se in [0,1,2]
+                    
+                    c1 = SE in fset + baseonly and se in [0,2]
+                    c2 = SE in capsaicinGroup and se in [0]
+                    c3 = SE in salineGroup and se in [0,1,2,3,4]
+                    
+                    c4 = SE in adenosineGroup + chloroquineGroup + itSalineGroup \
+                        + itClonidineGroup and se in [0]
+                    c5 = SE in CFAgroup and se in [0]
+                        
     
-                    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
-                    c101 = SE in set2 and se in [1]
-                    c102 = SE in capsaicinGroup and se in [1]
-                    c103 = SE in pslGroup and se in [1,2]
-                    c104 = SE in itSalineGroup and se in [1,2,3,4]
+                    c101 = SE in fset and se in [1] and movement[SE,se] > 0.15
                                        
-                    if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
+                    if c1 or c2 or c3 or c4 or c5:
                         msclass = 0; init = True
-                    elif c101 or c102 or c103 or c104: #
+                    elif c101:#
                         msclass = 1; init = True
                         
-                    if SE == 132 and se == 2:
-                        msclass = 1; init = True
-                    if SE == 129 and se == 2:
+                    if msclass == 0 and movement[SE,se] < 0.3:
                         continue
+                        
+#                    if SE == 132 and se == 2 and init:
+#                        msclass = 1; init = True
+#                    if SE == 129 and se == 2:
+#                        continue
                  
                 if init:
 #                    print(SE, msclass )
@@ -657,16 +640,21 @@ for nix, q in enumerate(project_list):
     print('maxepoch', maxepoch)
 
     # In[]
-    while False:
-        picklesavename = gsync + 'mssave.pickle'
-        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-            mssave = pickle.load(f)
+    testlist = list(range(N))
+    testlist.remove(8); testlist.remove(26)
+    valid = valid_generation(testlist, only_se=None)
+    validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
+    valid = tuple([validX, validY])
     
-        print('len(mssave)', len(mssave))
+    while True:
+        picklesavename = gsync + 'mssave_v2_withbase.pickle'
+        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+            mssave_v2_withbase = pickle.load(f)
+    
+        print('len(mssave_v2_withbase)', len(mssave_v2_withbase))
         # label blind
 
-        Ylist = list(range(len(Y)))
-#        msmin = 50 # 조합 최소 갯수    
+        Ylist = list(range(len(Y))) 
         random.seed(None)
         rn = random.randrange(50, 200)
         print('sample max', len(Ylist), 'rn', rn)
@@ -679,12 +667,6 @@ for nix, q in enumerate(project_list):
     
         trX, trY, trZ = upsampling(X_elite, Y_elite, Z_elite)
            
-        testlist = list(fset)
-        testlist.remove(8); testlist.remove(26)
-        valid = valid_generation(testlist, only_se=None)
-        validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
-        valid = tuple([validX, validY])
-        
         reset_keras(model)
         nseed(seed)
         tf.random.set_seed(seed)   
@@ -693,7 +675,7 @@ for nix, q in enumerate(project_list):
      
         starttime = time.time(); current_acc = -np.inf; cnt=0
         s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
-        grade_acc = 0.6
+        grade_acc = 0.75
         while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
             if (cnt > maxepoch/epochs) or \
             (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
@@ -728,7 +710,7 @@ for nix, q in enumerate(project_list):
                 sval_loss += list(np.array(hist.history['val_loss']))
                 sval_acc += list(np.array(hist.history['val_accuracy']))
             
-                if s_acc[-1] - 0.03 > sval_acc[-1]:
+                if s_acc[-1] - 0.1 > sval_acc[-1]:
                     print('overfit 판단, 종료')
                     break
             
@@ -738,14 +720,14 @@ for nix, q in enumerate(project_list):
         
 #        if sval_acc[-1] > 0.55:
         if len(sval_acc) > 0:
-            mssave.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
+            mssave_v2_withbase.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
 #            print('len(mssave)', len(mssave))
             with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(mssave_v2_withbase, f, pickle.HIGHEST_PROTOCOL)
 
 # In[]     
 
-picklesavename = gsync + 'mssave.pickle'
+picklesavename = gsync + 'mssave_v2_withbase.pickle'
 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
     mssave = pickle.load(f)
 
@@ -792,11 +774,6 @@ for si in [1,2,3]:
     
     dropout_rate1 = 0.2 # dropout late
     dropout_rate2 = 0.1 # 
-            
-    if si == 0:
-        savename = 'fset + baseonly'
-        tset = fset + baseonly
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset)
 
     if si in [1,2,3]:
         if si == 1:
@@ -807,8 +784,10 @@ for si in [1,2,3]:
             thr = 0.70
   
         base_pslset = []
-        savename = 'fset + baseonly + CFAgroup + capsaicinGroup_' + str(thr) + '_0415'
-        tset = fset + baseonly + CFAgroup + capsaicinGroup    
+        savename = 'allbase_0417' + str(thr) + '_0415'
+        
+        tset = CFAgroup + capsaicinGroup + salineGroup + adenosineGroup + chloroquineGroup + itSalineGroup + itClonidineGroup \
+        + fset + baseonly
             
         acc_thr = 0.895
         
@@ -817,10 +796,10 @@ for si in [1,2,3]:
         for i in range(elite_cfa.shape[1]):
             elite_cfa2.append(list(elite_cfa[:,i]))
         print('len(elite_cfa2)', len(elite_cfa2))
-        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset + base_pslset, addset= elite_cfa2, addset2= CFAgroup + capsaicinGroup)
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset, addset= elite_cfa2)
+        
         
         repeat = 5
-        
         for ti in range(repeat):
             savename2 = savename + '_t' + str(ti) + '.pickle'
             print('index', savename2)
@@ -918,7 +897,7 @@ def eval_ttset_roc(target):
     psl1 = nanex(test_matrix[pslGroup,1])
     psl2 = nanex(test_matrix[pslGroup,2])
     
-    sham0 = nanex(test_matrix[shamGroup,0])
+#    sham0 = nanex(test_matrix[shamGroup,0])
     sham1 = nanex(test_matrix[shamGroup,1])
     sham2 = nanex(test_matrix[shamGroup,2])
     
@@ -1010,246 +989,6 @@ test = np.nanmean(np.array(tmatrix_save[2]),axis=0)    # +cap+cfa, 0.7 v0416
 eval_ttset_roc(test) 
 
     # In[]
-
-
-
-# In[]  
-
-
-import sys
-sys.exit()
-
-test_matrix = np.array(control)            
-print('control')
-psl0 = nanex(test_matrix[pslGroup,0])
-psl1 = nanex(test_matrix[pslGroup,1])
-psl2 = nanex(test_matrix[pslGroup,2])
-
-sham0 = nanex(test_matrix[shamGroup,0])
-sham1 = nanex(test_matrix[shamGroup,1])
-sham2 = nanex(test_matrix[shamGroup,2])
-
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
-print('sham3_vs_psl3', sham3_vs_psl3)
-print('sham10_vs_psl10', sham10_vs_psl10)
-
-test_matrix = np.array(control2)            
-print('control2')
-psl0 = nanex(test_matrix[pslGroup,0])
-psl1 = nanex(test_matrix[pslGroup,1])
-psl2 = nanex(test_matrix[pslGroup,2])
-
-sham0 = nanex(test_matrix[shamGroup,0])
-sham1 = nanex(test_matrix[shamGroup,1])
-sham2 = nanex(test_matrix[shamGroup,2])
-
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
-print('sham3_vs_psl3', sham3_vs_psl3)
-print('sham10_vs_psl10', sham10_vs_psl10)
-
-test_matrix = np.array(test2)            
-print('test2')
-psl0 = nanex(test_matrix[pslGroup,0])
-psl1 = nanex(test_matrix[pslGroup,1])
-psl2 = nanex(test_matrix[pslGroup,2])
-
-sham0 = nanex(test_matrix[shamGroup,0])
-sham1 = nanex(test_matrix[shamGroup,1])
-sham2 = nanex(test_matrix[shamGroup,2])
-
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
-print('sham3_vs_psl3', sham3_vs_psl3)
-print('sham10_vs_psl10', sham10_vs_psl10)
-        
-"""
-base_vs_3 0.20899769289520562
-base_vs_10 0.2228891067168212
-sham3_vs_psl3 0.08354878798789862
-sham10_vs_psl10 0.0794040903778463
-"""
-        
-# In[]
-for si in [0,1]:
-    if si == 0:
-        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
-
-    if si == 1:
-        savename = 'fc+keto_0.65'; thr = 0.65
-        
-    for ti in range(5):
-        savename2 = savename + '_t' + str(ti) + '.pickle'
-        print('index', savename2)
-            
-        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
-        reset_keras(model)
-        model, idcode = keras_setup(lr=0)
-        model.load_weights(final_weightsave) 
-        
-        testlist = pslGroup + shamGroup + itSalineGroup
-    
-        dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
-        for test_mouseNum in testlist:        
-            sessionNum = 5
-            if test_mouseNum in se3set:
-                sessionNum = 3
-            for se in range(sessionNum): 
-                valid = valid_generation([test_mouseNum], only_se=se)
-                print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
-                hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
-        #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
-                dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
-            
-        # 최적화용 저장      
-        picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + savename2
-        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-            pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
-            print(picklesavename, '저장되었습니다.')  
-
-# In[]
-for si in [0,1]:
-    if si == 0:
-        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
-
-    if si == 1:
-        savename = 'fc+keto_0.65'; thr = 0.65
-    
-    dummy_table_avg = []
-    for ti in range(5):
-        savename2 = savename + '_t' + str(ti) + '.pickle'
-        picklesavename =  RESULT_SAVE_PATH + 'exp_raw\\' + savename2
-        
-        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-            dummy_table = pickle.load(f)
-            dummy_table_avg.append(dummy_table)
-            
-    dummy_table_avg = np.array(dummy_table_avg)
-    dummy_table_avg2 = np.mean(dummy_table_avg, axis=0)
-            
-print(np.mean(dummy_table_avg2[itSalineGroup,:], axis=0))    
-
-for ix in [0,1]:
-    for ix2 in [1]:
-        print(ix, ix2)
-        
-        avg_matrix2 = np.mean(np.array(matrixsave[ix]), axis=0)
-        
-        avg_matrix3 = np.zeros(avg_matrix2.shape); avg_matrix3[:] = np.nan
-        for SE in range(N):
-            if SE in np.array(msset_total)[:,0]:
-                settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
-                avg_matrix3[SE,:] = np.nanmean(avg_matrix2[settmp,:],axis=0)
-        #            print('set averaging', settmp)
-            elif SE not in np.array(msset_total).flatten(): 
-                avg_matrix3[SE,:] = avg_matrix2[SE,:]
-        
-                
-        psl0 = nanex(avg_matrix3[pslGroup,0])
-        psl1 = nanex(avg_matrix3[pslGroup,1])
-        psl2 = nanex(avg_matrix3[pslGroup,2])
-        
-        sham0 = nanex(avg_matrix3[shamGroup,0])
-        sham1 = nanex(avg_matrix3[shamGroup,1])
-        sham2 = nanex(avg_matrix3[shamGroup,2])
-        
-        itsaline1 = nanex(avg_matrix3[itSalineGroup,0])
-        
-        
-        
-        zeroby = stats.ttest_ind(np.zeros(psl0.shape), (psl2-psl0))[1]
-        
-        base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-        base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-        sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-        sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-        
-        pain = np.concatenate((psl1, psl2), axis=0)
-        nonpain = np.concatenate((sham0, sham1, sham2, psl0), axis=0)
-        anstable = list(np.ones(pain.shape[0])) + list(np.zeros(nonpain.shape[0]))
-        predictValue = np.array(list(pain)+list(nonpain)); predictAns = np.array(anstable)  
-        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=1)
-        base_vs_10_roc = metrics.auc(fpr,tpr)
-        
-        print('========================')
-        #    print('base_vs_3', base_vs_3)
-        print('base_vs_10_roc', base_vs_10_roc)
-        print('zeroby', zeroby)
-        #    print('sham3_vs_psl3', sham3_vs_psl3)
-        #    print('sham10_vs_psl10', sham10_vs_psl10)
-        print(np.mean(avg_matrix2[pslGroup,:], axis=0))
-        print(np.mean(avg_matrix2[itSalineGroup,:], axis=0))
-        print('========================')
-
-
-"""
-sample # 221
-0.6500000000000004 selected as pain label, true ratio 0.5888888888888889
-sample # 180
-0.6600000000000004 selected as nonpain label, true ratio 0.5138121546961326
-sample # 181
-0.6600000000000004 selected as pain label, true ratio 0.6099290780141844
-sample # 141
-0.6700000000000004 selected as nonpain label, true ratio 0.5185185185185185
-sample # 135
-0.6700000000000004 selected as pain label, true ratio 0.5877192982456141
-sample # 114
-0.6800000000000004 selected as nonpain label, true ratio 0.5567010309278351
-sample # 97
-0.6800000000000004 selected as pain label, true ratio 0.6136363636363636
-sample # 88
-0.6900000000000004 selected as nonpain label, true ratio 0.5416666666666666
-sample # 72
-0.6900000000000004 selected as pain label, true ratio 0.6349206349206349
-sample # 63
-0.7000000000000004 selected as nonpain label, true ratio 0.5370370370370371
-sample # 54
-0.7000000000000004 selected as pain label, true ratio 0.6428571428571429
-sample # 42
-0.7100000000000004 selected as nonpain label, true ratio 0.575
-sample # 40
-0.7100000000000004 selected as pain label, true ratio 0.6071428571428571
-sample # 28
-0.7200000000000004 selected as nonpain label, true ratio 0.5384615384615384
-sample # 26
-0.7200000000000004 selected as pain label, true ratio 0.5625
-sample # 16
-0.7300000000000004 selected as nonpain label, true ratio 0.42857142857142855
-sample # 14
-0.7300000000000004 selected as pain label, true ratio 0.5
-sample # 10
-0.7400000000000004 selected as nonpain label, true ratio 0.2222222222222222
-sample # 9
-0.7400000000000004 selected as pain label, true ratio 0.4
-sample # 5
-0.7500000000000004 selected as nonpain label, true ratio 0.25
-sample # 8
-0.7500000000000004 selected as pain label, true ratio 0.0
-sample # 2
-Out[239]: [<matplotlib.lines.Line2D at 0x21a0349b288>]
-"""
-        
-
-
-
-
-
 
 
 
