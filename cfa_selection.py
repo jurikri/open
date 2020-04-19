@@ -246,8 +246,8 @@ epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 5e-4 # learning rate
 fn = 1
 
-n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 4) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 4) # fully conneted laye node 갯수 # 8 # 원래 6 
 
 
 # regulariza3 # regularization 상수
@@ -657,7 +657,7 @@ for nix, q in enumerate(project_list):
     valid = tuple([validX, validY])
     
     while True:
-        picklesavename = gsync + 'mssave_v3_ROIs.pickle'
+        picklesavename = gsync + 'mssave_v3_ROIs_titan.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
             mssave_v3_ROIs = pickle.load(f)
     
@@ -666,7 +666,7 @@ for nix, q in enumerate(project_list):
 
         Ylist = list(range(len(Y))) 
         random.seed(None)
-        rn = random.randrange(200, 300)
+        rn = random.randrange(50, 200)
         print('sample max', len(Ylist), 'rn', rn)
         rlist = random.sample(Ylist, rn)
         X_elite=[]; [X_elite.append([]) for u in range(len(X))]
@@ -685,10 +685,10 @@ for nix, q in enumerate(project_list):
      
         starttime = time.time(); current_acc = -np.inf; cnt=0
         s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
-        grade_acc = 0.75
-        while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
+        grade_acc = 0.60
+        while current_acc < acc_thr and cnt < 700: # 0.93: # 목표 최대 정확도, epoch limit
             if (cnt > maxepoch/epochs) or \
-            (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
+            (current_acc < 0.70 and cnt > 500/epochs) or (current_acc < 0.51 and cnt > 200/epochs):
                 break
 
             current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
@@ -709,7 +709,7 @@ for nix, q in enumerate(project_list):
                                      
             if s_acc[-1] > grade_acc:
                 print(grade_acc)
-                grade_acc += 0.05
+                grade_acc += 0.025
                 
                 hist = model.fit(trX, trY, batch_size = batch_size, epochs = epochs, \
                                  validation_data = valid)
