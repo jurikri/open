@@ -1,0 +1,20 @@
+                        if meansw == False:
+                            for ROI in range(ROInum):
+                                mannual_signal = signalss_PSL_test[:,ROI]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+        
+        #                            print(mannual_signal2.shape)
+        
+                                Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += Xtest; Y_tmp += Ytest
+                                
+                        elif meansw == True:
+                            mannual_signal = np.median(signalss_PSL_test, axis=1)
+                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+    
+                            Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
+                                           Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                            
+                            X_tmp += Xtest; Y_tmp += Ytest
