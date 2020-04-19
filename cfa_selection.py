@@ -368,7 +368,7 @@ for nix, q in enumerate(project_list):
                     for se in range(sessionNum):   
                         msclass = None
                         
-                        c1 = SE in fset + baseonly and se in [0,2]
+                        c1 = SE in fset + baseonly and se in [0]
                         c2 = SE in capsaicinGroup and se in [0]
                         c3 = SE in CFAgroup and se in [0]
 #                        c4 = SE in pslGroup and se in [0]
@@ -389,29 +389,30 @@ for nix, q in enumerate(project_list):
                             
                         if msclass is None:
                             continue
-                            
-                        mssignal = np.mean(signalss[SE][se], axis=1)
-                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
-                        for u in msbins:
-                            passw = False
-                            if forselection == True:
-                                if c1 or c3 or c102 or c2 or c103 or c4 or c5:
+                        
+                        for ROI in range(signalss[SE][se].shape[1]):
+                            mssignal = signalss[SE][se][:,ROI]
+                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
+                            for u in msbins:
+                                passw = False
+                                if forselection == True:
+    #                                if c1 or c3 or c102 or c2 or c103 or c4 or c5:
                                     passw = True
-                            
-                            elif forselection == False:
-                                if c101 or [SE, se, u] in addset:
-                                    passw = True
-       
-                            if passw == False:
-                                continue
-
-                            mannual_signal = mssignal[u:u+full_sequence]
-                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                            
-                            X, Y, Z = dataGeneration(SE, se, label=msclass, \
-                                           Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                            
-                            X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [u]]#; T_tmp += t4_save 
+                                
+                                elif forselection == False:
+                                    if [SE, se, ROI, u] in addset:
+                                        passw = True
+           
+                                if passw == False:
+                                    continue
+    
+                                mannual_signal = mssignal[u:u+full_sequence]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                
+                                X, Y, Z = dataGeneration(SE, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [ROI, u]]#; T_tmp += t4_save 
                 
         print('nonpain vs pain_sample distribution', np.mean(Y_tmp, axis=0))      
         return X_tmp, Y_tmp, Z_tmp
@@ -541,7 +542,7 @@ for nix, q in enumerate(project_list):
     model.save_weights(initial_weightsave)
     print(model.summary())
     
-    def valid_generation(mousenumlist, only_se=None):
+    def valid_generation(mousenumlist, only_se=None, meansw=False):
         X_tmp = []; Y_tmp = []; valid = None
         for mousenum in mousenumlist:
             test_mouseNum = mousenum
@@ -560,24 +561,23 @@ for nix, q in enumerate(project_list):
                 elif only_se == None:
                     SE = test_mouseNum
                     
-                    c1 = SE in fset + baseonly and se in [0,2]
+                    c1 = SE in fset + baseonly and se in [0]
                     c2 = SE in capsaicinGroup and se in [0]
-                    c3 = SE in salineGroup and se in [0,1,2,3,4]
+                    c3 = SE in CFAgroup and se in [0]
+#                        c4 = SE in pslGroup and se in [0]
+#                        c5 = SE in shamGroup and se in [0]
+                    c4 = SE in adenosineGroup + chloroquineGroup + itSalineGroup + itClonidineGroup and se in [0]
+                    c5 = SE in salineGroup and se in [0,1,2,3,4]
                     
-                    c4 = SE in adenosineGroup + chloroquineGroup + itSalineGroup \
-                        + itClonidineGroup and se in [0]
-                    c5 = SE in CFAgroup and se in [0]
-                        
-    
-                    c101 = SE in fset and se in [1] and movement[SE,se] > 0.15
-                                       
                     if c1 or c2 or c3 or c4 or c5:
                         msclass = 0; init = True
-                    elif c101:#
+                          
+                    c101 = SE in fset and se in [1] and movement[SE,se] > 0.15
+                    c102 = SE in CFAgroup and se in [1,2]
+                    c103 = SE in capsaicinGroup and se in [1]
+                    
+                    if c101 or c102 or c103:
                         msclass = 1; init = True
-                        
-                    if msclass == 0 and movement[SE,se] < 0.3:
-                        continue
                         
 #                    if SE == 132 and se == 2 and init:
 #                        msclass = 1; init = True
@@ -600,11 +600,21 @@ for nix, q in enumerate(project_list):
     #                        mannual_signal2 = mssignal2[binning[i]:binning[i]+full_sequence]
     #                        mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
                         
-                        for ROI in range(ROInum):
-                            mannual_signal = signalss_PSL_test[:,ROI]
+                        if meansw == False:
+                            for ROI in range(ROInum):
+                                mannual_signal = signalss_PSL_test[:,ROI]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+        
+        #                            print(mannual_signal2.shape)
+        
+                                Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += Xtest; Y_tmp += Ytest
+                                
+                        elif meansw == True:
+                            mannual_signal = np.median(signalss_PSL_test, axis=1)
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-    
-    #                            print(mannual_signal2.shape)
     
                             Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
                                            Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
@@ -642,21 +652,21 @@ for nix, q in enumerate(project_list):
     # In[]
     testlist = list(range(N))
     testlist.remove(8); testlist.remove(26)
-    valid = valid_generation(testlist, only_se=None)
+    valid = valid_generation(testlist, only_se=None, meansw=True)
     validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
     valid = tuple([validX, validY])
     
     while True:
-        picklesavename = gsync + 'mssave_v2_withbase.pickle'
+        picklesavename = gsync + 'mssave_v3_ROIs.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-            mssave_v2_withbase = pickle.load(f)
+            mssave_v3_ROIs = pickle.load(f)
     
-        print('len(mssave_v2_withbase)', len(mssave_v2_withbase))
+        print('len(mssave_v2_withbase)', len(mssave_v3_ROIs))
         # label blind
 
         Ylist = list(range(len(Y))) 
         random.seed(None)
-        rn = random.randrange(50, 200)
+        rn = random.randrange(200, 300)
         print('sample max', len(Ylist), 'rn', rn)
         rlist = random.sample(Ylist, rn)
         X_elite=[]; [X_elite.append([]) for u in range(len(X))]
@@ -720,14 +730,14 @@ for nix, q in enumerate(project_list):
         
 #        if sval_acc[-1] > 0.55:
         if len(sval_acc) > 0:
-            mssave_v2_withbase.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
+            mssave_v3_ROIs.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
 #            print('len(mssave)', len(mssave))
             with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump(mssave_v2_withbase, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(mssave_v3_ROIs, f, pickle.HIGHEST_PROTOCOL)
 
 # In[]     
 
-picklesavename = gsync + 'mssave_v2_withbase.pickle'
+picklesavename = gsync + 'mssave_v3_ROIs.pickle'
 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
     mssave = pickle.load(f)
 
@@ -995,7 +1005,7 @@ eval_ttset_roc(test)
 
 
 
-#
+
 
 
 
