@@ -75,6 +75,9 @@ ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
+
+msset2[-1] = [146,149]
+
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
@@ -326,7 +329,7 @@ for nix, q in enumerate(project_list):
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -653,7 +656,7 @@ for nix, q in enumerate(project_list):
     valid = tuple([validX, validY])
     
     while True:
-        picklesavename = gsync + 'mssave_v3_ROIs.pickle'
+        picklesavename = gsync + 'mssave_v3_ROIs_titan.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
             mssave_v3_ROIs = pickle.load(f)
     
@@ -764,9 +767,9 @@ print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
 
 plt.hist(index_value_save.flatten(), bins=20)
 
-# In[]
+# In
 from scipy import stats
-from sklearn import metrics
+#from sklearn import metrics
 
 def nanex(array1):
     array1 = np.array(array1)
@@ -774,35 +777,44 @@ def nanex(array1):
     return array1
 
 # In[]
-testlist = ipsaline_pslGroup # pslGroup + shamGroup + ipsaline_pslGroup + chloroquineGroup
+testlist = pslGroup + shamGroup + ipsaline_pslGroup
 pathsave = []
 valid = valid_generation(testlist, psltest=True, meansw=True)
 print('valid distribuation', np.mean(valid[1], axis=0))
 #valid = valid_generation(testlist, only_se=None)   
-for si in [1]:    
+for si in [6]: # range(1,7):    
     acc_thr = 0.91
-    n_hidden = int(8 * 10) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-    layer_1 = int(8 * 10) #
+    n_hidden = int(8 * 20) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+    layer_1 = int(8 * 20) #
     l2_rate = 0.001
     
     dropout_rate1 = 0.1 # dropout late
     dropout_rate2 = 0.1 # 
 
     if si == 1:
-        thr = 0.65
+        thr = 0.64
+        
+    if si == 2:
+        thr = 0.60
+        
+    if si == 3:
+        thr = 0.66
+        
+    if si == 4:
+        thr = 0.58
+        
+    if si == 5:
+        thr = 0.56
+
+    if si == 6:
+        thr = 0
 
     base_pslset = []
-    savename = 'selected_ROI' + str(thr) + '_042023'
+    savename = 'selected_ROI' + str(thr) + '_042209'
     
     tset = CFAgroup + capsaicinGroup + salineGroup + adenosineGroup + chloroquineGroup + itSalineGroup + itClonidineGroup \
     + fset + baseonly
  
-#    elite_cfa = np.where(index_value_save>thr)
-#    elite_cfa = np.array(elite_cfa); elite_cfa2=[]
-#    for i in range(elite_cfa.shape[1]):
-#        elite_cfa2.append(list(elite_cfa[:,i]))
-#    print('len(elite_cfa2)', len(elite_cfa2))
-    
     forlist= tset; addset=index_value_save; thr=thr; 
     X_save2, Y_save2, Z_save2 = ms_sampling(forlist=forlist, thr=thr, addset=index_value_save, )
     
@@ -871,6 +883,7 @@ for si in [1]:
             model.save_weights(final_weightsave)
         model.load_weights(final_weightsave)
 #        for tSE in testlist:
+        
         test_matrix = np.zeros((N,5)); test_matrix[:] = np.nan
         
         if os.path.isfile(test_matrix_savename):
@@ -884,7 +897,7 @@ for si in [1]:
         
         for TSE in testlist:
             senum = 3
-            if TSE in [144,145]:
+            if TSE in [144,145,147,148]:
                 senum = 5
             for tse in range(senum):
                 if np.isnan(test_matrix[TSE, tse]):
@@ -893,7 +906,7 @@ for si in [1]:
                     pain = score[1]
                     print(TSE, tse, 'pain %', pain)
                     test_matrix[TSE, tse] = pain
-                
+                        
         with open(test_matrix_savename, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(test_matrix, f, pickle.HIGHEST_PROTOCOL)
 
@@ -914,9 +927,9 @@ def eval_ttset_roc(target):
     sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
     sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
 
-    print('psl mean', np.mean(test_matrix[pslGroup,:], axis=0))
-    print('sham mean', np.mean(test_matrix[shamGroup,:], axis=0))
-    print('ip_saline mean', np.mean(test_matrix[ipsaline_pslGroup,:], axis=0))
+    print('psl mean', np.nanmean(test_matrix[pslGroup,:], axis=0))
+    print('sham mean', np.nanmean(test_matrix[shamGroup,:], axis=0))
+    print('ip_saline mean', np.nanmean(test_matrix[ipsaline_pslGroup,:], axis=0))
 
     print('base_vs_3', base_vs_3)
     print('base_vs_10', base_vs_10)
@@ -926,15 +939,37 @@ def eval_ttset_roc(target):
     return None            
 
 pathsave_ms = []
-pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t0.h5')
-pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t1.h5')
-pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t2.h5')
-pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t3.h5')
-pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t4.h5')
+#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t0.h5')
+#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t1.h5')
+#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t2.h5')
+#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t3.h5')
+#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t4.h5')
 
 #pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\allbase0.580.82_0419_t0.h5')
 #pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\allbase0.580.82_0419_t0.h5')
-        
+
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t1.h5')
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t0.h5')
+
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t1.h5')
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t0.h5')
+
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.64_042209_t0.h5')
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.64_042209_t1.h5')
+
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.56_042209_t1.h5')
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.56_042209_t0.h5')
+
+pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.66_042209_t0.h5')
+pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.66_042209_t1.h5')
+
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.58_042209_t1.h5')
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.58_042209_t0.h5')
+
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.6_042209_t0.h5')
+#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.6_042209_t1.h5')
+
+
 tmatrix_save = []
 for i in range(len(pathsave_ms)):
     with open(pathsave_ms[i], 'rb') as f:  # Python 3: open(..., 'rb')
@@ -942,11 +977,13 @@ for i in range(len(pathsave_ms)):
     tmatrix_save.append(tmatrix)
     print(pathsave_ms[i])
     print(tmatrix.shape)
-    
- # In[] 
 
 test = np.nanmean(np.array(tmatrix_save),axis=0)       # +cap+cfa, 0.7 v0416
 eval_ttset_roc(test) 
+
+    
+ # In[] 
+
 
 test_matrix = test
 a0 = test_matrix[shamGroup,:]
