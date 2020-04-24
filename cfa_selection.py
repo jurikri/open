@@ -75,9 +75,7 @@ ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
-
 msset2[-1] = [146,149]
-
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
@@ -249,9 +247,15 @@ epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 5e-4 # learning rate
 fn = 1
 
-n_hidden = int(8 * 4) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 4) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 3) # fully conneted laye node 갯수 # 8 # 원래 6 
+# 6 for normal
+# 10 for +cfa
 
+#duplicatedNum = 1
+#mspainThr = 0.27
+#acitivityThr = 0.4
+# 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regulariza3 # regularization 상수
 l2_rate = 0.0
@@ -264,7 +268,13 @@ statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
 testsw2 = False
 testsw3 = True
+#if testsw2:
+##    import os
+#    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+#    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+#    import tensorflow as tf
 
+# 집 컴퓨터, test 전용으로 수정
 
 acc_thr = 0.91 # 0.93 -> 0.94
 batch_size = 2**10 # 5000
@@ -277,7 +287,18 @@ n_out = 2 # number of class # 20191104: 3 class로 시도
 classratio = 1 # class under sampling ratio
 
 project_list = []
-
+ # proejct name, seed
+#
+#project_list.append(['control_test_segment_adenosine_set1', 100, None])
+#project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#project_list.append(['control_test_segment_adenosine_set4', 400, None])
+#project_list.append(['control_test_segment_adenosine_set5', 500, None])
+# 
+#project_list.append(['0330_batchnorm_1', 100, None])
+#project_list.append(['0330_batchnorm_2', 200, None])
+#project_list.append(['0330_batchnorm_3', 300, None])
+ 
 project_list.append(['0331_CFA_selection', 100, None])
 
 q = project_list[0]
@@ -348,7 +369,7 @@ for nix, q in enumerate(project_list):
     print('selected mouse #', len(reducing_test_list))          
 #    print(reducing_test_list)
     
-    def ms_sampling(forlist=range(N), thr=None, addset=None):
+    def ms_sampling(forlist=range(N), ex=[], addset=None, addset2=[], passsw=False):
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
         datasetX = []; datasetY = []; datasetZ = []
@@ -358,7 +379,10 @@ for nix, q in enumerate(project_list):
         # nonpain
 #        msclass = 0 # nonpain
         X_tmp = []; Y_tmp = []; Z_tmp = []
-        for SE in forlist:   
+        for SE in forlist:
+            if SE in ex:
+                continue
+            
             if SE in trainingset:
                 if SE in reducing_test_list:
                     sessionNum = 5
@@ -368,49 +392,48 @@ for nix, q in enumerate(project_list):
                     for se in range(sessionNum):   
                         msclass = None
                         
-                        c1 = SE in fset + baseonly and se in [0]
+                        c1 = SE in fset + baseonly and se in [0,2]
                         c2 = SE in capsaicinGroup and se in [0]
                         c3 = SE in CFAgroup and se in [0]
-#                        c4 = SE in pslGroup and se in [0]
-#                        c5 = SE in shamGroup and se in [0]
-                        c4 = SE in adenosineGroup + chloroquineGroup + itSalineGroup \
-                        + itClonidineGroup and se in [0]
-                        c5 = SE in salineGroup and se in [0,1,2,3,4]
+                        c4 = SE in pslGroup and se in [0]
+                        c5 = SE in shamGroup and se in [0,1,2]
+                        c5 = SE in adenosineGroup + chloroquineGroup + itSalineGroup \
+                        + itClonidineGroup + ipsaline_pslGroup  and se in [0]
                         
                         if c1 or c2 or c3 or c4 or c5:
                             msclass = 0 
                               
                         c101 = SE in fset and se in [1] and movement[SE,se] > 0.15
                         c102 = SE in CFAgroup and se in [1,2]
-                        c103 = SE in capsaicinGroup and se in [1]
+                        c103 = SE in pslGroup and se in [1,2]
                             
                         if c101 or c102 or c103:
                             msclass = 1
                             
                         if msclass is None:
                             continue
-                        
-                        for ROI in range(signalss[SE][se].shape[1]):
-                            mssignal = signalss[SE][se][:,ROI]
-                            msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
-                            for u in msbins:
-                                passw = False     
-                                if addset is None:
-                                    passw = True
-                                elif addset[SE, se, ROI, u] > thr:
-                                    passw = True
+                            
+                        mssignal = np.mean(signalss[SE][se], axis=1)
+                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)   
+                        for u in msbins:
+                            if not(addset is None) and SE in addset2 and msclass == 1 and not(passsw):
+                                if not [SE, se, u] in addset:
+                                    continue
                                 
-                                if passw:
-                                    mannual_signal = mssignal[u:u+full_sequence]
-                                    mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                                    
-                                    X, Y, Z = dataGeneration(SE, se, label=msclass, \
-                                                   Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                                    
-                                    X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [ROI, u]]#; T_tmp += t4_save 
-                    
+                            elif (not SE in fset) and msclass == 1 and not(passsw):
+                                continue
+                            
+                            
+                            
+                            mannual_signal = mssignal[u:u+full_sequence]
+                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                            
+                            X, Y, Z = dataGeneration(SE, se, label=msclass, \
+                                           Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                            
+                            X_tmp += X; Y_tmp += Y; Z_tmp += [Z[0] + [u]]#; T_tmp += t4_save 
+                
         print('nonpain vs pain_sample distribution', np.mean(Y_tmp, axis=0))      
-
         return X_tmp, Y_tmp, Z_tmp
 
     def upsampling(X_elite, Y_elite, Z_elite):
@@ -476,10 +499,7 @@ for nix, q in enumerate(project_list):
         print('sample distributions', np.mean(trY, axis=0), 'total #', trY.shape[0])
         return trX2, trY, trZ
     # In
-    tset = CFAgroup + capsaicinGroup + salineGroup + adenosineGroup + chloroquineGroup + itSalineGroup + itClonidineGroup \
-    + fset + baseonly
-
-    X_save2, Y_save2, Z_save2 = ms_sampling(forlist=tset)
+    X_save2, Y_save2, Z_save2 = ms_sampling(forlist = CFAgroup + capsaicinGroup, passsw=True)
     
     X = array_recover(X_save2)
     Y = np.array(Y_save2); Y = np.reshape(Y, (Y.shape[0], n_out))
@@ -538,7 +558,7 @@ for nix, q in enumerate(project_list):
     model.save_weights(initial_weightsave)
     print(model.summary())
     
-    def valid_generation(mousenumlist, only_se=None, meansw=False, psltest=False):
+    def valid_generation(mousenumlist, only_se=None):
         X_tmp = []; Y_tmp = []; valid = None
         for mousenum in mousenumlist:
             test_mouseNum = mousenum
@@ -556,32 +576,32 @@ for nix, q in enumerate(project_list):
                     msclass = 1; init = True # 무적권 pain으로 취급
                 elif only_se == None:
                     SE = test_mouseNum
-                    
-                    c1 = SE in fset + baseonly and se in [0]
-                    c2 = SE in capsaicinGroup and se in [0]
-                    c3 = SE in CFAgroup and se in [0]
-                    c4 = SE in adenosineGroup + chloroquineGroup + itSalineGroup + itClonidineGroup and se in [0]
+                    set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+                    c1 = SE in set1 and se in [0,2]
+                    c2 = SE in capsaicinGroup and se in [0,2]
+                    c3 = SE in pslGroup + adenosineGroup and se in [0]
+                    c4 = SE in shamGroup and se in [0,1,2]
                     c5 = SE in salineGroup and se in [0,1,2,3,4]
-                    
-                          
-                    c101 = SE in fset and se in [1] and movement[SE,se] > 0.15
-                    c102 = SE in CFAgroup and se in [1,2]
-                    c103 = SE in capsaicinGroup and se in [1]
-                    
-                    c6 = False; c7 = False; c104 = False
-                    if psltest:
-                        c6 = SE in pslGroup + ipsaline_pslGroup and se in [0]
-                        c7 = SE in shamGroup and se in [0,1,2]
-                        
-                        c104 = SE in pslGroup + ipsaline_pslGroup and se in [1,2]
-#                        c105 = 
-                               
-                    if c1 or c2 or c3 or c4 or c5 or c6 or c7:
+                    c6 = SE in CFAgroup and se in [0]
+                    c7 = SE in chloroquineGroup and se in [0]
+                    c8 = SE in itSalineGroup and se in [0]
+                    c9 = SE in itClonidineGroup and se in [0,1,2]
+    
+                    set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+                    c101 = SE in set2 and se in [1]
+                    c102 = SE in capsaicinGroup and se in [1]
+                    c103 = SE in pslGroup and se in [1,2]
+                    c104 = SE in itSalineGroup and se in [1,2]
+                                       
+                    if c1 or c2 or c3 or c4 or c5 or c6 or c7 or c8 or c9:
                         msclass = 0; init = True
-                    
-                    if c101 or c102 or c103 or c104:
+                    elif c101 or c102 or c103 or c104: #
                         msclass = 1; init = True
                         
+                    if SE == 132 and se == 2:
+                        msclass = 1; init = True
+                    if SE == 129 and se == 2:
+                        continue
                  
                 if init:
 #                    print(SE, msclass )
@@ -599,21 +619,11 @@ for nix, q in enumerate(project_list):
     #                        mannual_signal2 = mssignal2[binning[i]:binning[i]+full_sequence]
     #                        mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
                         
-                        if meansw == False:
-                            for ROI in range(ROInum):
-                                mannual_signal = signalss_PSL_test[:,ROI]
-                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-        
-        #                            print(mannual_signal2.shape)
-        
-                                Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
-                                               Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                                
-                                X_tmp += Xtest; Y_tmp += Ytest
-                                
-                        elif meansw == True:
-                            mannual_signal = np.median(signalss_PSL_test, axis=1)
+                        for ROI in range(ROInum):
+                            mannual_signal = signalss_PSL_test[:,ROI]
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+    
+    #                            print(mannual_signal2.shape)
     
                             Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
                                            Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
@@ -649,21 +659,16 @@ for nix, q in enumerate(project_list):
     print('maxepoch', maxepoch)
 
     # In[]
-    testlist = list(range(N))
-    testlist.remove(8); testlist.remove(26)
-    valid = valid_generation(testlist, only_se=None, meansw=True)
-    validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
-    valid = tuple([validX, validY])
-    
     while True:
-        picklesavename = gsync + 'mssave_v3_ROIs_titan.pickle'
+        picklesavename = gsync + 'mssave.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-            mssave_v3_ROIs = pickle.load(f)
+            mssave = pickle.load(f)
     
-        print('len(mssave_v2_withbase)', len(mssave_v3_ROIs))
+        print('len(mssave)', len(mssave))
         # label blind
 
-        Ylist = list(range(len(Y))) 
+        Ylist = list(range(len(Y)))
+#        msmin = 50 # 조합 최소 갯수    
         random.seed(None)
         rn = random.randrange(50, 200)
         print('sample max', len(Ylist), 'rn', rn)
@@ -676,6 +681,12 @@ for nix, q in enumerate(project_list):
     
         trX, trY, trZ = upsampling(X_elite, Y_elite, Z_elite)
            
+        testlist = list(fset)
+        testlist.remove(8); testlist.remove(26)
+        valid = valid_generation(testlist, only_se=None)
+        validX, validY, _ = upsampling(valid[0], valid[1], valid[1])
+        valid = tuple([validX, validY])
+        
         reset_keras(model)
         nseed(seed)
         tf.random.set_seed(seed)   
@@ -684,10 +695,10 @@ for nix, q in enumerate(project_list):
      
         starttime = time.time(); current_acc = -np.inf; cnt=0
         s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[] 
-        grade_acc = 0.60
-        while current_acc < acc_thr and cnt < 700: # 0.93: # 목표 최대 정확도, epoch limit
+        grade_acc = 0.6
+        while current_acc < acc_thr and cnt < 500: # 0.93: # 목표 최대 정확도, epoch limit
             if (cnt > maxepoch/epochs) or \
-            (current_acc < 0.70 and cnt > 500/epochs) or (current_acc < 0.51 and cnt > 200/epochs):
+            (current_acc < 0.70 and cnt > 300/epochs) or (current_acc < 0.51 and cnt > 100/epochs):
                 break
 
             current_weightsave = RESULT_SAVE_PATH + '_tmp_model_weights.h5'    
@@ -708,7 +719,7 @@ for nix, q in enumerate(project_list):
                                      
             if s_acc[-1] > grade_acc:
                 print(grade_acc)
-                grade_acc += 0.025
+                grade_acc += 0.05
                 
                 hist = model.fit(trX, trY, batch_size = batch_size, epochs = epochs, \
                                  validation_data = valid)
@@ -719,7 +730,7 @@ for nix, q in enumerate(project_list):
                 sval_loss += list(np.array(hist.history['val_loss']))
                 sval_acc += list(np.array(hist.history['val_accuracy']))
             
-                if s_acc[-1] - 0.1 > sval_acc[-1]:
+                if s_acc[-1] - 0.03 > sval_acc[-1]:
                     print('overfit 판단, 종료')
                     break
             
@@ -729,24 +740,22 @@ for nix, q in enumerate(project_list):
         
 #        if sval_acc[-1] > 0.55:
         if len(sval_acc) > 0:
-            mssave_v3_ROIs.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
+            mssave.append([grade_acc-0.05, trY, trZ, s_loss, s_acc, sval_loss, sval_acc, cnt])
 #            print('len(mssave)', len(mssave))
             with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump(mssave_v3_ROIs, f, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
 
 # In[]     
 
-picklesavename = gsync + 'mssave_v3_ROIs.pickle'
+picklesavename = gsync + 'mssave.pickle'
 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
     mssave = pickle.load(f)
     
-picklesavename = gsync + 'mssave_v3_ROIs_titan.pickle'
+picklesavename = gsync + 'mssave_titan.pickle'
 with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
     mssave0 = pickle.load(f)
 
-
 mssave2 = np.array(mssave + mssave0)
-print('seleted sample #', len(mssave2))
 # preallocation
 tmp1 = np.array(mssave2[0][2])
 for i in range(1, len(mssave2)):
@@ -759,17 +768,18 @@ for i in range(len(mssave2)):
     acctmp = mssave2[i][6][-1]
 #    print(acctmp)
     for j in mssave2[i][2]:
-        tmp = index_value_save[j[0], j[1], j[2], j[3]]
-        index_value_save[j[0], j[1], j[2], j[3]] = np.nanmean([tmp, acctmp])
+        if j[1] != 0:
+            tmp = index_value_save[j[0], j[1], j[2]]
+            index_value_save[j[0], j[1], j[2]] = np.nanmean([tmp, acctmp])
 #        print(index_value_save[j[0], j[1], j[2]])
         
 print('np.nanmean(index_value_save)', np.nanmean(index_value_save))
 
 plt.hist(index_value_save.flatten(), bins=20)
 
-# In
+# In[]
 from scipy import stats
-#from sklearn import metrics
+from sklearn import metrics
 
 def nanex(array1):
     array1 = np.array(array1)
@@ -779,57 +789,51 @@ def nanex(array1):
 # In[]
 testlist = pslGroup + shamGroup + ipsaline_pslGroup
 pathsave = []
-valid = valid_generation(testlist, psltest=True, meansw=True)
-print('valid distribuation', np.mean(valid[1], axis=0))
 #valid = valid_generation(testlist, only_se=None)   
-for si in [6]: # range(1,7):    
+for si in [1]:    
     acc_thr = 0.91
-    n_hidden = int(8 * 20) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-    layer_1 = int(8 * 20) #
-    l2_rate = 0.001
+    n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+    layer_1 = int(8 * 6) #
+    l2_rate = 0.3
     
-    dropout_rate1 = 0.1 # dropout late
+    dropout_rate1 = 0.2 # dropout late
     dropout_rate2 = 0.1 # 
+            
 
-    if si == 1:
-        thr = 0.64
-        
-    if si == 2:
-        thr = 0.60
-        
-    if si == 3:
-        thr = 0.66
-        
-    if si == 4:
-        thr = 0.58
-        
-    if si == 5:
-        thr = 0.56
 
-    if si == 6:
-        thr = 0
+    if si == 0:
+        savename = 'fset + baseonly'
+        tset = fset + baseonly
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset)
 
-    base_pslset = []
-    savename = 'selected_ROI' + str(thr) + '_042209'
+    if si in [1]:
+        if si == 1:
+            thr = 0.69
+        
+        base_pslset = []
+        savename = 'fset + baseonly + CFAgroup + capsaicinGroup_' + str(thr) + '_0415'
+        tset = fset + baseonly + CFAgroup + capsaicinGroup    
+            
+        acc_thr = 0.895
+        
+        elite_cfa = np.where(index_value_save>thr)
+        elite_cfa = np.array(elite_cfa); elite_cfa2=[]
+        for i in range(elite_cfa.shape[1]):
+            elite_cfa2.append(list(elite_cfa[:,i]))
+        X_save2, Y_save2, Z_save2 = ms_sampling(forlist= tset + base_pslset, addset= elite_cfa2, addset2= CFAgroup + capsaicinGroup)
     
-    tset = CFAgroup + capsaicinGroup + salineGroup + adenosineGroup + chloroquineGroup + itSalineGroup + itClonidineGroup \
-    + fset + baseonly
- 
-    forlist= tset; addset=index_value_save; thr=thr; 
-    X_save2, Y_save2, Z_save2 = ms_sampling(forlist=forlist, thr=thr, addset=index_value_save, )
+    reset_keras(model)
+    nseed(seed)
+    tf.random.set_seed(seed)   
+    model, idcode = keras_setup() 
     
-    repeat = 2
-    for ti in range(repeat):
+    ##
+    for ti in range(5):
         savename2 = savename + '_t' + str(ti) + '.pickle'
         print('index', savename2)
         final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
         test_matrix_savename = RESULT_SAVE_PATH + 'exp_raw/' + savename + '_t' + str(ti) + '.h5'
         pathsave.append([si, ti, final_weightsave, test_matrix_savename])
-        
-        reset_keras(model)
-        nseed(seed)
-        tf.random.set_seed(seed)   
-        model, idcode = keras_setup() 
         
         if not(os.path.isfile(final_weightsave)):
             X = array_recover(X_save2)
@@ -837,7 +841,7 @@ for si in [6]: # range(1,7):
             Z = np.array(Z_save2)
             
             trX, trY, trZ = upsampling(X, Y, Z)
-#            print('len(elite_cfa2)', len(elite_cfa2))
+            print('len(elite_cfa2)', len(elite_cfa2))
             print('tr samples #', len(Z_save2))
             print('tr samples after upsampling #', len(trZ))
                 
@@ -869,8 +873,7 @@ for si in [6]: # range(1,7):
                 if isfile1 and cnt > 0:
                     model.load_weights(current_weightsave)
                     
-                hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs, \
-                                 validation_data = valid)
+                hist = model.fit(trX, trY, batch_size=batch_size, epochs=epochs)
                 cnt += 1; model.save_weights(current_weightsave)
                 if cnt % 20 == 0 and cnt != 0:
                     print('cnt', cnt)
@@ -881,11 +884,10 @@ for si in [6]: # range(1,7):
                 # 종료조건: 
                 current_acc = s_acc[-1] 
             model.save_weights(final_weightsave)
-        model.load_weights(final_weightsave)
+    
 #        for tSE in testlist:
-        
+        model.load_weights(final_weightsave)
         test_matrix = np.zeros((N,5)); test_matrix[:] = np.nan
-        
         if os.path.isfile(test_matrix_savename):
             with open(test_matrix_savename, 'rb') as f:  # Python 3: open(..., 'rb')
                 tmatrix = pickle.load(f)
@@ -901,34 +903,41 @@ for si in [6]: # range(1,7):
                 senum = 5
             for tse in range(senum):
                 if np.isnan(test_matrix[TSE, tse]):
+                    
                     valid = valid_generation([TSE], only_se=tse)
                     score = model.evaluate(valid[0], valid[1], verbose=0)
                     pain = score[1]
                     print(TSE, tse, 'pain %', pain)
                     test_matrix[TSE, tse] = pain
-                        
+        
         with open(test_matrix_savename, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(test_matrix, f, pickle.HIGHEST_PROTOCOL)
 
 # In[]
 def eval_ttset_roc(target):
     test_matrix = np.array(target)            
-    print('test')    
+    print('test')     
     psl0 = nanex(test_matrix[pslGroup,0])
     psl1 = nanex(test_matrix[pslGroup,1])
     psl2 = nanex(test_matrix[pslGroup,2])
     
-#    sham0 = nanex(test_matrix[shamGroup,0])
+    sham0 = nanex(test_matrix[shamGroup,0])
     sham1 = nanex(test_matrix[shamGroup,1])
     sham2 = nanex(test_matrix[shamGroup,2])
     
-    base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+    ipsaline0 = nanex(test_matrix[ipsaline_pslGroup,0])
+    ipsaline1 = nanex(test_matrix[ipsaline_pslGroup,1])
+    ipsaline2 = nanex(test_matrix[ipsaline_pslGroup,2])
+    
+    baseall = np.concatenate((sham0, psl0, ipsaline0), axis=0)
+    
+    base_vs_3 = stats.ttest_ind(baseall , psl1)[1]
     base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
     sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
     sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
 
-    print('psl mean', np.nanmean(test_matrix[pslGroup,:], axis=0))
-    print('sham mean', np.nanmean(test_matrix[shamGroup,:], axis=0))
+    print('psl mean', np.mean(test_matrix[pslGroup,:], axis=0))
+    print('sham mean', np.mean(test_matrix[shamGroup,:], axis=0))
     print('ip_saline mean', np.nanmean(test_matrix[ipsaline_pslGroup,:], axis=0))
 
     print('base_vs_3', base_vs_3)
@@ -937,128 +946,197 @@ def eval_ttset_roc(target):
     print('sham10_vs_psl10', sham10_vs_psl10)    
 
     return None            
-
-pathsave_ms = []
-#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t0.h5')
-#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t1.h5')
-#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t2.h5')
-#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t3.h5')
-#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t4.h5')
-
-#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\allbase0.580.82_0419_t0.h5')
-#pathsave_ms.append('C:\\Users\\MSBak\\Desktop\\exp_raw\\exp_raw\\allbase0.580.82_0419_t0.h5')
-
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t1.h5')
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t0.h5')
-
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t1.h5')
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0_042209_t0.h5')
-
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.64_042209_t0.h5')
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.64_042209_t1.h5')
-
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.56_042209_t1.h5')
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.56_042209_t0.h5')
-
-pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.66_042209_t0.h5')
-pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.66_042209_t1.h5')
-
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.58_042209_t1.h5')
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.58_042209_t0.h5')
-
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.6_042209_t0.h5')
-#pathsave_ms.append('C:\\titan_savepath\\result\\0331_CFA_selection\\exp_raw\\selected_ROI0.6_042209_t1.h5')
-
-
-tmatrix_save = []
-for i in range(len(pathsave_ms)):
-    with open(pathsave_ms[i], 'rb') as f:  # Python 3: open(..., 'rb')
+                
+tmatrix_save = []; [tmatrix_save.append([]) for u in range(7)]
+for i in range(len(pathsave)-1):
+    with open(pathsave[i][3], 'rb') as f:  # Python 3: open(..., 'rb')
         tmatrix = pickle.load(f)
-    tmatrix_save.append(tmatrix)
-    print(pathsave_ms[i])
-    print(tmatrix.shape)
+    tmatrix_save[pathsave[i][0]].append(tmatrix)
 
-test = np.nanmean(np.array(tmatrix_save),axis=0)       # +cap+cfa, 0.7 v0416
-eval_ttset_roc(test) 
-
-    
- # In[] 
+  
+test = np.nanmean(np.array(tmatrix_save[1]),axis=0)       # fset + base
+eval_ttset_roc(test)
 
 
-test_matrix = test
-a0 = test_matrix[shamGroup,:]
-a1 = test_matrix[pslGroup,:]
-a2 = test_matrix[ipsaline_pslGroup,:]
+# In[]  
 
-
-a3 = test_matrix[chloroquineGroup,:]
-a4 = test_matrix[itSalineGroup,:]
-a5 = test_matrix[itClonidineGroup,:]
-
-np.mean(a3,axis=0), np.mean(a4,axis=0), np.mean(a5,axis=0)
-
-
-test_matrix = np.array(test)
+test_matrix = np.array(control)            
+print('control')
 psl0 = nanex(test_matrix[pslGroup,0])
 psl1 = nanex(test_matrix[pslGroup,1])
 psl2 = nanex(test_matrix[pslGroup,2])
-sham = nanex(test_matrix[shamGroup,:3].flatten())
-ipsaline0 = nanex(test_matrix[ipsaline_pslGroup,0])
-ipsaline1 = nanex(test_matrix[ipsaline_pslGroup,1])
-ipsaline2 = nanex(test_matrix[ipsaline_pslGroup,2])
 
-test_matrix = movement
-psl0m = nanex(test_matrix[pslGroup,0])
-psl1m = nanex(test_matrix[pslGroup,1])
-psl2m = nanex(test_matrix[pslGroup,2])
-shamm = nanex(test_matrix[shamGroup,:3].flatten())
-ipsaline0m = nanex(test_matrix[ipsaline_pslGroup,0])
-ipsaline1m = nanex(test_matrix[ipsaline_pslGroup,1])
-ipsaline2m = nanex(test_matrix[ipsaline_pslGroup,2])
+sham0 = nanex(test_matrix[shamGroup,0])
+sham1 = nanex(test_matrix[shamGroup,1])
+sham2 = nanex(test_matrix[shamGroup,2])
 
-p_hat = np.concatenate((sham, psl0, ipsaline0), axis=0)
-mov = np.concatenate((shamm, psl0m, ipsaline0m), axis=0)
+base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
+sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
 
-plt.scatter(mov, p_hat)
+print('base_vs_3', base_vs_3)
+print('base_vs_10', base_vs_10)
+print('sham3_vs_psl3', sham3_vs_psl3)
+print('sham10_vs_psl10', sham10_vs_psl10)
 
-def mslinear_regression(x,y):
-    x = np.array(x); y = np.array(y); 
-    x = x[np.isnan(x)==0]; y = y[np.isnan(y)==0]
-    
-    n = x.shape[0]
-    r = (1/(n-1)) * np.sum(((x - np.mean(x))/np.std(x)) * ((y - np.mean(y))/np.std(y)))
-    m = r*(np.std(y)/np.std(x))
-    b = np.mean(y) - np.mean(x)*m
-
-    return m, b # bx+a
-
-m, b = mslinear_regression(mov, p_hat)
-
-
-test2 = np.array(test) - np.array(movement)*0.2
-eval_ttset_roc(test2) 
-
-test_matrix = np.array(test2)
+test_matrix = np.array(control2)            
+print('control2')
 psl0 = nanex(test_matrix[pslGroup,0])
 psl1 = nanex(test_matrix[pslGroup,1])
 psl2 = nanex(test_matrix[pslGroup,2])
-sham = nanex(test_matrix[shamGroup,:3].flatten())
-ipsaline0 = nanex(test_matrix[ipsaline_pslGroup,0])
-ipsaline1 = nanex(test_matrix[ipsaline_pslGroup,1])
-ipsaline2 = nanex(test_matrix[ipsaline_pslGroup,2])
 
-p_hat = np.concatenate((sham, psl0, ipsaline0), axis=0)
-mov = np.concatenate((shamm, psl0m, ipsaline0m), axis=0)
+sham0 = nanex(test_matrix[shamGroup,0])
+sham1 = nanex(test_matrix[shamGroup,1])
+sham2 = nanex(test_matrix[shamGroup,2])
 
-plt.scatter(mov, p_hat)
- # In[] 
+base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
+sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
 
+print('base_vs_3', base_vs_3)
+print('base_vs_10', base_vs_10)
+print('sham3_vs_psl3', sham3_vs_psl3)
+print('sham10_vs_psl10', sham10_vs_psl10)
 
-test = np.nanmean(np.array(tmatrix_save[2]),axis=0)    # +cap+cfa, 0.7 v0416
-eval_ttset_roc(test) 
+test_matrix = np.array(test2)            
+print('test2')
+psl0 = nanex(test_matrix[pslGroup,0])
+psl1 = nanex(test_matrix[pslGroup,1])
+psl2 = nanex(test_matrix[pslGroup,2])
 
-    # In[]
+sham0 = nanex(test_matrix[shamGroup,0])
+sham1 = nanex(test_matrix[shamGroup,1])
+sham2 = nanex(test_matrix[shamGroup,2])
 
+base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
+sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
+
+print('base_vs_3', base_vs_3)
+print('base_vs_10', base_vs_10)
+print('sham3_vs_psl3', sham3_vs_psl3)
+print('sham10_vs_psl10', sham10_vs_psl10)
+        
+"""
+base_vs_3 0.20899769289520562
+base_vs_10 0.2228891067168212
+sham3_vs_psl3 0.08354878798789862
+sham10_vs_psl10 0.0794040903778463
+"""
+        
+# In[]
+for si in [0,1]:
+    if si == 0:
+        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
+
+    if si == 1:
+        savename = 'fc+keto_0.65'; thr = 0.65
+        
+    for ti in range(5):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        print('index', savename2)
+            
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+        reset_keras(model)
+        model, idcode = keras_setup(lr=0)
+        model.load_weights(final_weightsave) 
+        
+        testlist = pslGroup + shamGroup + itSalineGroup
+    
+        dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
+        for test_mouseNum in testlist:        
+            sessionNum = 5
+            if test_mouseNum in se3set:
+                sessionNum = 3
+            for se in range(sessionNum): 
+                valid = valid_generation([test_mouseNum], only_se=se)
+                print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+                hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+        #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+                dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+            
+        # 최적화용 저장      
+        picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + savename2
+        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+            print(picklesavename, '저장되었습니다.')  
+
+# In[]
+for si in [0,1]:
+    if si == 0:
+        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
+
+    if si == 1:
+        savename = 'fc+keto_0.65'; thr = 0.65
+    
+    dummy_table_avg = []
+    for ti in range(5):
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        picklesavename =  RESULT_SAVE_PATH + 'exp_raw\\' + savename2
+        
+        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
+            dummy_table = pickle.load(f)
+            dummy_table_avg.append(dummy_table)
+            
+    dummy_table_avg = np.array(dummy_table_avg)
+    dummy_table_avg2 = np.mean(dummy_table_avg, axis=0)
+            
+print(np.mean(dummy_table_avg2[itSalineGroup,:], axis=0))    
+
+for ix in [0,1]:
+    for ix2 in [1]:
+        print(ix, ix2)
+        
+        avg_matrix2 = np.mean(np.array(matrixsave[ix]), axis=0)
+        
+        avg_matrix3 = np.zeros(avg_matrix2.shape); avg_matrix3[:] = np.nan
+        for SE in range(N):
+            if SE in np.array(msset_total)[:,0]:
+                settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
+                avg_matrix3[SE,:] = np.nanmean(avg_matrix2[settmp,:],axis=0)
+        #            print('set averaging', settmp)
+            elif SE not in np.array(msset_total).flatten(): 
+                avg_matrix3[SE,:] = avg_matrix2[SE,:]
+        
+                
+        psl0 = nanex(avg_matrix3[pslGroup,0])
+        psl1 = nanex(avg_matrix3[pslGroup,1])
+        psl2 = nanex(avg_matrix3[pslGroup,2])
+        
+        sham0 = nanex(avg_matrix3[shamGroup,0])
+        sham1 = nanex(avg_matrix3[shamGroup,1])
+        sham2 = nanex(avg_matrix3[shamGroup,2])
+        
+        itsaline1 = nanex(avg_matrix3[itSalineGroup,0])
+        
+        
+        
+        zeroby = stats.ttest_ind(np.zeros(psl0.shape), (psl2-psl0))[1]
+        
+        base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
+        base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
+        sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
+        sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
+        
+        pain = np.concatenate((psl1, psl2), axis=0)
+        nonpain = np.concatenate((sham0, sham1, sham2, psl0), axis=0)
+        anstable = list(np.ones(pain.shape[0])) + list(np.zeros(nonpain.shape[0]))
+        predictValue = np.array(list(pain)+list(nonpain)); predictAns = np.array(anstable)  
+        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=1)
+        base_vs_10_roc = metrics.auc(fpr,tpr)
+        
+        print('========================')
+        #    print('base_vs_3', base_vs_3)
+        print('base_vs_10_roc', base_vs_10_roc)
+        print('zeroby', zeroby)
+        #    print('sham3_vs_psl3', sham3_vs_psl3)
+        #    print('sham10_vs_psl10', sham10_vs_psl10)
+        print(np.mean(avg_matrix2[pslGroup,:], axis=0))
+        print(np.mean(avg_matrix2[itSalineGroup,:], axis=0))
+        print('========================')
 
 
 
