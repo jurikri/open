@@ -30,9 +30,11 @@ from keras.layers import BatchNormalization
 # set pathway
 try:
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
+    gsync = 'D:\\mscore\\syncbackup\\google_syn\\'
 except:
     try:
         savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
+        gsync = 'C:\\Users\\skklab\\Google 드라이브\\google_syn\\'
     except:
         try:
             savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
@@ -40,8 +42,7 @@ except:
             savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 
-pickleload = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'
-with open(pickleload, 'rb') as f:  # Python 3: open(..., 'rb')
+with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
      
 FPS = msdata_load['FPS']
@@ -68,9 +69,12 @@ CFAgroup = msGroup['CFAgroup']
 chloroquineGroup = msGroup['chloroquineGroup']
 itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
- 
+ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
+
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
+msset2[-1] = [146,149]
+
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
@@ -78,6 +82,8 @@ se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chl
 + itSalineGroup + itClonidineGroup # for test only
 
 pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
+fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+baseonly = lowGroup + lidocaineGroup + restrictionGroup
 # In[]
 
 def downsampling(msssignal, wanted_size):
@@ -285,7 +291,10 @@ project_list = []
 #project_list.append(['control_test_segment_adenosine_set2', 200, None])
 #project_list.append(['control_test_segment_adenosine_set3', 300, None])
 #project_list.append(['control_test_segment_adenosine_set4', 400, None])
-project_list.append(['control_test_segment_adenosine_set5', 500, None]) # 4번 까지 완료, 밤에 돌리자 0331 
+#project_list.append(['control_test_segment_adenosine_set5', 500, None]) # 4번 까지 완료, 밤에 돌리자 0331 
+ 
+project_list.append(['foramlin_only_1', 100, None]) 
+ 
  
 #project_list.append(['0330_batchnorm_1', 100, None])
 #project_list.append(['0330_batchnorm_2', 200, None])
@@ -344,7 +353,7 @@ for nix, q in enumerate(project_list):
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -378,10 +387,10 @@ for nix, q in enumerate(project_list):
                     for se in range(5):      
                         # pain Group에 들어갈 수 있는 모든 경우의 수 
                         set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
-                        c1 = SE in set1 and se in [0,2]
-                        c2 = SE in capsaicinGroup and se in [0,2]
-                        c3 = SE in pslGroup + adenosineGroup and se in [0]
-                        c4 = SE in shamGroup and se in [0,1,2]
+                        c1 = SE in set1 and se in [0]
+                        c2 = SE in capsaicinGroup and se in [0]
+#                        c3 = SE in pslGroup + adenosineGroup and se in [0]
+#                        c4 = SE in shamGroup and se in [0,1,2]
                         c5 = SE in salineGroup and se in [0,1,2,3,4]
                         c6 = SE in CFAgroup and se in [0]
                         c7 = SE in chloroquineGroup and se in [0]
@@ -390,7 +399,7 @@ for nix, q in enumerate(project_list):
   
 #                        c13 = SE in chloroquineGroup and se in [1]
                                         
-                        if c1 or c2 or c3 or c4 or c5 or c6 or c7:
+                        if c1 or c2 or c5 or c6 or c7:
 #                        if c13: #
                             # msset 만 baseline을 제외시킴, total set 아님 
                             exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
@@ -423,7 +432,7 @@ for nix, q in enumerate(project_list):
                 if SE in reducing_test_list:
                     for se in range(5):      
                         # pain Group에 들어갈 수 있는 모든 경우의 수 
-                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
+                        set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2
                         c11 = SE in set2 and se in [1]
 #                        c12 = SE in CFAgroup and se in [1,2]
 #                        c13 = SE in chloroquineGroup and se in [1]
@@ -689,7 +698,7 @@ for nix, q in enumerate(project_list):
 #        if not t in pslset + capsaicinGroup + CFAgroup:
 #            tmp.append(t)
             
-    wanted = mouselist
+    wanted = highGroup + midleGroup + ketoGroup + highGroup2 + capsaicinGroup + CFAgroup + lidocaineGroup
     # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
@@ -963,7 +972,7 @@ for nix, q in enumerate(project_list):
 
         ####### test - binning 구문 입니다. ##########, test version 2
         # model load는 cv set 시작에서 무조건 하도록 되어 있음.
-        if isffileile2 and testsw2:
+        if isfile2 and testsw2:
             model.load_weights(final_weightsave) # training / test는 흔히 별개로 처리되곤하기 때문에, 다시 로드한다.
             
             for test_mouseNum in testlist:
