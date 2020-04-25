@@ -22,7 +22,7 @@ from keras.layers.core import Dense, Activation
 from keras.layers.recurrent import LSTM
 from keras.layers.wrappers import Bidirectional
 from keras.optimizers import Adam
-from numpy.random import seed as nseed
+from numpy.random import seed as nseed #
 import tensorflow as tf
 from keras.layers import BatchNormalization
 
