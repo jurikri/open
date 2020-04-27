@@ -68,6 +68,7 @@ def msGrouping_yohimbine(msdata):
 
 try:
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
+    gsync = 'D:\\mscore\\syncbackup\\google_syn\\'
 except:
     try:
         savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
@@ -80,12 +81,12 @@ print('savepath', savepath)
 #
 
 # var import
-with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
     
-with open('mspickle_msdict.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
-    msdict = pickle.load(f)
-    msdict = msdict['msdict']
+#with open('mspickle_msdict.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+#    msdict = pickle.load(f)
+#    msdict = msdict['msdict']
     
 #with open('PSL_result_save.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
 #    PSL_result_save = pickle.load(f)
@@ -119,9 +120,11 @@ CFAgroup = msGroup['CFAgroup']
 chloroquineGroup = msGroup['chloroquineGroup']
 itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
+ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
+msset2[-1] = [146,149]
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
@@ -390,44 +393,67 @@ for SE in range(N):
         movement[SE,se] = np.mean(bahavss[SE][se]>0) # binaryzation or not
         # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
                     
-                    # In[]
-                    
-project_list = []
+# In[] Formalin CV
+ 
+if False:
+    savepath = 'D:\\mscore\\syncbackup\\google_syn\\result0\\'               
+    project_list = []
+
+    project_list.append(['foramlin_only_1', 100, None])
+    project_list.append(['foramlin_only_2', 200, None]) 
+    project_list.append(['foramlin_only_3', 300, None]) 
+    project_list.append(['foramlin_only_4', 400, None])
+    project_list.append(['foramlin_only_5', 500, None]) 
+ 
 
 ###
-project_list.append(['control_test_segment_adenosine_set1', 100, None])
-project_list.append(['control_test_segment_adenosine_set2', 200, None])
-project_list.append(['control_test_segment_adenosine_set3', 300, None])
-project_list.append(['control_test_segment_adenosine_set4', 400, None])
-project_list.append(['control_test_segment_adenosine_set5', 500, None])
-
-#project_list.append(['0330_batchnorm_1', 100, None])
-#project_list.append(['0330_batchnorm_2', 200, None])
-#project_list.append(['0330_batchnorm_3', 300, None])
-
-
-model_name2 = project_list 
-             
-# In testsw3
-        # In[]
-
-model_name = np.array(model_name2)
-testsw3_mean = np.zeros((N,5,len(model_name)))
-for ix, p in enumerate(model_name):
-    for SE in range(N):
-        loadpath5 = savepath + 'result\\' + p[0] + '\\exp_raw\\' + 'testsw3_' + str(SE) + '.pickle'
-        if os.path.isfile(loadpath5):
-            with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
-                testsw3 = pickle.load(f)
-            testsw3_mean[SE,:,ix] = testsw3[SE,:]
+#    project_list.append(['control_test_segment_adenosine_set1', 100, None])
+#    project_list.append(['control_test_segment_adenosine_set2', 200, None])
+#    project_list.append(['control_test_segment_adenosine_set3', 300, None])
+#    project_list.append(['control_test_segment_adenosine_set4', 400, None])
+#    project_list.append(['control_test_segment_adenosine_set5', 500, None])
+    
+    #project_list.append(['0330_batchnorm_1', 100, None])
+    #project_list.append(['0330_batchnorm_2', 200, None])
+    #project_list.append(['0330_batchnorm_3', 300, None])
+    
+    
+    model_name2 = project_list 
+                 
+    # In testsw3
+    
+    model_name = np.array(model_name2)
+    testsw3_mean = np.zeros((N,5,len(model_name)))
+    for ix, p in enumerate(model_name):
+        for SE in range(N):
             
-testsw3_mean = np.nanmean(testsw3_mean, axis=2)
+            loadpath5 = savepath + p[0] + '\\exp_raw\\' + 'testsw3_' + str(SE) + '.pickle'
+            if os.path.isfile(loadpath5):
+                with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                    testsw3 = pickle.load(f)
+                testsw3_mean[SE,:,ix] = testsw3[SE,:]
+                
+                
+    # In[] PSL용 load
+if False:
+    t = 10
+    testsw3_mean = np.zeros((N,5,t))           
+    for i in range(t):
+        path1 = 'D:\\mscore\\syncbackup\\google_syn\\result1\\'
+        path2 = 'fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t' + str(i) + '.h5'
+        path3 = path1+ path2
+        
+        if os.path.isfile(path3):
+            with open(path3, 'rb') as f:  # Python 3: open(..., 'rb')
+                testsw3 = pickle.load(f)
+                testsw3_mean[:,:,i] = testsw3
 
-biRNN_short = testsw3_mean
+# In[]          
+testsw4_mean = np.nanmean(testsw3_mean, axis=2)
+biRNN_short = testsw4_mean
+#Aprism_biRNN2_pain_vs_itch = msGrouping_base_vs_itch(testsw3_mean)
 
-Aprism_biRNN2_pain_vs_itch = msGrouping_base_vs_itch(testsw3_mean)
-
-# In
+# In[] raw test (구버전)
 if False:
     min_mean_save = []; [min_mean_save.append([]) for k in range(N)]
     ROImean_save = []; [ROImean_save.append([]) for k in range(N)]
@@ -512,7 +538,25 @@ if False:
         for se in range(sessionNum):
     #        if [SE, se] in shortlist:
             biRNN_short[SE,se]  = np.mean(calc_target[SE][se]) # [BINS][bins]
-        # In
+        # In[]
+        
+
+# movement 50% filter# In label 섞인건 재정렬
+mscopy = np.array(biRNN_short)
+for SE in range(N):
+    if SE in [141,142,143]:
+        biRNN_short[SE,:] = np.nan
+        biRNN_short[SE,0] = mscopy[SE,0]
+        biRNN_short[SE,3:5] = mscopy[SE,1:3]
+    
+        movement[SE,1:3] = movement[SE,3:5] 
+        movement[SE,1:3] = np.nan
+     
+#biRNN_short[(movement>0.5)==1] = np.nan
+
+        
+        
+# subset 평균처리        
 biRNN_long_subset = np.zeros((N,5)); biRNN_long_subset[:] = np.nan
 for SE in range(N):
     if SE in np.array(msset_total)[:,0]:
@@ -521,6 +565,8 @@ for SE in range(N):
 #        print('set averaging', settmp)
     elif SE not in np.array(msset_total).flatten(): 
         biRNN_long_subset[SE,:] = biRNN_short[SE,:]
+
+
 
 # In ## PRISM 정리 및 통계처리
 Aprism_biRNN2_formalin = msGrouping_nonexclude(biRNN_long_subset)
@@ -602,13 +648,89 @@ Aprism_biRNN2_psl = pd.concat([Aprism_biRNN2_psl , pd.DataFrame(sham1), pd.DataF
                               , pd.DataFrame(itClonidineGroup0) , pd.DataFrame(itClonidineGroup1), pd.DataFrame(itClonidineGroup2)] \
                               , ignore_index=True, axis=1)
 
+## psl_ipsaline
+#t = biRNN_long_subset[ipsaline_pslGroup,:]
+#np.nanmean(t, axis=0)
+#
+#t = movement[ipsaline_pslGroup,:]
+#np.nanmean(t, axis=0)
+#
+#t = movement[pslGroup + shamGroup + itSalineGroup + itClonidineGroup,:]
+#np.nanmean(t, axis=0)
+#
+#a = t[:,0]
+#plt.hist(a, bins=20)
+
+
+
 ## 통계처리 통합
 ms_statistics = pd.concat([ms_statistics, pd.DataFrame(['CFA base vs CFA d1', paired_CFA1]).T \
                             , pd.DataFrame(['CFA base vs CFA d3', paired_CFA2]).T] \
                             ,ignore_index=True, axis = 0)
 
-
 print(ms_statistics)
+
+def msacc(class0, class1, mslabel='None', figsw=False):
+    pos_label = 1; roc_auc = -np.inf; fig = None
+    while roc_auc < 0.5:
+        class0 = np.array(class0); class1 = np.array(class1)
+        class0 = class0[np.isnan(class0)==0]; class1 = class1[np.isnan(class1)==0]
+        
+        anstable = list(np.ones(class1.shape[0])) + list(np.zeros(class0.shape[0]))
+        predictValue = np.array(list(class1)+list(class0)); predictAns = np.array(anstable)
+        #            
+        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=pos_label)
+        
+        maxix = np.argmax((1-fpr) * tpr)
+        specificity = 1-fpr[maxix]; sensitivity = tpr[maxix]
+        accuracy = ((class1.shape[0] * sensitivity) + (class0.shape[0]  * specificity)) / (class1.shape[0] + class0.shape[0])
+        roc_auc = metrics.auc(fpr,tpr)
+        
+        if roc_auc < 0.5:
+            pos_label = 0
+            
+    if figsw:
+        sz = 0.9
+        fig = plt.figure(1, figsize=(7*sz, 5*sz))
+        lw = 2
+        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))))
+        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+#        plt.xlabel('False Positive Rate', fontsize=20)
+#        plt.ylabel('True Positive Rate', fontsize=20)
+#        plt.title('ROC')
+        plt.legend(loc="lower right", prop={'size': 15})
+#        plt.show()
+            
+    return roc_auc, accuracy, fig
+
+# cap, cfa prism, ROC
+base_merge = np.concatenate((cap0, CFA0), axis=0)
+Aprism_biRNN_cap_cfa = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(cap1) \
+                              , pd.DataFrame(CFA1) , pd.DataFrame(CFA2)], ignore_index=True, axis=1)
+
+pain = np.concatenate((cap1, CFA1, CFA2), axis=0)
+nonpain = np.concatenate((cap0, CFA0), axis=0)
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='Model2, AUC:', figsw=True)
+
+simultaneous_sw=False
+
+# model2_formalin_only_averaged_indtest_to_cap+cfa
+if simultaneous_sw:
+    pain = [0.252381,0.0338983,0.376344,0.561446,0.106757,0.091358,0.393333,0.0135135,0.44794,0.436636,0.405494,0.120793,0.114639,0.268272,0.0940197,0.3995,0.170395,0.0981818,0.251888,0.244685,0.0745674]
+    nonpain = [0.0142857,0.0389831,0.237634,0.0843373,0.0297297,0.228807,0.03875,0.0222973,0.402996,0.0894091,0.0348617,0.053986,0.0787413,0.194005,0.0676889]
+    roc_auc, _, _ = msacc(nonpain, pain, mslabel='Model2, AUC:', figsw=True)
+    
+
+# psl prism, ROC
+base_merge = np.concatenate((psl0, sham0), axis=0)
+Aprism_biRNN_psl= pd.concat([pd.DataFrame(base_merge), pd.DataFrame(sham1) \
+                              , pd.DataFrame(sham2) , pd.DataFrame(psl1), pd.DataFrame(psl2)], ignore_index=True, axis=1)
+
+pain = np.concatenate((cap1, CFA1, CFA2), axis=0)
+nonpain = np.concatenate((cap0, CFA0), axis=0)
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='Model2, AUC:', figsw=True)
 
 # In[] movement 정리
 
@@ -693,40 +815,15 @@ os.sys.exit()
 
 
 # In[] ROC plot (동시)
-def msacc(class0, class1, mslabel='None', figsw=False):
-    pos_label = 1; roc_auc = -np.inf; fig = None
-    while roc_auc < 0.5:
-        class0 = np.array(class0); class1 = np.array(class1)
-        class0 = class0[np.isnan(class0)==0]; class1 = class1[np.isnan(class1)==0]
-        
-        anstable = list(np.ones(class1.shape[0])) + list(np.zeros(class0.shape[0]))
-        predictValue = np.array(list(class1)+list(class0)); predictAns = np.array(anstable)
-        #            
-        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=pos_label)
-        
-        maxix = np.argmax((1-fpr) * tpr)
-        specificity = 1-fpr[maxix]; sensitivity = tpr[maxix]
-        accuracy = ((class1.shape[0] * sensitivity) + (class0.shape[0]  * specificity)) / (class1.shape[0] + class0.shape[0])
-        roc_auc = metrics.auc(fpr,tpr)
-        
-        if roc_auc < 0.5:
-            pos_label = 0
-            
-    if figsw:
-        sz = 0.9
-        fig = plt.figure(1, figsize=(7*sz, 5*sz))
-        lw = 2
-        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))))
-        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-#        plt.xlabel('False Positive Rate', fontsize=20)
-#        plt.ylabel('True Positive Rate', fontsize=20)
-#        plt.title('ROC')
-        plt.legend(loc="lower right", prop={'size': 15})
-#        plt.show()
-            
-    return roc_auc, accuracy, fig
+
+
+# ROC1, bRNN, PSL (sham (d3, d10) + before (sham, psl)) vs psl (d3, d10)
+
+
+pain = np.concatenate((psl1, psl2), axis=0)
+nonpain = np.concatenate((psl0, sham0, sham1, sham2), axis=0)
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='Mean activity, AUC:', figsw=True)
+
 
 # ROC1
 # (t4, event amp)
@@ -737,6 +834,9 @@ nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) 
 + list(target[:,8]) + list(target[:,10])
 roc_auc, _, _ = msacc(nonpain, pain, mslabel='Mean activity, AUC:', figsw=True)   
 
+
+# formalin event amplitude and frequecny ROC curve
+
 with open('formalin_event_detection.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     formalin_event = pickle.load(f)
     formalin_event_detection = formalin_event['Aprism_amplitude_formalin']
@@ -744,14 +844,12 @@ with open('formalin_event_detection.pickle', 'rb') as f:  # Python 3: open(..., 
 
 target = np.array(formalin_event_detection)
 pain = list(target[:,5]) + list(target[:,9])
-nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) \
-+ list(target[:,8]) + list(target[:,10]) 
+nonpain = list(target[:,0:2].flatten()) + list(target[:,4]) + list(target[:,8]) # interphase 제거됨
 roc_auc, _, _ = msacc(nonpain, pain, mslabel='Event amplitude, AUC:', figsw=True)
 
 target = np.array(formalin_frequency_detection)
 pain = list(target[:,5]) + list(target[:,9])
-nonpain = list(target[:,0:4].flatten()) + list(target[:,4]) + list(target[:,6]) \
-+ list(target[:,8]) + list(target[:,10]) 
+nonpain = list(target[:,0:2].flatten()) + list(target[:,4]) + list(target[:,8]) # interphase 제거됨
 roc_auc, _, _ = msacc(nonpain, pain, mslabel='Event frequency, AUC:', figsw=True)  
 
 plt.savefig(savepath2 + 'ROC_fig1.png', dpi=1000)
