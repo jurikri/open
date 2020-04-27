@@ -33,7 +33,7 @@ try:
     gsync = 'D:\\mscore\\syncbackup\\google_syn\\'
 except:
     try:
-        savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
+        savepath = 'C:\\titan_savepath\\'; os.chdir(savepath);
         gsync = 'C:\\Users\\skklab\\Google 드라이브\\google_syn\\'
     except:
         try:
