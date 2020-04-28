@@ -244,8 +244,8 @@ epochs = 1 # epoch 종료를 결정할 최소 단위.
 lr = 1e-3 # learning rate
 fn = 1
 
-n_hidden = int(8 * 6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8 * 20) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8 * 20) # fully conneted laye node 갯수 # 8 # 원래 6 
 # 6 for normal
 # 10 for +cfa
 
@@ -255,9 +255,9 @@ layer_1 = int(8 * 6) # fully conneted laye node 갯수 # 8 # 원래 6
 # 1부터 2배수로 test 결과 8이 performance가 충분한 최소 단위임.
 
 # regulariza3 # regularization 상수
-l2_rate = 0.3
-dropout_rate1 = 0.20 # dropout late
-dropout_rate2 = 0.10 # 
+l2_rate = 0.001
+dropout_rate1 = 0.1 # dropout late
+dropout_rate2 = 0.1 # 
 
 #testsw = False  # test 하지 않고 model만 저장함. # cloud 사용량을 줄이기 위한 전략.. 
 trainingsw = True # training 하려면 True 
@@ -274,7 +274,7 @@ testsw3 = True
 # 집 컴퓨터, test 전용으로 수정
 
 acc_thr = 0.91 # 0.93 -> 0.94
-batch_size = 2**11 # 5000
+batch_size = 2**10 # 5000
 ###############
 
 # constant 
@@ -667,7 +667,7 @@ for nix, q in enumerate(project_list):
     # training set 재설정
     trainingset = trainingset
     print('trainingset #, pre', len(trainingset))
-    etc = itSalineGroup + itClonidineGroup
+    etc = pslGroup + shamGroup
     forlist = list(trainingset)
     for SE in forlist:
         c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
@@ -701,7 +701,7 @@ for nix, q in enumerate(project_list):
 #        if not t in pslset + capsaicinGroup + CFAgroup:
 #            tmp.append(t)
             
-    wanted = highGroup + midleGroup + ketoGroup + highGroup2 + capsaicinGroup + CFAgroup + lidocaineGroup
+    wanted = capsaicinGroup + CFAgroup + [etc[0]]
     # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
@@ -865,30 +865,30 @@ for nix, q in enumerate(project_list):
                 current_acc = hist_save_acc[-1] 
                 
                 
-                if acc_thr_sw:
-                    dummy_table = np.zeros((N,5))
-                    for test_mouseNum in testlist:
-                        
-                        reset_keras(model)
-                        model, idcode = keras_setup(lr=0)
-                        model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
-                        
-                        sessionNum = 5
-                        if test_mouseNum in se3set:
-                            sessionNum = 3
-                        for se in range(sessionNum): 
-                            valid = valid_generation([test_mouseNum], only_se=se)
-                            print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
-                            hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
-    #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
-                            dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
-
-                    # 최적화용 저장
-                    tmp = 'l2_rate_' + str(l2_rate) +  '_current_acc_' + str(round(current_acc,3)) 
-                    picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'valid_' + tmp + '.pickle'
-                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
-                        print(picklesavename, '저장되었습니다.')  
+#                if acc_thr_sw:
+#                    dummy_table = np.zeros((N,5))
+#                    for test_mouseNum in testlist:
+#                        
+#                        reset_keras(model)
+#                        model, idcode = keras_setup(lr=0)
+#                        model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+#                        
+#                        sessionNum = 5
+#                        if test_mouseNum in se3set:
+#                            sessionNum = 3
+#                        for se in range(sessionNum): 
+#                            valid = valid_generation([test_mouseNum], only_se=se)
+#                            print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+#                            hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+#    #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+#                            dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+#
+#                    # 최적화용 저장
+#                    tmp = 'l2_rate_' + str(l2_rate) +  '_current_acc_' + str(round(current_acc,3)) 
+#                    picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'valid_' + tmp + '.pickle'
+#                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+#                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+#                        print(picklesavename, '저장되었습니다.')  
                            
             model.save_weights(final_weightsave)   
             print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
