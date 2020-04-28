@@ -525,7 +525,6 @@ if False:
                    
     calc_target = np.array(min_mean_save)
     
-                
     biRNN_short = np.zeros((N,5)); biRNN_short[:] = np.nan;
     for SE in range(N):
         if not SE in grouped_total_list or SE in skiplist:
