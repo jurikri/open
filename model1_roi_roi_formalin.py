@@ -655,6 +655,7 @@ for nix, q in enumerate(project_list):
             with redirect_stdout(f):
                 model.summary()
                 
+                
         from keras.utils import plot_model
         plot_model(model, to_file='model.png')
              
