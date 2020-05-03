@@ -110,6 +110,7 @@ chloroquineGroup = msGroup['chloroquineGroup']
 itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
+ipclonidineGroup = msGroup['ipclonidineGroup']
 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -118,6 +119,7 @@ msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ig
 
 skiplist = restrictionGroup + lowGroup
 
+fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup
 pslset = pslGroup + shamGroup + adenosineGroup
 
@@ -158,7 +160,7 @@ def msacc(class0, class1, mslabel='None', figsw=False):
         sz = 0.9
         fig = plt.figure(1, figsize=(7*sz, 5*sz))
         lw = 2
-        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))))
+        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))), alpha=1)
         plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
@@ -197,7 +199,29 @@ for SE in range(N):
         movement[SE,se] = np.mean(bahavss[SE][se]>0) # binaryzation or not
         # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
                     
-# In[] Formalin CV
+        # In[] model1 load
+if True:
+    savepath = 'D:\\mscore\\syncbackup\\google_syn\\model1\\'               
+    project_list = []
+
+    project_list.append(['model1_roiroi_formalin_1', 100, None])
+
+    model_name2 = project_list 
+                 
+    model_name = np.array(model_name2)
+    testsw3_mean = np.zeros((N,5,len(model_name))); testsw3_mean[:] = np.nan
+    for ix, p in enumerate(model_name):
+        for SE in range(N):
+            
+            loadpath5 = savepath + p[0] + '\\exp_raw\\' + 'testsw3_' + str(SE) + '.pickle'
+            if os.path.isfile(loadpath5):
+                with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                    testsw3 = pickle.load(f)
+                testsw3_mean[SE,:,ix] = testsw3[SE,:]
+    model1 = np.nanmean(testsw3_mean, axis=2)
+    
+
+# In[] Formalin CV-- model2
  
 if True:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
@@ -223,7 +247,7 @@ if True:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model2 = np.nanmean(testsw3_mean, axis=2)
                 
-    # In[] PSL용 load
+    # In[] PSL용 load - model3
 if True:
     t = 10
     testsw3_mean = np.zeros((N,5,t)); testsw3_mean[:] = np.nan         
@@ -235,7 +259,7 @@ if True:
         if os.path.isfile(path3):
             with open(path3, 'rb') as f:  # Python 3: open(..., 'rb')
                 testsw3 = pickle.load(f)
-                testsw3_mean[:,:,i] = testsw3
+                testsw3_mean[:testsw3.shape[0],:,i] = testsw3
     model3 = np.nanmean(testsw3_mean, axis=2)
     
         # In[] model4 load
@@ -275,6 +299,7 @@ movement_filter = np.array(target)
 
 def dict_gen(target):
     target = np.array(target)
+    
     for SE in range(N):
         if SE in [141,142,143]:
             target[SE,1:3] = target[SE,3:5] 
@@ -295,6 +320,11 @@ def dict_gen(target):
             subset_mean[SE,:] = target[SE,:]
     
     # grouping
+    formalin0 = nanex(subset_mean[fset,0])
+    formalin1 = nanex(subset_mean[fset,1])
+    
+    saline0 = nanex(subset_mean[salineGroup,0])
+    saline1 = nanex(subset_mean[salineGroup,1])
     
     cap0 = nanex(subset_mean[capsaicinGroup,0])
     cap1 = nanex(subset_mean[capsaicinGroup,1])
@@ -317,21 +347,41 @@ def dict_gen(target):
     ipsaline3 = nanex(subset_mean[ipsaline_pslGroup,3])
     ipsaline4 = nanex(subset_mean[ipsaline_pslGroup,4])
     
-    model2_dict = {'cap0': cap0, 'cap1': cap1, \
+    ipclonidine0 = nanex(subset_mean[ipclonidineGroup,0])
+    ipclonidine1 = nanex(subset_mean[ipclonidineGroup,1])
+    ipclonidine2 = nanex(subset_mean[ipclonidineGroup,2])
+    ipclonidine3 = nanex(subset_mean[ipclonidineGroup,3])
+    ipclonidine4 = nanex(subset_mean[ipclonidineGroup,4])
+    
+    model2_dict = {'formalin0': formalin0, 'formalin1': formalin1, 'saline0': saline0, 'saline1': saline1, \
+                   'cap0': cap0, 'cap1': cap1, \
                    'CFA0': CFA0, 'CFA1': CFA1, 'CFA2': CFA2, \
                    'sham0': sham0, 'sham1': sham1, 'sham2': sham2, \
                    'psl0': psl0, 'psl1': psl1, 'psl2': psl2, \
                    'ipsaline0': ipsaline0, 'ipsaline1': ipsaline1, 'ipsaline2': ipsaline2, 'ipsaline3': ipsaline3, 'ipsaline4': ipsaline4, \
+                   'ipclonidine0': ipclonidine0, 'ipclonidine1': ipclonidine1, 'ipclonidine2': ipclonidine2, \
+                   'ipclonidine3': ipclonidine3, 'ipclonidine4': ipclonidine4, \
                    }
     
     return model2_dict
 
+model1_dict = dict_gen(model1)
 model2_dict = dict_gen(model2)
 model3_dict = dict_gen(model3)
 model4_dict = dict_gen(model4)
 
 
-# cap, cfa prism, ROC
+# foramlin
+def formalin_roc_gen(target, name):
+    tdict = dict(target)
+    pain = np.concatenate((tdict['formalin1'],[]), axis=0)
+    nonpain = np.concatenate((tdict['formalin0'], tdict['saline0'], tdict['saline1']), axis=0)
+    roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True)
+
+formalin_roc_gen(model1_dict, 'Model1')
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'formalin_roc', dpi=1000)# cap, cfa prism, ROC
+
 def capcfa_roc_gen(target, name):
     tdict = dict(target)
     pain = np.concatenate((tdict['cap1'], tdict['CFA1'], tdict['CFA2']), axis=0)
@@ -344,11 +394,14 @@ def Aprim_capcfa_gen(taget):
     Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(tdict['cap1']) \
                                   , pd.DataFrame(tdict['CFA1']) , pd.DataFrame(tdict['CFA2'])], ignore_index=True, axis=1)
     return Aprism
-    
-capcfa_roc_gen(model2_dict, 'Model2')
-capcfa_roc_gen(model4_dict, 'Model4')
+
 Aprism_biRNN_capcfa = Aprim_capcfa_gen(model2_dict)
 
+capcfa_roc_gen(model4_dict, 'Model1')
+capcfa_roc_gen(model2_dict, 'Model2')
+capcfa_roc_gen(model4_dict, 'Model4')
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'capcfa_roc', dpi=1000)
 
 # psl prism, ROC
 def psl_roc_gen(target, name):
@@ -357,9 +410,23 @@ def psl_roc_gen(target, name):
     nonpain = np.concatenate((tdict['psl0'], tdict['sham0'], tdict['sham1'], tdict['sham2']), axis=0)
     roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True)
     
+def Aprim_psl_gen(taget):
+    tdict = dict(target)
+    base_merge = np.concatenate((tdict['sham0'], tdict['psl0']), axis=0)
+    base_merge2 = np.concatenate((tdict['ipsaline0'], tdict['ipclonidine0']), axis=0)
+    Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(tdict['sham1']), pd.DataFrame(tdict['sham2']), \
+                        pd.DataFrame(tdict['psl1']) , pd.DataFrame(tdict['psl2']), pd.DataFrame(base_merge2), \
+                        pd.DataFrame(tdict['ipsaline1']) , pd.DataFrame(tdict['ipsaline2']), \
+                        pd.DataFrame(tdict['ipsaline3']), pd.DataFrame(tdict['ipsaline4']), \
+                        pd.DataFrame(tdict['ipclonidine1']) , pd.DataFrame(tdict['ipclonidine2']), \
+                        pd.DataFrame(tdict['ipclonidine3']) , pd.DataFrame(tdict['ipclonidine4'])], ignore_index=True, axis=1)
+        
+    return Aprism
+
+Aprism_biRNN_psl= Aprim_psl_gen(model3_dict)
+    
 psl_roc_gen(model2_dict, 'Model2')
 psl_roc_gen(model3_dict, 'Model3')
-
 savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
 plt.savefig(savepath2 + 'psl_roc', dpi=1000)
 
@@ -386,6 +453,8 @@ Aprism_mov_biRNN2_capsaicin = movement_subset[capsaicinGroup,0:3]
 Aprism_mov_biRNN2_CFA = movement_subset[CFAgroup,0:3]
 Aprism_mov_biRNN2_psl = msGrouping_pslOnly(movement_subset)
 Aprism_mov_biRNN2_yohimbine = msGrouping_yohimbine(movement_subset)
+
+movement_subset[ketoGroup,:]
 
 # total activity 정리
 
