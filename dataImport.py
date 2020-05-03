@@ -30,11 +30,12 @@ highGroup2 =        [95,96] # 학습용, late ,recovery는 애초에 분석되�
 chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
 itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
-ipsaline_pslGroup = [141,142,143,144,145,146]
+ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152]
+ipclonidineGroup =  [151, 153]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
-          [134,135],[136,137],[128,138],[130,139],[129,140]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149]] # baseline 독립, training 때 base를 skip 하지 않음.
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -55,6 +56,7 @@ msGroup['chloroquineGroup'] = chloroquineGroup
 msGroup['itSalineGroup'] = itSalineGroup
 msGroup['itClonidineGroup'] = itClonidineGroup
 msGroup['ipsaline_pslGroup'] = ipsaline_pslGroup
+msGroup['ipclonidineGroup'] = ipclonidineGroup
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -418,7 +420,7 @@ def msMovementExtraction(list1):
 
 # In[]
 #runlist = [77,123,120,106] + list(range(139,N))
-runlist = list(range(144, N))
+runlist = range(152, N)
 print('runlist', runlist, '<<<< 확인!!')
  
 mssignal_save(runlist)
@@ -427,41 +429,65 @@ msMovementExtraction(runlist)
 
 
 # In[] signal & behavior import
-signalss = list(); bahavss = list()
+#signalss = list(); bahavss = list()
+
+signalss=[];[signalss.append([]) for u in range(N2)]
+bahavss=[];[bahavss.append([]) for u in range(N2)]
+
+RESULT_SAVE_PATH = msdir + '\\raw_tmpsave\\'
+if not os.path.exists(RESULT_SAVE_PATH):
+    os.mkdir(RESULT_SAVE_PATH)
 
 for SE in range(N2):
     print(SE, N)
-    path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-#    loadpath = path + '\\events_save.xlsx'
-    loadpath2 = path + '\\signal_save.xlsx'
+    pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw.pickle'
     
-    signals = list(); behavs = list() # events = list(); 
-    os.chdir(path)
-    
-    
-    for se in range(5):
-        try:
-    #        df = pd.read_excel(loadpath, header=None, sheet_name=se)
-            df2 = pd.read_excel(loadpath2, header=None, sheet_name=se)
-            df3 = np.array(pd.read_csv('MS_' + behav_data[se]))
-    
-    #        events.append(np.array(df))
-            signals.append(np.array(df2))
-            behavs.append(np.array(df3))
+    if os.path.isfile(pickle_savepath):
+        with open(pickle_savepath, 'rb') as f:  # Python 3: open(..., 'rb')
+            msdata_load = pickle.load(f)
             
-        except:
-            print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
-            signals.append(np.array(df2))
-            behavs.append(np.array(df3))
-  
-#    eventss.append(events)
-    signalss.append(signals)
-    bahavss.append(behavs) # 변수명이 오타인데.. 이미 하도많이 사용해서 그냥 두겠음..
-    
+        signals = msdata_load['signals']
+        behavs = msdata_load['behavs']
+        
+    else:
+        path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+    #    loadpath = path + '\\events_save.xlsx'
+        loadpath2 = path + '\\signal_save.xlsx'
+        
+        signals = list(); behavs = list() # events = list(); 
+        os.chdir(path)
+        
+        df2 = None
+        for se in range(5):
+            try:
+                df2 = pd.read_excel(loadpath2, header=None, sheet_name=se)
+                df3 = np.array(pd.read_csv('MS_' + behav_data[se]))
+        
+                signals.append(np.array(df2))
+                behavs.append(np.array(df3))
+                
+            except:
+                if se < 3:
+                    print('se 3 이하 session은 필수입니다.')
+                    import sys
+                    sys.exit
+                    
+                print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
+                signals.append(np.array(df2))
+                behavs.append(np.array(df3))
+                
+        tmp1 = { 'signals' : signals, 'behavs' : behavs}
+        with open(pickle_savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump(tmp1, f, pickle.HIGHEST_PROTOCOL)
+            print(pickle_savepath, '저장되었습니다.')
+            
+    signalss[SE] = signals
+    bahavss[SE] = behavs
+    # In[]
 # In QC
 # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
 thr = 10
-for SE in runlist:
+for SE in range(N2):
     print(SE)
     signals = signalss[SE]
     rois = np.zeros(signals[0].shape[1])
