@@ -72,6 +72,7 @@ chloroquineGroup = msGroup['chloroquineGroup']
 itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
+ipclonidineGroup = msGroup['ipclonidineGroup']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -787,7 +788,7 @@ def nanex(array1):
     return array1
 
 # In[]
-testlist = pslGroup + shamGroup + ipsaline_pslGroup
+testlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
 pathsave = []
 #valid = valid_generation(testlist, only_se=None)   
 for si in [1]:    
@@ -828,7 +829,7 @@ for si in [1]:
     model, idcode = keras_setup() 
     
     ##
-    for ti in range(5):
+    for ti in range(10):
         savename2 = savename + '_t' + str(ti) + '.pickle'
         print('index', savename2)
         final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
