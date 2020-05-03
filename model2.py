@@ -33,8 +33,11 @@ try:
     gsync = 'D:\\mscore\\syncbackup\\google_syn\\'
 except:
     try:
-        savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
+        savepath = 'C:\\titan_savepath\\'; os.chdir(savepath);
         gsync = 'C:\\Users\\skklab\\Google 드라이브\\google_syn\\'
+        
+#        os.path.isfile('C:\\Windows\\addins\\FXSEXT.ecf')
+#        os.path.isfile('C:\\titan_savepath\\result\\test.txt')
     except:
         try:
             savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
@@ -293,7 +296,11 @@ project_list = []
 #project_list.append(['control_test_segment_adenosine_set4', 400, None])
 #project_list.append(['control_test_segment_adenosine_set5', 500, None]) # 4번 까지 완료, 밤에 돌리자 0331 
  
-project_list.append(['foramlin_only_1', 100, None]) 
+project_list.append(['foramlin_only_1', 100, None])
+project_list.append(['foramlin_only_2', 200, None]) 
+project_list.append(['foramlin_only_3', 300, None]) 
+project_list.append(['foramlin_only_4', 400, None]) 
+project_list.append(['foramlin_only_5', 500, None]) 
  
  
 #project_list.append(['0330_batchnorm_1', 100, None])
@@ -315,7 +322,7 @@ for nix, q in enumerate(project_list):
     print('settingID', settingID, 'seed', seed, 'continueSW', continueSW)
 
     # set the pathway2
-    RESULT_SAVE_PATH = './result/'
+    RESULT_SAVE_PATH =  savepath + 'result\\'
     if not os.path.exists(RESULT_SAVE_PATH):
         os.mkdir(RESULT_SAVE_PATH)
 
@@ -565,7 +572,7 @@ for nix, q in enumerate(project_list):
     model.save_weights(initial_weightsave)
     print(model.summary())
     
-    def valid_generation(mousenumlist, only_se=None):
+    def valid_generation(mousenumlist, only_se=None, meantest=False):
         X_tmp = []; Y_tmp = []; valid = None
         for mousenum in mousenumlist:
             test_mouseNum = mousenum
@@ -622,14 +629,21 @@ for nix, q in enumerate(project_list):
                         signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
                         ROInum = signalss_PSL_test.shape[1]
                         
-    #                        mannual_signal2 = mssignal2[binning[i]:binning[i]+full_sequence]
-    #                        mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                        
-                        for ROI in range(ROInum):
-                            mannual_signal = signalss_PSL_test[:,ROI]
+                        if not(meantest):
+                            for ROI in range(ROInum):
+                                mannual_signal = signalss_PSL_test[:,ROI]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+        
+        #                            print(mannual_signal2.shape)
+        
+                                Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += Xtest; Y_tmp += Ytest
+                                
+                        elif meantest:
+                            mannual_signal = np.mean(signalss_PSL_test, axis=1)
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-    
-    #                            print(mannual_signal2.shape)
     
                             Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
                                            Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
@@ -746,6 +760,13 @@ for nix, q in enumerate(project_list):
     for ix, sett in enumerate(mannual):
         final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
         print('final_weightsave', final_weightsave)
+        
+        os.path.isfile('C:\\titan_savepath\\result\\foramlin_only_1\\model\\0_my_model_weights_final.h5')
+        os.path.isfile('C:\\Windows\\addins\\FXSEXT.ecf')
+        os.path.isfile('‪C:\\titan_savepath\\test.txt')
+        os.path.isfile('C:\\test.txt')
+        
+       
         
         exist_model = os.path.isfile(final_weightsave)
         print('training을 위한 model 존재 유무', exist_model)
@@ -969,6 +990,30 @@ for nix, q in enumerate(project_list):
                     with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
                         pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
                         print(picklesavename, '저장되었습니다.')
+                        
+                # meantest
+                picklesavename2 = RESULT_SAVE_PATH + 'exp_raw/' + 'testsw3_' + str(test_mouseNum) + 'mean.pickle'
+                if not(os.path.isfile(picklesavename2)) or False: # 만들어야될게 없으면 실행 or overwrite
+                    dummy_table = np.zeros((N,5))
+                    reset_keras(model)
+                    model, idcode = keras_setup(lr=0)
+                    model.load_weights(final_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+                    
+                    sessionNum = 5
+                    if test_mouseNum in se3set:
+                        sessionNum = 3
+                    for se in range(sessionNum): 
+                        valid = valid_generation([test_mouseNum], only_se=se, meantest=True)
+                        print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+                        hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+                        
+                        dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+
+                    with open(picklesavename2, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename2, '저장되었습니다.')
+                        
 
         ####### test - binning 구문 입니다. ##########, test version 2
         # model load는 cv set 시작에서 무조건 하도록 되어 있음.
