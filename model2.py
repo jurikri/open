@@ -73,10 +73,10 @@ chloroquineGroup = msGroup['chloroquineGroup']
 itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
+ipclonidineGroup = msGroup['ipclonidineGroup']
 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
-msset2[-1] = [146,149]
 
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
@@ -84,7 +84,7 @@ msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ig
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup \
 + itSalineGroup + itClonidineGroup # for test only
 
-pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
+pslset = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
 fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
 baseonly = lowGroup + lidocaineGroup + restrictionGroup
 # In[]
@@ -360,7 +360,7 @@ for nix, q in enumerate(project_list):
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup + ipclonidineGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -678,7 +678,8 @@ for nix, q in enumerate(project_list):
     # training set 재설정
     trainingset = trainingset
     print('trainingset #, pre', len(trainingset))
-    etc = itSalineGroup + itClonidineGroup
+    etc = ipsaline_pslGroup + ipclonidineGroup
+
     forlist = list(trainingset)
     for SE in forlist:
         c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
@@ -688,9 +689,12 @@ for nix, q in enumerate(project_list):
             
         c2 = msset_total[:,0]
         if SE in c2:
-            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
-                trainingset.remove(u)
-                print('subset 포함을 위한 제거', u)
+            try:
+                for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
+                    trainingset.remove(u)
+                    print('subset 포함을 위한 제거', u)
+            except:
+                print('예외처리', SE)
                 
         if SE in chloroquineGroup and SE in trainingset: # chloroquineGroup을 training에만 사용하고, test하지 않음
             trainingset.remove(SE)
@@ -712,7 +716,7 @@ for nix, q in enumerate(project_list):
 #        if not t in pslset + capsaicinGroup + CFAgroup:
 #            tmp.append(t)
             
-    wanted = highGroup + midleGroup + ketoGroup + highGroup2 + capsaicinGroup + CFAgroup + lidocaineGroup
+    wanted = [etc[0]]
     # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
