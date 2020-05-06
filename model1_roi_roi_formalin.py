@@ -35,6 +35,9 @@ except:
     try:
         savepath = 'C:\\titan_savepath\\'; os.chdir(savepath);
         gsync = 'C:\\Users\\skklab\\Google 드라이브\\google_syn\\'
+        
+#        os.path.isfile('C:\\Windows\\addins\\FXSEXT.ecf')
+#        os.path.isfile('C:\\titan_savepath\\result\\test.txt')
     except:
         try:
             savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
@@ -70,6 +73,7 @@ chloroquineGroup = msGroup['chloroquineGroup']
 itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
+ipclonidineGroup = msGroup['ipclonidineGroup']
 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -80,7 +84,7 @@ msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ig
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup \
 + itSalineGroup + itClonidineGroup # for test only
 
-pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
+pslset = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
 fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
 baseonly = lowGroup + lidocaineGroup + restrictionGroup
 # In[]
@@ -292,8 +296,12 @@ project_list = []
 #project_list.append(['control_test_segment_adenosine_set4', 400, None])
 #project_list.append(['control_test_segment_adenosine_set5', 500, None]) # 4번 까지 완료, 밤에 돌리자 0331 
  
-#project_list.append(['model4_roiroi_formalin_cap_cfa_1', 100, None]) 
-project_list.append(['model1_roiroi_formalin_1', 100, None]) 
+project_list.append(['model2_roitraining_1', 100, None])
+#project_list.append(['foramlin_only_2', 200, None]) 
+#project_list.append(['foramlin_only_3', 300, None]) 
+#project_list.append(['foramlin_only_4', 400, None]) 
+#project_list.append(['foramlin_only_5', 500, None]) 
+ 
  
 #project_list.append(['0330_batchnorm_1', 100, None])
 #project_list.append(['0330_batchnorm_2', 200, None])
@@ -314,7 +322,7 @@ for nix, q in enumerate(project_list):
     print('settingID', settingID, 'seed', seed, 'continueSW', continueSW)
 
     # set the pathway2
-    RESULT_SAVE_PATH = './result/'
+    RESULT_SAVE_PATH =  savepath + 'result\\'
     if not os.path.exists(RESULT_SAVE_PATH):
         os.mkdir(RESULT_SAVE_PATH)
 
@@ -352,7 +360,7 @@ for nix, q in enumerate(project_list):
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup + ipclonidineGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -370,7 +378,7 @@ for nix, q in enumerate(project_list):
               reducing_test_list += list(tmp)
     print('selected mouse #', len(reducing_test_list))          
 #    print(reducing_test_list)
-    def ms_sampling(training_with_each_roi=False):
+    def ms_sampling():
         sampleNum = []; [sampleNum.append([]) for u in range(n_out)]
         
         datasetX = []; datasetY = []; datasetZ = []
@@ -402,24 +410,19 @@ for nix, q in enumerate(project_list):
 #                        if c13: #
                             # msset 만 baseline을 제외시킴, total set 아님 
                             exceptbaseline = (SE in np.array(msset)[:,1:].flatten()) and se == 0 
-                            if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다.
-                                if training_with_each_roi:
-                                    for ROI in range(signalss[SE][se].shape[1]): 
-                                        mssignal = np.array(signalss[SE][se][:,ROI])
-        #                                mssignal2 = np.array(movement_syn[SE][se])
-                                        msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                            if not exceptbaseline: # baseline을 공유하므로, 사용하지 않는다. 
+                                for ROI in range(signalss[SE][se].shape[1]): 
+                                    mssignal = np.array(signalss[SE][se][:,ROI])
+                                    msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+                                               
+                                    for u in msbins:
+                                        mannual_signal = mssignal[u:u+full_sequence]
+                                        mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                            
+                                        X, Y, Z = dataGeneration(SE, se, label=msclass, \
+                                                       Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
                                         
-                                        for u in msbins:
-                                            mannual_signal = mssignal[u:u+full_sequence]
-                                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                                            
-        #                                    mannual_signal2 = mssignal2[u:u+full_sequence]
-        #                                    mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-            
-                                            X, Y, Z = dataGeneration(SE, se, label=msclass, \
-                                                           Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                                            
-                                            X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
+                                        X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
                     
         datasetX[msclass] = X_tmp; datasetY[msclass] = Y_tmp; datasetZ[msclass] = Z_tmp
         
@@ -436,29 +439,24 @@ for nix, q in enumerate(project_list):
                         set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2
                         c11 = SE in set2 and se in [1]
 #                        c12 = SE in CFAgroup and se in [1,2]
-#                        c13 = SE in capsaicinGroup and se in [1]
 #                        c13 = SE in chloroquineGroup and se in [1]
                           
-                        if c11: # or c12 or c13: # 
+                        if c11: # 
                             if not(0.15 < movement[SE,se]):
                                 print(SE, se, 'movement 부족, pain session에서 제외.')
                                 continue
                             
-                            if training_with_each_roi:
-                                for ROI in range(signalss[SE][se].shape[1]): 
-                                    mssignal = np.array(signalss[SE][se][:,ROI])
-                                    msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
-                            
-                                    for u in msbins:
-                                        mannual_signal = mssignal[u:u+full_sequence]
-                                        mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-                                        
-        #                                mannual_signal2 = mssignal2[u:u+full_sequence]
-        #                                mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                                        
-                                        X, Y, Z = dataGeneration(SE, se, label=msclass, \
-                                                       Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
-                                        X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
+                            for ROI in range(signalss[SE][se].shape[1]): 
+                                mssignal = np.array(signalss[SE][se][:,ROI])
+                                msbins = np.arange(0, mssignal.shape[0]-full_sequence+1, bins)
+    
+                                for u in msbins:
+                                    mannual_signal = mssignal[u:u+full_sequence]
+                                    mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                                          
+                                    X, Y, Z = dataGeneration(SE, se, label=msclass, \
+                                                   Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                                    X_tmp += X; Y_tmp += Y; Z_tmp += Z #; T_tmp += t4_save 
                     
         datasetX[msclass] = np.array(X_tmp)
         datasetY[msclass] = np.array(Y_tmp)
@@ -485,7 +483,7 @@ for nix, q in enumerate(project_list):
 
         return datasetX, datasetY, datasetZ
     
-    X_save2, Y_save2, Z_save2 = ms_sampling(training_with_each_roi=True)
+    X_save2, Y_save2, Z_save2 = ms_sampling()
 #    if continueSW != None:
 #        X_save2, Y_save2, Z_save2, t4_save = ms_sampling_continue()
 #    painindex_classs = np.concatenate((painindex_class0, painindex_class1), axis=0)
@@ -568,7 +566,7 @@ for nix, q in enumerate(project_list):
     model.save_weights(initial_weightsave)
     print(model.summary())
     
-    def valid_generation(mousenumlist, only_se=None):
+    def valid_generation(mousenumlist, only_se=None, meantest=False):
         X_tmp = []; Y_tmp = []; valid = None
         for mousenum in mousenumlist:
             test_mouseNum = mousenum
@@ -625,14 +623,21 @@ for nix, q in enumerate(project_list):
                         signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
                         ROInum = signalss_PSL_test.shape[1]
                         
-    #                        mannual_signal2 = mssignal2[binning[i]:binning[i]+full_sequence]
-    #                        mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
-                        
-                        for ROI in range(ROInum):
-                            mannual_signal = signalss_PSL_test[:,ROI]
+                        if not(meantest):
+                            for ROI in range(ROInum):
+                                mannual_signal = signalss_PSL_test[:,ROI]
+                                mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+        
+        #                            print(mannual_signal2.shape)
+        
+                                Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
+                                               Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
+                                
+                                X_tmp += Xtest; Y_tmp += Ytest
+                                
+                        elif meantest:
+                            mannual_signal = np.mean(signalss_PSL_test, axis=1)
                             mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-    
-    #                            print(mannual_signal2.shape)
     
                             Xtest, Ytest, _= dataGeneration(test_mouseNum, se, label=msclass, \
                                            Mannual=True, mannual_signal=mannual_signal) #, mannual_signal2=mannual_signal2)
@@ -655,7 +660,6 @@ for nix, q in enumerate(project_list):
             with redirect_stdout(f):
                 model.summary()
                 
-                
         from keras.utils import plot_model
         plot_model(model, to_file='model.png')
              
@@ -668,7 +672,8 @@ for nix, q in enumerate(project_list):
     # training set 재설정
     trainingset = trainingset
     print('trainingset #, pre', len(trainingset))
-    etc = capsaicinGroup + CFAgroup 
+    etc = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
+
     forlist = list(trainingset)
     for SE in forlist:
         c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
@@ -678,9 +683,12 @@ for nix, q in enumerate(project_list):
             
         c2 = msset_total[:,0]
         if SE in c2:
-            for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
-                trainingset.remove(u)
-                print('subset 포함을 위한 제거', u)
+            try:
+                for u in np.array(msset_total)[np.where(np.array(msset_total)[:,0] == SE)[0][0],:][1:]:
+                    trainingset.remove(u)
+                    print('subset 포함을 위한 제거', u)
+            except:
+                print('예외처리', SE)
                 
         if SE in chloroquineGroup and SE in trainingset: # chloroquineGroup을 training에만 사용하고, test하지 않음
             trainingset.remove(SE)
@@ -702,7 +710,7 @@ for nix, q in enumerate(project_list):
 #        if not t in pslset + capsaicinGroup + CFAgroup:
 #            tmp.append(t)
             
-    wanted = fset + salineGroup + [etc[0]]
+    wanted = fset + salineGroup + capsaicinGroup + CFAgroup + [etc[0]]
     # pslset + capsaicinGroup + CFAgroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
@@ -750,6 +758,13 @@ for nix, q in enumerate(project_list):
     for ix, sett in enumerate(mannual):
         final_weightsave = RESULT_SAVE_PATH + 'model/' + str(mouselist[sett]) + '_my_model_weights_final.h5'
         print('final_weightsave', final_weightsave)
+        
+        os.path.isfile('C:\\titan_savepath\\result\\foramlin_only_1\\model\\0_my_model_weights_final.h5')
+        os.path.isfile('C:\\Windows\\addins\\FXSEXT.ecf')
+        os.path.isfile('‪C:\\titan_savepath\\test.txt')
+        os.path.isfile('C:\\test.txt')
+        
+       
         
         exist_model = os.path.isfile(final_weightsave)
         print('training을 위한 model 존재 유무', exist_model)
@@ -818,7 +833,7 @@ for nix, q in enumerate(project_list):
             
             
             starttime = time.time()
-#            grade_acc = 0.86
+            grade_acc = 0.86
             while current_acc < acc_thr: # 0.93: # 목표 최대 정확도, epoch limit
                 acc_thr_sw = False
                 if (cnt > maxepoch/epochs) or (current_acc < 0.70 and cnt > 300/epochs) or ( current_acc < 0.51 and cnt > 50/epochs):
@@ -855,10 +870,10 @@ for nix, q in enumerate(project_list):
                 cnt += 1
                 hist_save_loss += list(np.array(hist.history['loss']))
                 hist_save_acc += list(np.array(hist.history['accuracy']))
-#                if hist_save_acc[-1] > grade_acc:
-#                    acc_thr_sw = True
-#                    print(grade_acc)
-#                    grade_acc += 0.02
+                if hist_save_acc[-1] > grade_acc:
+                    acc_thr_sw = True
+                    print(grade_acc)
+                    grade_acc += 0.02
                                           
                 model.save_weights(current_weightsave)
                 
@@ -866,30 +881,30 @@ for nix, q in enumerate(project_list):
                 current_acc = hist_save_acc[-1] 
                 
                 
-#                if acc_thr_sw:
-#                    dummy_table = np.zeros((N,5))
-#                    for test_mouseNum in testlist:
-#                        
-#                        reset_keras(model)
-#                        model, idcode = keras_setup(lr=0)
-#                        model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
-#                        
-#                        sessionNum = 5
-#                        if test_mouseNum in se3set:
-#                            sessionNum = 3
-#                        for se in range(sessionNum): 
-#                            valid = valid_generation([test_mouseNum], only_se=se)
-#                            print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
-#                            hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
-#    #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
-#                            dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
-#
-#                    # 최적화용 저장
-#                    tmp = 'l2_rate_' + str(l2_rate) +  '_current_acc_' + str(round(current_acc,3)) 
-#                    picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'valid_' + tmp + '.pickle'
-#                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-#                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
-#                        print(picklesavename, '저장되었습니다.')  
+                if acc_thr_sw:
+                    dummy_table = np.zeros((N,5))
+                    for test_mouseNum in testlist:
+                        
+                        reset_keras(model)
+                        model, idcode = keras_setup(lr=0)
+                        model.load_weights(current_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+                        
+                        sessionNum = 5
+                        if test_mouseNum in se3set:
+                            sessionNum = 3
+                        for se in range(sessionNum): 
+                            valid = valid_generation([test_mouseNum], only_se=se)
+                            print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+                            hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+    #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+                            dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+
+                    # 최적화용 저장
+                    tmp = 'l2_rate_' + str(l2_rate) +  '_current_acc_' + str(round(current_acc,3)) 
+                    picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + 'valid_' + tmp + '.pickle'
+                    with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename, '저장되었습니다.')  
                            
             model.save_weights(final_weightsave)   
             print('mouse #', [mouselist[sett]], 'traning 종료, final model을 저장합니다.')
@@ -913,24 +928,6 @@ for nix, q in enumerate(project_list):
             spendingtime = time.time() - starttime
             csvwriter.writerow([spendingtime, spendingtime/60, spendingtime/60**2])
             csvfile.close()
-
-#            if validation_sw:
-#                plt.figure();
-#                mouseNum = mouselist[sett]
-#                hist_save_val_loss_plot = np.array(hist_save_val_loss)/np.max(hist_save_val_loss)
-#                
-#                plt.plot(hist_save_val_loss_plot, label= '# ' + str(mouseNum) + ' loss')
-#                plt.plot(hist_save_val_acc, label= '# ' + str(mouseNum) + ' acc')
-#                plt.legend()
-#                plt.savefig(RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.png')
-#                plt.close()
-#
-#                savename = RESULT_SAVE_PATH + 'model/' + str(mouseNum) + '_validationSet_result.csv'
-#                csvfile = open(savename, 'w', newline='')
-#                csvwriter = csv.writer(csvfile)
-#                csvwriter.writerow(hist_save_val_acc)
-#                csvwriter.writerow(hist_save_val_loss)
-#                csvfile.close()
 
         ####### test 구문 입니다. ##########        
         # testlist는 위에 작성한 dev set의 testlist 변수를 그대로 이어 받는다.
@@ -973,6 +970,30 @@ for nix, q in enumerate(project_list):
                     with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
                         pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
                         print(picklesavename, '저장되었습니다.')
+                        
+                # meantest
+                picklesavename2 = RESULT_SAVE_PATH + 'exp_raw/' + 'testsw3_' + str(test_mouseNum) + 'mean.pickle'
+                if not(os.path.isfile(picklesavename2)) or False: # 만들어야될게 없으면 실행 or overwrite
+                    dummy_table = np.zeros((N,5))
+                    reset_keras(model)
+                    model, idcode = keras_setup(lr=0)
+                    model.load_weights(final_weightsave) # subset은 상위 mouse의 final 을 load해야 할것이다.. 확인은 안해봄..
+                    
+                    sessionNum = 5
+                    if test_mouseNum in se3set:
+                        sessionNum = 3
+                    for se in range(sessionNum): 
+                        valid = valid_generation([test_mouseNum], only_se=se, meantest=True)
+                        print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
+                        hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
+                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
+                        
+                        dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
+
+                    with open(picklesavename2, 'wb') as f:  # Python 3: open(..., 'wb')
+                        pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
+                        print(picklesavename2, '저장되었습니다.')
+                        
 
         ####### test - binning 구문 입니다. ##########, test version 2
         # model load는 cv set 시작에서 무조건 하도록 되어 있음.
