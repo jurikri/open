@@ -73,6 +73,7 @@ itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
 ipclonidineGroup = msGroup['ipclonidineGroup']
+gabapentinGroup = msGroup['gabapentinGroup']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -659,7 +660,7 @@ for nix, q in enumerate(project_list):
     print('maxepoch', maxepoch)
 
     # In[]
-    while True:
+    while False:
         picklesavename = gsync + 'mssave.pickle'
         with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
             mssave = pickle.load(f)
@@ -787,7 +788,7 @@ def nanex(array1):
     return array1
 
 # In[]
-testlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
+testlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup
 pathsave = []
 #valid = valid_generation(testlist, only_se=None)   
 for si in [1]:    
@@ -912,234 +913,6 @@ for si in [1]:
         
         with open(test_matrix_savename, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(test_matrix, f, pickle.HIGHEST_PROTOCOL)
-
-# In[]
-def eval_ttset_roc(target):
-    test_matrix = np.array(target)            
-    print('test')     
-    psl0 = nanex(test_matrix[pslGroup,0])
-    psl1 = nanex(test_matrix[pslGroup,1])
-    psl2 = nanex(test_matrix[pslGroup,2])
-    
-    sham0 = nanex(test_matrix[shamGroup,0])
-    sham1 = nanex(test_matrix[shamGroup,1])
-    sham2 = nanex(test_matrix[shamGroup,2])
-    
-    ipsaline0 = nanex(test_matrix[ipsaline_pslGroup,0])
-    ipsaline1 = nanex(test_matrix[ipsaline_pslGroup,1])
-    ipsaline2 = nanex(test_matrix[ipsaline_pslGroup,2])
-    
-    baseall = np.concatenate((sham0, psl0, ipsaline0), axis=0)
-    
-    base_vs_3 = stats.ttest_ind(baseall , psl1)[1]
-    base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-    sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-    sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-
-    print('psl mean', np.mean(test_matrix[pslGroup,:], axis=0))
-    print('sham mean', np.mean(test_matrix[shamGroup,:], axis=0))
-    print('ip_saline mean', np.nanmean(test_matrix[ipsaline_pslGroup,:], axis=0))
-
-    print('base_vs_3', base_vs_3)
-    print('base_vs_10', base_vs_10)
-    print('sham3_vs_psl3', sham3_vs_psl3)
-    print('sham10_vs_psl10', sham10_vs_psl10)    
-
-    return None            
-                
-tmatrix_save = []; [tmatrix_save.append([]) for u in range(7)]
-for i in range(len(pathsave)-1):
-    with open(pathsave[i][3], 'rb') as f:  # Python 3: open(..., 'rb')
-        tmatrix = pickle.load(f)
-    tmatrix_save[pathsave[i][0]].append(tmatrix)
-
-  
-test = np.nanmean(np.array(tmatrix_save[1]),axis=0)       # fset + base
-eval_ttset_roc(test)
-
-
-# In[]  
-
-test_matrix = np.array(control)            
-print('control')
-psl0 = nanex(test_matrix[pslGroup,0])
-psl1 = nanex(test_matrix[pslGroup,1])
-psl2 = nanex(test_matrix[pslGroup,2])
-
-sham0 = nanex(test_matrix[shamGroup,0])
-sham1 = nanex(test_matrix[shamGroup,1])
-sham2 = nanex(test_matrix[shamGroup,2])
-
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
-print('sham3_vs_psl3', sham3_vs_psl3)
-print('sham10_vs_psl10', sham10_vs_psl10)
-
-test_matrix = np.array(control2)            
-print('control2')
-psl0 = nanex(test_matrix[pslGroup,0])
-psl1 = nanex(test_matrix[pslGroup,1])
-psl2 = nanex(test_matrix[pslGroup,2])
-
-sham0 = nanex(test_matrix[shamGroup,0])
-sham1 = nanex(test_matrix[shamGroup,1])
-sham2 = nanex(test_matrix[shamGroup,2])
-
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
-print('sham3_vs_psl3', sham3_vs_psl3)
-print('sham10_vs_psl10', sham10_vs_psl10)
-
-test_matrix = np.array(test2)            
-print('test2')
-psl0 = nanex(test_matrix[pslGroup,0])
-psl1 = nanex(test_matrix[pslGroup,1])
-psl2 = nanex(test_matrix[pslGroup,2])
-
-sham0 = nanex(test_matrix[shamGroup,0])
-sham1 = nanex(test_matrix[shamGroup,1])
-sham2 = nanex(test_matrix[shamGroup,2])
-
-base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-
-print('base_vs_3', base_vs_3)
-print('base_vs_10', base_vs_10)
-print('sham3_vs_psl3', sham3_vs_psl3)
-print('sham10_vs_psl10', sham10_vs_psl10)
-        
-"""
-base_vs_3 0.20899769289520562
-base_vs_10 0.2228891067168212
-sham3_vs_psl3 0.08354878798789862
-sham10_vs_psl10 0.0794040903778463
-"""
-        
-# In[]
-for si in [0,1]:
-    if si == 0:
-        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
-
-    if si == 1:
-        savename = 'fc+keto_0.65'; thr = 0.65
-        
-    for ti in range(5):
-        savename2 = savename + '_t' + str(ti) + '.pickle'
-        print('index', savename2)
-            
-        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
-        reset_keras(model)
-        model, idcode = keras_setup(lr=0)
-        model.load_weights(final_weightsave) 
-        
-        testlist = pslGroup + shamGroup + itSalineGroup
-    
-        dummy_table = np.zeros((N,5)); dummy_table[:] = np.nan
-        for test_mouseNum in testlist:        
-            sessionNum = 5
-            if test_mouseNum in se3set:
-                sessionNum = 3
-            for se in range(sessionNum): 
-                valid = valid_generation([test_mouseNum], only_se=se)
-                print('학습아님.. test 중입니다.', 'SE', test_mouseNum, 'se', se)
-                hist = model.fit(valid[0], valid[1], batch_size=batch_size, epochs=1)
-        #                        # lr = 0 으로 학습안됨. validation이 이 방법이 훨씬 빨라서 사용함.. 
-                dummy_table[test_mouseNum, se] = hist.history['accuracy'][-1]
-            
-        # 최적화용 저장      
-        picklesavename =  RESULT_SAVE_PATH + 'exp_raw/' + savename2
-        with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
-            pickle.dump(dummy_table, f, pickle.HIGHEST_PROTOCOL)
-            print(picklesavename, '저장되었습니다.')  
-
-# In[]
-for si in [0,1]:
-    if si == 0:
-        savename = 'fcp_thr_v3_0.65_t'; thr = 0.65
-
-    if si == 1:
-        savename = 'fc+keto_0.65'; thr = 0.65
-    
-    dummy_table_avg = []
-    for ti in range(5):
-        savename2 = savename + '_t' + str(ti) + '.pickle'
-        picklesavename =  RESULT_SAVE_PATH + 'exp_raw\\' + savename2
-        
-        with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'rb')
-            dummy_table = pickle.load(f)
-            dummy_table_avg.append(dummy_table)
-            
-    dummy_table_avg = np.array(dummy_table_avg)
-    dummy_table_avg2 = np.mean(dummy_table_avg, axis=0)
-            
-print(np.mean(dummy_table_avg2[itSalineGroup,:], axis=0))    
-
-for ix in [0,1]:
-    for ix2 in [1]:
-        print(ix, ix2)
-        
-        avg_matrix2 = np.mean(np.array(matrixsave[ix]), axis=0)
-        
-        avg_matrix3 = np.zeros(avg_matrix2.shape); avg_matrix3[:] = np.nan
-        for SE in range(N):
-            if SE in np.array(msset_total)[:,0]:
-                settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
-                avg_matrix3[SE,:] = np.nanmean(avg_matrix2[settmp,:],axis=0)
-        #            print('set averaging', settmp)
-            elif SE not in np.array(msset_total).flatten(): 
-                avg_matrix3[SE,:] = avg_matrix2[SE,:]
-        
-                
-        psl0 = nanex(avg_matrix3[pslGroup,0])
-        psl1 = nanex(avg_matrix3[pslGroup,1])
-        psl2 = nanex(avg_matrix3[pslGroup,2])
-        
-        sham0 = nanex(avg_matrix3[shamGroup,0])
-        sham1 = nanex(avg_matrix3[shamGroup,1])
-        sham2 = nanex(avg_matrix3[shamGroup,2])
-        
-        itsaline1 = nanex(avg_matrix3[itSalineGroup,0])
-        
-        
-        
-        zeroby = stats.ttest_ind(np.zeros(psl0.shape), (psl2-psl0))[1]
-        
-        base_vs_3 = stats.ttest_ind(psl0, psl1)[1]
-        base_vs_10 = stats.ttest_ind(psl0, psl2)[1]
-        sham3_vs_psl3 = stats.ttest_ind(sham1, psl1)[1]
-        sham10_vs_psl10 = stats.ttest_ind(sham2, psl2)[1]
-        
-        pain = np.concatenate((psl1, psl2), axis=0)
-        nonpain = np.concatenate((sham0, sham1, sham2, psl0), axis=0)
-        anstable = list(np.ones(pain.shape[0])) + list(np.zeros(nonpain.shape[0]))
-        predictValue = np.array(list(pain)+list(nonpain)); predictAns = np.array(anstable)  
-        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=1)
-        base_vs_10_roc = metrics.auc(fpr,tpr)
-        
-        print('========================')
-        #    print('base_vs_3', base_vs_3)
-        print('base_vs_10_roc', base_vs_10_roc)
-        print('zeroby', zeroby)
-        #    print('sham3_vs_psl3', sham3_vs_psl3)
-        #    print('sham10_vs_psl10', sham10_vs_psl10)
-        print(np.mean(avg_matrix2[pslGroup,:], axis=0))
-        print(np.mean(avg_matrix2[itSalineGroup,:], axis=0))
-        print('========================')
-
-
-
 
 
 
