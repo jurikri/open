@@ -30,12 +30,14 @@ highGroup2 =        [95,96] # 학습용, late ,recovery는 애초에 분석되�
 chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
 itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
-ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152]
-ipclonidineGroup =  [151, 153]
+ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159]
+ipclonidineGroup =  [151,153,154,157,160,161,162,163]
+gabapentinGroup =   [164,165,166,167,168,169,170,171]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
-          [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149], \
+          [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168]] # baseline 독립, training 때 base를 skip 하지 않음.
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -57,6 +59,8 @@ msGroup['itSalineGroup'] = itSalineGroup
 msGroup['itClonidineGroup'] = itClonidineGroup
 msGroup['ipsaline_pslGroup'] = ipsaline_pslGroup
 msGroup['ipclonidineGroup'] = ipclonidineGroup
+msGroup['ipclonidineGroup'] = ipclonidineGroup
+msGroup['gabapentinGroup'] = gabapentinGroup
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -376,7 +380,6 @@ def msMovementExtraction(list1):
                 thr = 1
             if N == 99 and i in [2]:
                 thr = 1.2
-                
             if N == 100 and i in [1]:
                 thr = 0.9
             if N == 101 and i in [2]:
@@ -386,6 +389,8 @@ def msMovementExtraction(list1):
             if N == 127 and i in [1]:
                 thr = 1
             if N == 128 and i in [2]:
+                thr = 1
+            if N == 154 and i in [3]:
                 thr = 1
                    
             aline = np.zeros(diffplot.shape[0]); aline[:] = thr
@@ -420,7 +425,7 @@ def msMovementExtraction(list1):
 
 # In[]
 #runlist = [77,123,120,106] + list(range(139,N))
-runlist = range(152, N)
+runlist = range(169, N)
 print('runlist', runlist, '<<<< 확인!!')
  
 mssignal_save(runlist)
@@ -483,7 +488,7 @@ for SE in range(N2):
             
     signalss[SE] = signals
     bahavss[SE] = behavs
-    # In[]
+    # In
 # In QC
 # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
 thr = 10
@@ -626,7 +631,7 @@ fixlist = [[1,1],[8,4]]
 print('다음 session은 syn가 안맞으므로 수정합니다.')
 print(fixlist)
 
-# In[]
+# In
 
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
