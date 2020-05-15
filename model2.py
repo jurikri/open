@@ -74,6 +74,7 @@ itSalineGroup = msGroup['itSalineGroup']
 itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
 ipclonidineGroup = msGroup['ipclonidineGroup']
+gabapentinGroup = msGroup['gabapentinGroup']
 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -360,7 +361,8 @@ for nix, q in enumerate(project_list):
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup + ipclonidineGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup + ipclonidineGroup + \
+    gabapentinGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -678,7 +680,7 @@ for nix, q in enumerate(project_list):
     # training set 재설정
     trainingset = trainingset
     print('trainingset #, pre', len(trainingset))
-    etc = ipsaline_pslGroup + ipclonidineGroup
+    etc = ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup
 
     forlist = list(trainingset)
     for SE in forlist:
