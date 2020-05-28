@@ -319,8 +319,8 @@ if True:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model2roi_mean = np.nanmean(testsw3_mean, axis=2)  
                 
-    # In[] PSL용 load - model3
-if True:
+    # In PSL용 load - model3
+if False:
     t = 10
     testsw3_mean = np.zeros((N,5,t)); testsw3_mean[:] = np.nan         
     for i in range(t):
@@ -334,8 +334,8 @@ if True:
                 testsw3_mean[:testsw3.shape[0],:,i] = testsw3
     model3 = np.nanmean(testsw3_mean, axis=2)
     
-        # In[] model4 load
-if True:
+        # In model4 load
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model4\\'               
     project_list = []
 
@@ -355,12 +355,43 @@ if True:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model4 = np.nanmean(testsw3_mean, axis=2)
     
-
-
+# In raw test (구버전)
     
+if False:
+    
+    thr = 0.5
+    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\result\\'               
+    project_list = []
 
+    project_list.append(['foramlin_only_1', 100, None])
+    project_list.append(['foramlin_only_2', 200, None]) 
+    project_list.append(['foramlin_only_3', 300, None]) 
+    project_list.append(['foramlin_only_4', 400, None])
+    project_list.append(['foramlin_only_5', 500, None])
+    
+    model2_mean_overtime = np.zeros((N,5,len(project_list))); model2_mean_overtime[:] = np.nan
+    
+    for i in range(len(project_list)):
+        projectname = project_list[i][0]
+        
+        for SE in range(N):
+            loadpath = savepath + projectname + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
+            loadpath_mean = savepath + projectname + '\\exp_raw\\' + 'PSL_result_mean_' + str(SE) + '.pickle'
+            
+            if os.path.isfile(loadpath_mean):
+                with open(loadpath_mean, 'rb') as f:  # Python 3: open(..., 'rb')
+                    PSL_result_save = pickle.load(f)[SE]
+                    
+                for se in range(5):
+                    mssave = []
+                    for bins in range(len(PSL_result_save[se])):
+                        mssave.append(PSL_result_save[se][bins][0][1])
+                    mssave = np.array(mssave)
+                    model2_mean_overtime[SE,se, i] = np.mean(mssave > thr)
+                    
+    model2_mean_overtime = np.mean(model2_mean_overtime, axis=2)
 
-# In[] label 재정렬 movement 
+# In label 재정렬 movement 
     
 t4 = np.zeros((N,5)); movement = np.zeros((N,5))
 for SE in range(N):
@@ -380,7 +411,7 @@ for SE in range(N):
 movement = target     
 movement_filter = np.array(target)
         
-# In[]
+# In
 target = np.array(model2); fsw=True
 def dict_gen(target, msset=None, legendsw=None):
     if msset is None:
@@ -441,7 +472,7 @@ def dict_gen(target, msset=None, legendsw=None):
     psl2 = nanex(subset_mean[pslGroup,2])
     
     
-    ipsaline_pslGroup
+#    ipsaline_pslGroup
     
     ipsaline0 = nanex(subset_mean[ipsaline_pslGroup,0])
     ipsaline1 = nanex(subset_mean[ipsaline_pslGroup,1])
@@ -513,24 +544,36 @@ def dict_gen(target, msset=None, legendsw=None):
         psl3_merge = np.concatenate((psl1, ipsaline1, ipclonidine1), axis=0)
         psl10_merge = np.concatenate((psl2, ipsaline3, ipclonidine3), axis=0)
 
-        Aprism = [[], [], []]
+        Aprism = [[], [], [], []]
+        
+        # base, sham, psl
         Aprism[0] = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(sham1), pd.DataFrame(psl3_merge), \
                             pd.DataFrame(sham2), pd.DataFrame(psl10_merge)], \
                             ignore_index=True, axis=1)
         
+        # psl+ipsaline, psl+ipclonidine, psl+ipGB/VX
         base_merge = np.concatenate((ipsaline0, ipclonidine0, gaba120_0, gaba30_0), axis=0)
         Aprism[1] = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(ipsaline2), pd.DataFrame(ipsaline4), pd.DataFrame(ipclonidine2), \
                     pd.DataFrame(ipclonidine4), pd.DataFrame(gaba120_1), pd.DataFrame(gaba30_1), pd.DataFrame(gaba30_3), pd.DataFrame(gaba30_2), \
                     pd.DataFrame(gaba30_4), pd.DataFrame(scsalcine)], \
                     ignore_index=True, axis=1)
         
+        # psl+itsaline, psl+itclonidine
         base_merge = np.concatenate((itsaline0, itclonidine0), axis=0)
         Aprism[2] = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(itsaline1), pd.DataFrame(itclonidine1), \
               pd.DataFrame(itsaline2), pd.DataFrame(itclonidine2)],ignore_index=True, axis=1)
+        
+        # base, sham, psl(psl+ipsaline), psl+GB/VX
+        base_merge = np.concatenate((sham0, psl0, ipsaline0, gaba30_0, gaba120_0), axis=0)
+  
+        Aprism[3] = pd.concat([pd.DataFrame(base_merge), \
+              pd.DataFrame(sham1), pd.DataFrame(psl3_merge), pd.DataFrame(gaba30_1), \
+              pd.DataFrame(sham2), pd.DataFrame(psl10_merge), pd.DataFrame(gaba30_3), pd.DataFrame(gaba120_1)],ignore_index=True, axis=1)
+        
 
     return Aprism
 
-# In[]
+# In
 
 #model1_dict = dict_gen(model1)
 #model3_dict = dict_gen(model3)
@@ -543,26 +586,35 @@ def dict_gen(target, msset=None, legendsw=None):
 #model2roi_mean_dict = dict_gen(model2roi_mean)
 
 #### formalin pain
-Aprism_foramlin_pain = dict_gen(model2, msset='formalin', legendsw=True)
-_ = dict_gen(model2_mean, msset='formalin', legendsw=True)
-_ = dict_gen(model2roi_roi, msset='formalin', legendsw=True)
-_ = dict_gen(model2roi_mean, msset='formalin', legendsw=True)
-
-# formalin movement
-Aprism_foramlin_movement = dict_gen(movement, msset='formalin', legendsw=True)
-
-# capcfa pain
-Aprism_capcfa_pain = dict_gen(model2, msset='capcfa', legendsw=True)
-_ = dict_gen(model2_mean, msset='capcfa', legendsw=True)
-_ = dict_gen(model2roi_roi, msset='capcfa', legendsw=True)
-_ = dict_gen(model2roi_mean, msset='capcfa', legendsw=True)
-
-# capcfa movement
-Aprism_capcfa_movement = dict_gen(movement, msset='capcfa', legendsw=True)
+if False:
+    Aprism_foramlin_pain = dict_gen(model2, msset='formalin', legendsw=True)
+    _ = dict_gen(model2_mean, msset='formalin', legendsw=True)
+    _ = dict_gen(model2roi_roi, msset='formalin', legendsw=True)
+    _ = dict_gen(model2roi_mean, msset='formalin', legendsw=True)
+    
+    # formalin movement
+    Aprism_foramlin_movement = dict_gen(movement, msset='formalin', legendsw=True)
+    
+    # capcfa pain
+    Aprism_capcfa_pain = dict_gen(model2, msset='capcfa', legendsw=True)
+    _ = dict_gen(model2_mean, msset='capcfa', legendsw=True)
+    _ = dict_gen(model2_mean_overtime, msset='capcfa', legendsw=True)
+    
+    
+    _ = dict_gen(model2roi_roi, msset='capcfa', legendsw=True)
+    _ = dict_gen(model2roi_mean, msset='capcfa', legendsw=True)
+    
+    # capcfa movement
+    Aprism_capcfa_movement = dict_gen(movement, msset='capcfa', legendsw=True)
 
 # psl pain
 legendsw = True
 Aprism_psl_pain = dict_gen(model2, msset='psl', legendsw=legendsw)
+
+print('score', np.nanmean(np.abs((tmp - np.array(Aprism_psl_pain[3])))))
+
+# In[]
+
 _ = dict_gen(model2_mean, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_roi, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_mean, msset='psl', legendsw=legendsw)
