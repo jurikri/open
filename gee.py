@@ -355,9 +355,9 @@ if False:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model4 = np.nanmean(testsw3_mean, axis=2)
     
-# In raw test (구버전)
+# In[] raw test (구버전)
     
-if False:
+if True:
     
     thr = 0.5
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\result\\'               
@@ -391,7 +391,7 @@ if False:
                     
     model2_mean_overtime = np.mean(model2_mean_overtime, axis=2)
 
-# In label 재정렬 movement 
+# In[] label 재정렬 movement 
     
 t4 = np.zeros((N,5)); movement = np.zeros((N,5))
 for SE in range(N):
@@ -411,7 +411,7 @@ for SE in range(N):
 movement = target     
 movement_filter = np.array(target)
         
-# In
+# In[]
 target = np.array(model2); fsw=True
 def dict_gen(target, msset=None, legendsw=None):
     if msset is None:
@@ -878,7 +878,7 @@ if True:
 
     
 # In[] itch vs pain
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\save\\tensorData\\result\\'    
     project_list = []
 
@@ -916,6 +916,7 @@ if True:
         a2 = model_itch_vs_pain[chloroquineGroup,1]           
         
     # rawdata 직접 load
+if True:
     loadpath = 'D:\\mscore\\syncbackup\\save\\tensorData\\result\\20200302_painitch_1\\rawdata.xlsx'
     df1 = np.array(pd.read_excel(loadpath))
         
@@ -925,7 +926,7 @@ if True:
     plt.savefig(savepath2 + 'itch_vs_pain_ROC.png', dpi=1000)
 
 
-
+legendsw = True
 
 pain = cerebellum_capsaicin[:7,1]
 nonpain = np.concatenate((cerebellum_capsaicin[7:,:].flatten(), cerebellum_capsaicin[:7,0], cerebellum_capsaicin[:7,2]),axis=0)
@@ -943,7 +944,7 @@ nonpain = df1[:,1]
 roc_auc, _, _ = msacc(nonpain, pain, mslabel='S1, itch vs pain, AUC:', \
                       figsw=True, fontsz=12, fontloc="lower right", legendsw=legendsw)
 
-plt.savefig(savepath2 + 'etc_ROC.png', dpi=1000)
+plt.savefig(savepath2 + 'etc_ROC_HR.png', dpi=1000)
 
 
 
