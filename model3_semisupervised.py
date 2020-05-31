@@ -900,13 +900,13 @@ for si in [1]:
                 test_matrix[:len(tmp),:] = tmp
         
         for TSE in testlist:
-            senum = 3
-            if TSE in [144,145,147,148]:
-                senum = 5
+            senum = 5
+     
             for tse in range(senum):
                 if np.isnan(test_matrix[TSE, tse]):
                     
                     valid = valid_generation([TSE], only_se=tse)
+                    if valid is None: continue
                     score = model.evaluate(valid[0], valid[1], verbose=0)
                     pain = score[1]
                     print(TSE, tse, 'pain %', pain)
