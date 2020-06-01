@@ -1,0 +1,10 @@
+def mslinear_regression(x,y):
+    x = np.array(x); y = np.array(y); 
+    x = x[np.isnan(x)==0]; y = y[np.isnan(y)==0]
+    
+    n = x.shape[0]
+    r = (1/(n-1)) * np.sum(((x - np.mean(x))/np.std(x)) * ((y - np.mean(y))/np.std(y)))
+    m = r*(np.std(y)/np.std(x))
+    b = np.mean(y) - np.mean(x)*m
+
+    return m, b # bx+a
