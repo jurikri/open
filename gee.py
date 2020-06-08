@@ -319,8 +319,8 @@ if True:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model2roi_mean = np.nanmean(testsw3_mean, axis=2)  
                 
-    # In PSL용 load - model3
-if False:
+    # In[] PSL용 load - model3
+if True:
     t = 10
     testsw3_mean = np.zeros((N,5,t)); testsw3_mean[:] = np.nan         
     for i in range(t):
@@ -334,7 +334,8 @@ if False:
                 testsw3_mean[:testsw3.shape[0],:,i] = testsw3
     model3 = np.nanmean(testsw3_mean, axis=2)
     
-        # In model4 load
+    
+        # In[] model4 load
 if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model4\\'               
     project_list = []
@@ -369,30 +370,61 @@ if True:
     project_list.append(['foramlin_only_4', 400, None])
     project_list.append(['foramlin_only_5', 500, None])
     
-    model2_mean_overtime = np.zeros((N,5,len(project_list))); model2_mean_overtime[:] = np.nan
-    
-    for i in range(len(project_list)):
-        projectname = project_list[i][0]
+
+    model2_mean_overtime = []; [model2_mean_overtime.append([]) for u in range(N)]
+    for i in range(N):
+        [model2_mean_overtime[i].append([]) for u in range(5)]
         
-        for SE in range(N):
-            loadpath = savepath + projectname + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
-            loadpath_mean = savepath + projectname + '\\exp_raw\\' + 'PSL_result_mean_' + str(SE) + '.pickle'
-            
-            if os.path.isfile(loadpath_mean):
-                with open(loadpath_mean, 'rb') as f:  # Python 3: open(..., 'rb')
-                    PSL_result_save = pickle.load(f)[SE]
+    for SE in range(N):
+        for se in range(5):
+            matrixsave=[]
+            for i in range(len(project_list)):
+                loadpath_mean = savepath + project_list[i][0] + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
+                if os.path.isfile(loadpath_mean):
+                    with open(loadpath_mean, 'rb') as f:  # Python 3: open(..., 'rb')
+                        PSL_result_save = pickle.load(f)
+                        
+                    binum = len(PSL_result_save[SE][se])
+                    if binum == 0: continue          
+                    ROInum = len(PSL_result_save[SE][se][0])
                     
-                for se in range(5):
-                    mssave = []
-                    for bins in range(len(PSL_result_save[se])):
-                        mssave.append(PSL_result_save[se][bins][0][1])
-                    mssave = np.array(mssave)
-                    model2_mean_overtime[SE,se, i] = np.mean(mssave > thr)
+                    binROI_matrix = np.zeros((ROInum, binum)); binROI_matrix[:] = np.nan
                     
-    model2_mean_overtime = np.mean(model2_mean_overtime, axis=2)
+                    for col in range(binum):
+                        for row in range(ROInum):
+                            binROI_matrix[row,col] = PSL_result_save[SE][se][col][row][0][1]
+                    matrixsave.append(np.array(binROI_matrix))
+            matrixsave = np.array(matrixsave)
+                            
+            model2_mean_overtime[SE][se] = np.mean(matrixsave, axis=0)
+            print(SE, se, model2_mean_overtime[SE][se].shape)
+
+                        
+    # heatmatplot
+    
+    pains = []
+    pains.append(np.mean(model2_mean_overtime[73][1] > thr, axis=0))
+    pains.append(np.mean(model2_mean_overtime[73][2] > thr, axis=0))
+    pains.append(np.mean(model2_mean_overtime[75][1] > thr, axis=0))
+    pains.append(np.mean(model2_mean_overtime[85][2] > thr, axis=0))
+    pains.append(np.mean(model2_mean_overtime[87][1] > thr, axis=0))
+    pains.append(np.mean(model2_mean_overtime[88][1] > thr, axis=0))
+    pains = np.array(pains)[:,:55]
+    
+    nonpains = []
+    nonpains.append(np.mean(model2_mean_overtime[167][2] > thr, axis=0))
+    nonpains.append(np.mean(model2_mean_overtime[173][2] > thr, axis=0))
+    nonpains.append(np.mean(model2_mean_overtime[174][2] > thr, axis=0))
+    nonpains.append(np.mean(model2_mean_overtime[175][2] > thr, axis=0))
+    nonpains.append(np.mean(model2_mean_overtime[172][2] > thr, axis=0))
+    nonpains.append(np.mean(model2_mean_overtime[168][2] > thr, axis=0))
+    nonpains = np.array(nonpains)
+    
+    msplot = np.concatenate((pains, np.zeros((4,55)), nonpains), axis=0)
+    plt.imshow(msplot, cmap='hot')
+    plt.colorbar()
 
 # In[] label 재정렬 movement 
-    
 t4 = np.zeros((N,5)); movement = np.zeros((N,5))
 for SE in range(N):
     for se in range(5):
@@ -412,7 +444,7 @@ movement = target
 movement_filter = np.array(target)
         
 # In[]
-target = np.array(model2); fsw=True
+#target = np.array(model2); fsw=True
 def dict_gen(target, msset=None, legendsw=None):
     if msset is None:
         print('set mssset')
@@ -498,6 +530,8 @@ def dict_gen(target, msset=None, legendsw=None):
     gaba30_2 = np.concatenate((gaba30_2, nanex(subset_mean[[172,174], 3])), axis=0)  # lidocaine (d2)
     
     gaba30_3 = nanex(np.mean(subset_mean[[169,170,171],0:2], axis=1)) # GB/VX (d10~)
+    gaba30_3 = np.concatenate((gaba30_3, [np.mean(subset_mean[176,0:2])]), axis=0) 
+    
     gaba30_4 = nanex(np.mean(subset_mean[[169,170,171],2:4], axis=1)) # lidocaine (d10~)
     
     scsalcine = nanex(subset_mean[[172,174], 1])
@@ -573,7 +607,7 @@ def dict_gen(target, msset=None, legendsw=None):
 
     return Aprism
 
-# In
+# In[]
 
 #model1_dict = dict_gen(model1)
 #model3_dict = dict_gen(model3)
@@ -607,14 +641,9 @@ if False:
     # capcfa movement
     Aprism_capcfa_movement = dict_gen(movement, msset='capcfa', legendsw=True)
 
-# psl pain
+
 legendsw = True
 Aprism_psl_pain = dict_gen(model2, msset='psl', legendsw=legendsw)
-
-print('score', np.nanmean(np.abs((tmp - np.array(Aprism_psl_pain[3])))))
-
-# In[]
-
 _ = dict_gen(model2_mean, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_roi, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_mean, msset='psl', legendsw=legendsw)
@@ -628,6 +657,7 @@ Aprism_psl_movement = dict_gen(movement, msset='psl', legendsw=True)
 
 legendsw = True
 Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
+
 #
 ###
 #
