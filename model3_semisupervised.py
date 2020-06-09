@@ -267,7 +267,7 @@ dropout_rate2 = 0.05 #
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = False
+testsw2 = True
 testsw3 = True
 #if testsw2:
 ##    import os
@@ -914,6 +914,129 @@ for si in [1]:
         
         with open(test_matrix_savename, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(test_matrix, f, pickle.HIGHEST_PROTOCOL)
+
+# In[] testsw2 (20200605)
+testlist = list(range(167, N)) + pslGroup
+if testsw2:
+    for ti in range(10): # ensemble_num
+        
+        # reset_model
+        reset_keras(model)
+        nseed(seed)
+        tf.random.set_seed(seed)   
+        model, idcode = keras_setup() 
+        
+        # load_model
+        thr = 0.69
+        savename = 'fset + baseonly + CFAgroup + capsaicinGroup_' + str(thr) + '_0415'
+        savename2 = savename + '_t' + str(ti) + '.pickle'
+        print('index', savename2)
+        final_weightsave = RESULT_SAVE_PATH + 'model/' + savename2 + '.h5'
+        model.load_weights(final_weightsave)
+        
+        for test_mouseNum in testlist:
+            testbin = None
+            picklesavename = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_' + str(test_mouseNum) + '_' + str(ti) + '.pickle'
+            picklesavename2 = RESULT_SAVE_PATH + 'exp_raw/' + 'PSL_result_mean_' + str(test_mouseNum) + '_' + str(ti) + '.pickle'
+            
+            isfile3 = os.path.isfile(picklesavename)
+            if isfile3:
+                print('PSL_result_' + str(test_mouseNum) + '.pickle', '이미 존재합니다. skip')
+    
+            if not(isfile3):
+                PSL_result_save = []
+                [PSL_result_save.append([]) for i in range(N)]
+                PSL_result_save_mean = []
+                [PSL_result_save_mean.append([]) for i in range(N)]
+                
+                for SE2 in range(N):
+                    [PSL_result_save[SE2].append([]) for i in range(5)]
+                    [PSL_result_save_mean[SE2].append([]) for i in range(5)]
+                # PSL_result_save변수에 무조건 동일한 공간을 만들도록 설정함. pre allocation 개념
+                
+                sessionNum = 4
+                
+                for se in range(sessionNum):
+                    binning = list(range(0,(signalss[test_mouseNum][se].shape[0]-full_sequence), bins))
+                    binNum = len(binning)
+                    
+                    if signalss[test_mouseNum][se].shape[0] == full_sequence:
+                        binNum = 1
+                        binning = [0]
+                                                   
+                    [PSL_result_save[test_mouseNum][se].append([]) for i in range(binNum)]
+                    [PSL_result_save_mean[test_mouseNum][se].append([]) for i in range(binNum)]
+                    
+                    i = 54; ROI = 0
+                    for i in range(binNum):    
+                        # each ROI
+                        signalss_PSL_test = signalss[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                        ROInum = signalss_PSL_test.shape[1]
+                        
+                        [PSL_result_save[test_mouseNum][se][i].append([]) for k in range(ROInum)]
+                        
+                        mannual_signal2 = movement_syn[test_mouseNum][se][binning[i]:binning[i]+full_sequence]
+                        mannual_signal2 = np.reshape(mannual_signal2, (mannual_signal2.shape[0], 1))
+                        for ROI in range(ROInum):
+                            mannual_signal = signalss_PSL_test[:,ROI]
+                            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+                            
+                            X, _, _ = dataGeneration(test_mouseNum, se, label=0, \
+                                   Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                                
+                            X_array = array_recover(X)
+                            print(test_mouseNum, se, 'BINS', i ,'/', binNum, 'ROI', ROI)
+                            prediction = model.predict(X_array)
+                            PSL_result_save[test_mouseNum][se][i][ROI] = prediction
+                            
+                        # ROI mean
+                        mean_signal = np.mean(signalss_PSL_test, axis=1)
+                        mean_signal = np.reshape(mean_signal, (mean_signal.shape[0], 1))
+    
+                        X, _, _ = dataGeneration(test_mouseNum, se, label=0, \
+                                   Mannual=True, mannual_signal=mannual_signal, mannual_signal2=mannual_signal2)
+                            
+                        X_array = array_recover(X)
+                        prediction = model.predict(X_array)
+                        PSL_result_save_mean[test_mouseNum][se][i] = prediction
+                        
+                with open(picklesavename, 'wb') as f:  # Python 3: open(..., 'wb')
+                    pickle.dump(PSL_result_save, f, pickle.HIGHEST_PROTOCOL)
+                    print(picklesavename, '저장되었습니다.')
+                    
+                with open(picklesavename2, 'wb') as f:  # Python 3: open(..., 'wb')
+                    pickle.dump(PSL_result_save_mean, f, pickle.HIGHEST_PROTOCOL)
+                    print(picklesavename2, '저장되었습니다.')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
