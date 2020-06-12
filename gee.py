@@ -202,7 +202,7 @@ for SE in range(N):
         # 개별 thr로 relu 적용되어있음. frame은 signal과 syn가 다름
                     
         # In[] model1 load
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model1\\'               
     project_list = []
 
@@ -225,7 +225,7 @@ if True:
 
 # In[] Formalin CV-- model2 (AI)
  
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
     project_list = []
 
@@ -251,7 +251,7 @@ if True:
     
 # In Formalin CV-- model2 - mean (AA)
  
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
     project_list = []
 
@@ -277,7 +277,7 @@ if True:
     
 # In Formalin CV-- model2_roi_roi (II)
  
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2-roi\\'               
     project_list = []
 
@@ -299,7 +299,7 @@ if True:
     
 # In Formalin CV-- model2_roi_eman (IA)
  
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2-roi\\'               
     project_list = []
 
@@ -356,30 +356,22 @@ if False:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model4 = np.nanmean(testsw3_mean, axis=2)
     
-# In[] raw test (구버전)
+# In[] raw test (구버전) - with model3
     
 if True:
-    
     thr = 0.5
-    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\result\\'               
-    project_list = []
+    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\result\\0331_CFA_selection\\exp_raw\\'               
+    project_list = range(10)
 
-    project_list.append(['foramlin_only_1', 100, None])
-    project_list.append(['foramlin_only_2', 200, None]) 
-    project_list.append(['foramlin_only_3', 300, None]) 
-    project_list.append(['foramlin_only_4', 400, None])
-    project_list.append(['foramlin_only_5', 500, None])
-    
-
-    model2_mean_overtime = []; [model2_mean_overtime.append([]) for u in range(N)]
+    model3_mean_overtime = []; [model3_mean_overtime.append([]) for u in range(N)]
     for i in range(N):
-        [model2_mean_overtime[i].append([]) for u in range(5)]
+        [model3_mean_overtime[i].append([]) for u in range(5)]
         
     for SE in range(N):
         for se in range(5):
             matrixsave=[]
             for i in range(len(project_list)):
-                loadpath_mean = savepath + project_list[i][0] + '\\exp_raw\\' + 'PSL_result_' + str(SE) + '.pickle'
+                loadpath_mean = savepath + 'PSL_result_' + str(SE) + '_' + str(project_list[i]) + '.pickle' 
                 if os.path.isfile(loadpath_mean):
                     with open(loadpath_mean, 'rb') as f:  # Python 3: open(..., 'rb')
                         PSL_result_save = pickle.load(f)
@@ -396,32 +388,59 @@ if True:
                     matrixsave.append(np.array(binROI_matrix))
             matrixsave = np.array(matrixsave)
                             
-            model2_mean_overtime[SE][se] = np.mean(matrixsave, axis=0)
-            print(SE, se, model2_mean_overtime[SE][se].shape)
+            model3_mean_overtime[SE][se] = np.mean(matrixsave, axis=0)
+            print(SE, se, model3_mean_overtime[SE][se].shape)
 
                         
     # heatmatplot
     
+    nonpains2 = []
+    nonpains2.append(np.mean(model3_mean_overtime[167][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[168][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[173][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[173][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[75][0] > thr, axis=0)[:55]) # 5
+    nonpains2.append(np.mean(model3_mean_overtime[76][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[85][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[87][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[88][0] > thr, axis=0)[:55])
+    nonpains2.append(np.mean(model3_mean_overtime[94][1] > thr, axis=0)[:55]) # 10
+    nonpains2 = np.array(nonpains2)
+    
     pains = []
-    pains.append(np.mean(model2_mean_overtime[73][1] > thr, axis=0))
-    pains.append(np.mean(model2_mean_overtime[73][2] > thr, axis=0))
-    pains.append(np.mean(model2_mean_overtime[75][1] > thr, axis=0))
-    pains.append(np.mean(model2_mean_overtime[85][2] > thr, axis=0))
-    pains.append(np.mean(model2_mean_overtime[87][1] > thr, axis=0))
-    pains.append(np.mean(model2_mean_overtime[88][1] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[71][1] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[72][2] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[73][1] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[73][2] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[75][1] > thr, axis=0)) # 5
+    pains.append(np.mean(model3_mean_overtime[76][1] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[85][2] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[87][1] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[88][1] > thr, axis=0))
+    pains.append(np.mean(model3_mean_overtime[94][1] > thr, axis=0)) # 10
     pains = np.array(pains)[:,:55]
     
     nonpains = []
-    nonpains.append(np.mean(model2_mean_overtime[167][2] > thr, axis=0))
-    nonpains.append(np.mean(model2_mean_overtime[173][2] > thr, axis=0))
-    nonpains.append(np.mean(model2_mean_overtime[174][2] > thr, axis=0))
-    nonpains.append(np.mean(model2_mean_overtime[175][2] > thr, axis=0))
-    nonpains.append(np.mean(model2_mean_overtime[172][2] > thr, axis=0))
-    nonpains.append(np.mean(model2_mean_overtime[168][2] > thr, axis=0))
-    nonpains = np.array(nonpains)
+    nonpains.append(np.mean(model3_mean_overtime[167][2] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[168][2] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[172][2] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[173][2] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[174][2] > thr, axis=0)) # 5
+    nonpains.append(np.mean(model3_mean_overtime[175][2] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[177][1] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[178][1] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[179][1] > thr, axis=0))
+    nonpains.append(np.mean(model3_mean_overtime[180][1] > thr, axis=0)) # 10
+    nonpains = np.array(nonpains)[:,:55]
     
-    msplot = np.concatenate((pains, np.zeros((4,55)), nonpains), axis=0)
+    inter = np.ones((1,55))
+    msplot = np.concatenate((nonpains2, inter, pains, inter, nonpains), axis=0) 
+    
     plt.imshow(msplot, cmap='hot')
+    
+    plt.axes().get_xaxis().set_visible(False)
+    plt.axes().get_yaxis().set_visible(False)
+    
     plt.colorbar()
 
 # In[] label 재정렬 movement 
@@ -441,10 +460,10 @@ for SE in range(N):
         target[SE,3:] = np.nan
 
 movement = target     
-movement_filter = np.array(target)
+movement_filter = np.array(movement)
         
 # In[]
-#target = np.array(model2); fsw=True
+target = np.array(model3); fsw=True
 def dict_gen(target, msset=None, legendsw=None):
     if msset is None:
         print('set mssset')
@@ -520,11 +539,21 @@ def dict_gen(target, msset=None, legendsw=None):
 
     
     gaba120_0 = nanex(np.mean(subset_mean[[164,165,166],0:2], axis=1))
-    gaba120_1 = nanex(np.mean(subset_mean[[164,165,166],2:4], axis=1))
+    gaba120_1 = nanex(subset_mean[[177,179],2]) # psl_d3, GB/VX_i.p._120m 
+    gaba120_2 = nanex(np.mean(subset_mean[[164,165,166],2:4], axis=1)) # psl_d10, GB/VX_i.p._120m 
     
-    gaba30_0 = nanex(subset_mean[[167,168,172,174], 0])
+    
+    gaba30_0 = nanex(subset_mean[[167,168,172,174,177,179,182], 0])
+    gaba30_0 = np.concatenate((gaba30_0, [np.nanmean(subset_mean[181,0:2])]), axis=0)
+    
     gaba30_1 = nanex(subset_mean[[167,168], 1]) # GB/VX (d3)
     gaba30_1 = np.concatenate((gaba30_1, nanex(subset_mean[[172,174], 2])), axis=0)  # GB/VX (d3)
+    gaba30_1 = np.concatenate((gaba30_1, nanex(subset_mean[[177,179], 1])), axis=0)  # GB/VX (d3)
+    add = np.nanmean(subset_mean[181, [2,3]])
+    gaba30_1 = np.concatenate((gaba30_1, [add]), axis=0)
+    add = np.nanmean(subset_mean[182, [1,2]])
+    gaba30_1 = np.concatenate((gaba30_1, [add]), axis=0)
+    
     
     gaba30_2 = nanex(subset_mean[[167,168], 2]) # lidocaine (d2)
     gaba30_2 = np.concatenate((gaba30_2, nanex(subset_mean[[172,174], 3])), axis=0)  # lidocaine (d2)
@@ -601,8 +630,8 @@ def dict_gen(target, msset=None, legendsw=None):
         base_merge = np.concatenate((sham0, psl0, ipsaline0, gaba30_0, gaba120_0), axis=0)
   
         Aprism[3] = pd.concat([pd.DataFrame(base_merge), \
-              pd.DataFrame(sham1), pd.DataFrame(psl3_merge), pd.DataFrame(gaba30_1), \
-              pd.DataFrame(sham2), pd.DataFrame(psl10_merge), pd.DataFrame(gaba30_3), pd.DataFrame(gaba120_1)],ignore_index=True, axis=1)
+              pd.DataFrame(sham1), pd.DataFrame(psl3_merge), pd.DataFrame(gaba30_1), pd.DataFrame(gaba120_1), \
+              pd.DataFrame(sham2), pd.DataFrame(psl10_merge), pd.DataFrame(gaba30_3), pd.DataFrame(gaba120_2)],ignore_index=True, axis=1)
         
 
     return Aprism
@@ -657,162 +686,6 @@ Aprism_psl_movement = dict_gen(movement, msset='psl', legendsw=True)
 
 legendsw = True
 Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
-
-#
-###
-#
-#Aprism = dict_gen(model2, msset='psl', legendsw=True)
-#
-## foramlin
-#def formalin_roc_gen(target, name, legendsw):
-#    tdict = dict(target)
-#    pain = np.concatenate((tdict['high1'],tdict['midle1']), axis=0)
-#    nonpain = np.concatenate((tdict['high0'], tdict['midle0'], tdict['saline0'], tdict['saline1']), axis=0)
-#    roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
-#    
-#def Aprim_formalin_gen(target):
-#    tdict = dict(target)
-#    base_merge = np.concatenate((tdict['saline0'], tdict['saline1']), axis=0)
-#    Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(tdict['high0']), pd.DataFrame(tdict['high1']) \
-#                                   , pd.DataFrame(tdict['midle0']), pd.DataFrame(tdict['midle1']) \
-#                                   , pd.DataFrame(tdict['keto0']), pd.DataFrame(tdict['keto1'])
-#                                   , pd.DataFrame(tdict['lido0']), pd.DataFrame(tdict['lido1'])] \
-#                                   , ignore_index=True, axis=1)
-#    return Aprism
-#
-#Aprism_biRNN_formalin = Aprim_formalin_gen(model2_dict)
-#
-#legendsw = False
-#formalin_roc_gen(model2_dict, '', legendsw=legendsw) # AI
-#formalin_roc_gen(model2mean_dict, '', legendsw=legendsw) # AA
-#formalin_roc_gen(model2roi_roi_dict, '', legendsw=legendsw) # II
-#formalin_roc_gen(model2roi_mean_dict, '', legendsw=legendsw) # IA
-#
-#savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
-#plt.savefig(savepath2 + 'formalin_roc', dpi=1000)# cap, cfa prism, ROC
-#
-#def capcfa_roc_gen(target, name, legendsw):
-#    tdict = dict(target)
-#    pain = np.concatenate((tdict['cap1'], tdict['CFA1'], tdict['CFA2']), axis=0)
-#    nonpain = np.concatenate((tdict['cap0'], tdict['CFA0']), axis=0)
-#    roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
-#    
-#def Aprim_capcfa_gen(target):
-#    tdict = dict(target)
-#    base_merge = np.concatenate((tdict['cap0'], tdict['CFA0']), axis=0)
-#    Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(tdict['cap1']) \
-#                                  , pd.DataFrame(tdict['CFA1']) , pd.DataFrame(tdict['CFA2'])], ignore_index=True, axis=1)
-#    return Aprism
-#
-#Aprism_biRNN_capcfa = Aprim_capcfa_gen(model2_dict)
-#
-#legendsw = False
-#capcfa_roc_gen(model2_dict, '', legendsw=legendsw) # AI
-#capcfa_roc_gen(model2mean_dict, '', legendsw=legendsw) # AA
-#capcfa_roc_gen(model2roi_roi_dict, '', legendsw=legendsw) # II
-#capcfa_roc_gen(model2roi_mean_dict, '', legendsw=legendsw) # IA
-#
-#savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
-#plt.savefig(savepath2 + 'capcfa_roc', dpi=1000)
-#
-## psl prism, ROC
-#def psl_roc_gen(target, name, legendsw):
-#    tdict = dict(target)
-#    pain = np.concatenate((tdict['psl1'], tdict['psl2']), axis=0)
-#    nonpain = np.concatenate((tdict['psl0'], tdict['sham0'], tdict['sham1'], tdict['sham2']), axis=0)
-#    roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
-#    
-#target = model2_dict
-#def Aprim_psl_gen(target):
-#    tdict = dict(target)
-#    base_merge = np.concatenate((tdict['sham0'], tdict['psl0'], tdict['ipsaline0'], tdict['ipclonidine0']), axis=0)
-#    
-#    psl3_merge = np.concatenate((tdict['psl1'], tdict['ipsaline1'], tdict['ipclonidine1']), axis=0)
-#    psl10_merge = np.concatenate((tdict['psl2'], tdict['ipsaline3'], tdict['ipclonidine3']), axis=0)
-#    
-#    Aprism = pd.concat([pd.DataFrame(base_merge), \
-#                        pd.DataFrame(tdict['sham1']), \
-#                        pd.DataFrame(psl3_merge), pd.DataFrame(tdict['ipsaline2']), pd.DataFrame(tdict['gabapentin_first2']), \
-#                        pd.DataFrame(tdict['sham2']), \
-#                        pd.DataFrame(psl10_merge), pd.DataFrame(tdict['ipsaline4']), pd.DataFrame(tdict['gabapentin2']), \
-#                        pd.DataFrame(tdict['psl_lidocaine'])], \
-#                        ignore_index=True, axis=1)
-#        
-#    return Aprism
-#
-#model2_dict = dict_gen(model2, fsw=True)
-#Aprism_biRNN_psl= Aprim_psl_gen(model2_dict)
-#Aprism_biRNN_psl3= Aprim_psl_gen(model3_dict)
-#target = model3_dict
-#
-#model3_dict = dict_gen(model3, fsw=True)
-#Aprism_biRNN_psl= Aprim_psl_gen(model3_dict)
-#    
-##legendsw = False
-#legendsw = False
-#psl_roc_gen(model2_dict, '', legendsw=legendsw) # AI
-#psl_roc_gen(model2mean_dict, '', legendsw=legendsw) # AA
-#psl_roc_gen(model2roi_roi_dict, '', legendsw=legendsw) # II
-#psl_roc_gen(model2roi_mean_dict, '', legendsw=legendsw) # IA
-#
-#savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
-#plt.savefig(savepath2 + 'psl23_roc', dpi=1000)
-#
-#legendsw = True
-#formalin_roc_gen(model2_dict, '', legendsw=legendsw)
-#capcfa_roc_gen(model2_dict, '', legendsw=legendsw)
-#psl_roc_gen(model2_dict, '', legendsw=legendsw)
-#
-#savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
-#plt.savefig(savepath2 + 'psl_roc', dpi=1000)
-#
-## prsim 용으로 사용
-##    base_merge = np.concatenate((tdict['psl0'], tdict['sham0']), axis=0)
-##    Aprism_biRNN_psl= pd.concat([pd.DataFrame(base_merge), pd.DataFrame(tdict['sham1']) \
-##                                  , pd.DataFrame(tdict['sham2']) , pd.DataFrame(tdict['psl1']), \
-##                                  pd.DataFrame(tdict['psl2'])], ignore_index=True, axis=1)
-#
-#
-## In[] movement 정리
-#
-#movement_subset = np.zeros((N,5)); movement_subset[:] = np.nan
-#for SE in range(N):
-#    if SE in np.array(msset_total)[:,0]:
-#        settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
-#        movement_subset[SE,:] = np.nanmean(movement[settmp,:],axis=0)
-#        print('set averaging', 'movement', settmp)
-#    elif SE not in np.array(msset_total).flatten(): 
-#        movement_subset[SE,:] = movement[SE,:]
-#
-#movement_dict = dict_gen(np.array(movement))
-#Aprism_movement_capcfa = Aprim_capcfa_gen(movement_dict)
-#Aprism_movement_formalin = Aprim_formalin_gen(movement_dict)
-#Aprism_movement_psl = Aprim_psl_gen(movement_dict)
-#
-#Aprism_mov_biRNN2_formalin = msGrouping_nonexclude(movement_subset)
-#Aprism_mov_biRNN2_capsaicin = movement_subset[capsaicinGroup,0:3]
-#Aprism_mov_biRNN2_CFA = movement_subset[CFAgroup,0:3]
-#Aprism_mov_biRNN2_psl = msGrouping_pslOnly(movement_subset)
-#Aprism_mov_biRNN2_yohimbine = msGrouping_yohimbine(movement_subset)
-#
-#movement_subset[ketoGroup,:]
-#
-## total activity 정리
-#
-#t4_subset = np.zeros((N,5)); t4_subset[:] = np.nan
-#for SE in range(N):
-#    if SE in np.array(msset_total)[:,0]:
-#        settmp = np.array(msset_total)[np.where(np.array(msset_total)[:,0]==SE)[0][0],:]
-#        t4_subset[SE,:] = np.nanmean(t4[settmp,:],axis=0)
-#        print('set averaging', 'movement', settmp)
-#    elif SE not in np.array(msset_total).flatten(): 
-#        t4_subset[SE,:] = t4[SE,:]
-#        
-#Aprism_t4_biRNN2_formalin = msGrouping_nonexclude(t4_subset)
-#Aprism_t4_biRNN2_capsaicin = t4_subset[capsaicinGroup,0:3]
-#Aprism_t4_biRNN2_CFA = t4_subset[CFAgroup,0:3]
-#Aprism_t4_biRNN2_psl = msGrouping_pslOnly(t4_subset)
-#Aprism_t4_biRNN2_yohimbine = msGrouping_yohimbine(t4_subset)
 
 
 # In[] 시간에 따른 통증확률 시각화
