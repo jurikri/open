@@ -560,6 +560,8 @@ def dict_gen(target, msset=None, legendsw=None):
     
     gaba30_3 = nanex(np.mean(subset_mean[[169,170,171],0:2], axis=1)) # GB/VX (d10~)
     gaba30_3 = np.concatenate((gaba30_3, [np.mean(subset_mean[176,0:2])]), axis=0) 
+    add = np.mean(subset_mean[[183,184],0:2], axis=1)
+    gaba30_3 = np.concatenate((gaba30_3, add), axis=0) 
     
     gaba30_4 = nanex(np.mean(subset_mean[[169,170,171],2:4], axis=1)) # lidocaine (d10~)
     
@@ -688,47 +690,47 @@ legendsw = True
 Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
 
 
-# In[] 시간에 따른 통증확률 시각화
-minsize=[]; painindex=[]; resultsave=[]                
-for SE in range(N):
-    if not SE in grouped_total_list or SE in skiplist:
-        continue
-    
-    if not(SE in pslset): # psl만 시각화
-        continue
-    
-    sessionNum = 5
-    if SE in se3set:
-        sessionNum = 3
-     
-    for se in range(sessionNum):
-        result_BINS = np.mean(calc_target[SE][se], axis=1) # [BINS][bins]
-        
-        if result_BINS.shape[0] < 5:
-            continue
-        
-        resultsave.append(result_BINS)
-        minsize.append(result_BINS.shape[0])
-        pix = 0
-        if SE in pslGroup and se in [1,2]:
-            pix = 1
-        painindex.append(pix)
-print('최소 BINS', np.min(minsize))        
-        
-for i in range(len(resultsave)):
-    resultsave[i] = resultsave[i][:np.min(minsize)]
-resultsave = np.array(resultsave)
-painindex = np.array(painindex)
-
-ix0 = np.where(painindex==0)[0] # nonpain
-ix1 = np.where(painindex==1)[0] # pain
-ix2 = np.concatenate((ix0[-32:], ix1), axis=0)
-
-plt.figure(1, figsize=(9.7*1, 6*1))
-plt.imshow(resultsave[ix2], cmap='hot')
-plt.colorbar()
-savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
-plt.savefig(savepath2 + str(SE) + '_heatmap.png', dpi=1000)
+## In[] 시간에 따른 통증확률 시각화
+#minsize=[]; painindex=[]; resultsave=[]                
+#for SE in range(N):
+#    if not SE in grouped_total_list or SE in skiplist:
+#        continue
+#    
+#    if not(SE in pslset): # psl만 시각화
+#        continue
+#    
+#    sessionNum = 5
+#    if SE in se3set:
+#        sessionNum = 3
+#     
+#    for se in range(sessionNum):
+#        result_BINS = np.mean(calc_target[SE][se], axis=1) # [BINS][bins]
+#        
+#        if result_BINS.shape[0] < 5:
+#            continue
+#        
+#        resultsave.append(result_BINS)
+#        minsize.append(result_BINS.shape[0])
+#        pix = 0
+#        if SE in pslGroup and se in [1,2]:
+#            pix = 1
+#        painindex.append(pix)
+#print('최소 BINS', np.min(minsize))        
+#        
+#for i in range(len(resultsave)):
+#    resultsave[i] = resultsave[i][:np.min(minsize)]
+#resultsave = np.array(resultsave)
+#painindex = np.array(painindex)
+#
+#ix0 = np.where(painindex==0)[0] # nonpain
+#ix1 = np.where(painindex==1)[0] # pain
+#ix2 = np.concatenate((ix0[-32:], ix1), axis=0)
+#
+#plt.figure(1, figsize=(9.7*1, 6*1))
+#plt.imshow(resultsave[ix2], cmap='hot')
+#plt.colorbar()
+#savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+#plt.savefig(savepath2 + str(SE) + '_heatmap.png', dpi=1000)
 
 # In[]
 import os
