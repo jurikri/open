@@ -678,59 +678,17 @@ Aprism_psl_pain = dict_gen(model2, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2_mean, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_roi, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_mean, msset='psl', legendsw=legendsw)
+Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
 
 savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
 plt.savefig(savepath2 + 'psl_roc', dpi=1000)#
 
 # psl movement
-Aprism_psl_movement = dict_gen(movement, msset='psl', legendsw=True)
+Aprism_psl_movement = dict_gen(movement, msset='capcfa', legendsw=True)
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'capcfa_movement_roc', dpi=1000)#
 
 
-legendsw = True
-Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
-
-
-## In[] 시간에 따른 통증확률 시각화
-#minsize=[]; painindex=[]; resultsave=[]                
-#for SE in range(N):
-#    if not SE in grouped_total_list or SE in skiplist:
-#        continue
-#    
-#    if not(SE in pslset): # psl만 시각화
-#        continue
-#    
-#    sessionNum = 5
-#    if SE in se3set:
-#        sessionNum = 3
-#     
-#    for se in range(sessionNum):
-#        result_BINS = np.mean(calc_target[SE][se], axis=1) # [BINS][bins]
-#        
-#        if result_BINS.shape[0] < 5:
-#            continue
-#        
-#        resultsave.append(result_BINS)
-#        minsize.append(result_BINS.shape[0])
-#        pix = 0
-#        if SE in pslGroup and se in [1,2]:
-#            pix = 1
-#        painindex.append(pix)
-#print('최소 BINS', np.min(minsize))        
-#        
-#for i in range(len(resultsave)):
-#    resultsave[i] = resultsave[i][:np.min(minsize)]
-#resultsave = np.array(resultsave)
-#painindex = np.array(painindex)
-#
-#ix0 = np.where(painindex==0)[0] # nonpain
-#ix1 = np.where(painindex==1)[0] # pain
-#ix2 = np.concatenate((ix0[-32:], ix1), axis=0)
-#
-#plt.figure(1, figsize=(9.7*1, 6*1))
-#plt.imshow(resultsave[ix2], cmap='hot')
-#plt.colorbar()
-#savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
-#plt.savefig(savepath2 + str(SE) + '_heatmap.png', dpi=1000)
 
 # In[]
 import os
@@ -772,8 +730,12 @@ if True:
     model_itch_vs_nonitch = np.nanmean(testsw3_mean, axis=2)
     
     pain = model_itch_vs_nonitch[chloroquineGroup,1]
-#    nonpain = np.concatenate((model_itch_vs_nonitch[salineGroup,:2].flatten(), model_itch_vs_nonitch[chloroquineGroup,0]),axis=0)
-    nonpain = np.array(model_itch_vs_nonitch[chloroquineGroup,0])
+    
+    tmp1 = model_itch_vs_nonitch[chloroquineGroup,0]
+    tmp2 = model_itch_vs_nonitch[salineGroup,1].flatten()
+    nonpain = np.concatenate((tmp1, tmp2), axis=0)
+    
+#    nonpain = np.array(model_itch_vs_nonitch[chloroquineGroup,0])
 
     roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw=True)
     
