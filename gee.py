@@ -225,7 +225,7 @@ if False:
 
 # In[] Formalin CV-- model2 (AI)
  
-if False:
+if True:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
     project_list = []
 
@@ -251,7 +251,7 @@ if False:
     
 # In Formalin CV-- model2 - mean (AA)
  
-if False:
+if True:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
     project_list = []
 
@@ -277,7 +277,7 @@ if False:
     
 # In Formalin CV-- model2_roi_roi (II)
  
-if False:
+if True:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2-roi\\'               
     project_list = []
 
@@ -299,7 +299,7 @@ if False:
     
 # In Formalin CV-- model2_roi_eman (IA)
  
-if False:
+if True:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2-roi\\'               
     project_list = []
 
@@ -356,6 +356,27 @@ if False:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model4 = np.nanmean(testsw3_mean, axis=2)
     
+        # In[] model5 load
+if True:
+    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\result\\'               
+    project_list = []
+
+    project_list.append(['model5_1', 100, None])
+
+    model_name2 = project_list 
+                 
+    model_name = np.array(model_name2)
+    testsw5_mean = np.zeros((N,5,len(model_name))); testsw5_mean[:] = np.nan
+    for ix, p in enumerate(model_name):
+        for SE in range(N):
+            
+            loadpath5 = savepath + p[0] + '\\exp_raw\\' + 'testsw3_' + str(SE) + '.pickle'
+            if os.path.isfile(loadpath5):
+                with open(loadpath5, 'rb') as f:  # Python 3: open(..., 'rb')
+                    testsw5 = pickle.load(f)
+                testsw5_mean[SE,:,ix] = testsw5[SE,:]
+    model5 = np.nanmean(testsw5_mean, axis=2)
+   
 # In[] raw test (구버전) - with model3
     
 if True:
@@ -463,7 +484,7 @@ movement = target
 movement_filter = np.array(movement)
         
 # In[]
-target = np.array(model3); fsw=True
+# target = np.array(model3); fsw=True
 def dict_gen(target, msset=None, legendsw=None):
     if msset is None:
         print('set mssset')
@@ -472,9 +493,10 @@ def dict_gen(target, msset=None, legendsw=None):
     target = np.array(target)
     print(target.shape, movement_filter.shape)
     
-    if msset in ['psl']:
+    if msset in ['psl'] and False:
         print('movement > 0.5 filter')
-        target[movement_filter[:target.shape[0],:] > 0.5] = np.nan
+        ix = np.where(movement_filter[:,0] > 0.5)[0]
+        target[ix,:] = np.nan
         
     # subset 평균처리        
     subset_mean = np.zeros((N,5)); subset_mean[:] = np.nan
@@ -545,6 +567,8 @@ def dict_gen(target, msset=None, legendsw=None):
     
     gaba30_0 = nanex(subset_mean[[167,168,172,174,177,179,182], 0])
     gaba30_0 = np.concatenate((gaba30_0, [np.nanmean(subset_mean[181,0:2])]), axis=0)
+    add = np.mean(subset_mean[[185,186],0:2], axis=1)
+    gaba30_0 = np.concatenate((gaba30_0, add), axis=0)     
     
     gaba30_1 = nanex(subset_mean[[167,168], 1]) # GB/VX (d3)
     gaba30_1 = np.concatenate((gaba30_1, nanex(subset_mean[[172,174], 2])), axis=0)  # GB/VX (d3)
@@ -561,6 +585,8 @@ def dict_gen(target, msset=None, legendsw=None):
     gaba30_3 = nanex(np.mean(subset_mean[[169,170,171],0:2], axis=1)) # GB/VX (d10~)
     gaba30_3 = np.concatenate((gaba30_3, [np.mean(subset_mean[176,0:2])]), axis=0) 
     add = np.mean(subset_mean[[183,184],0:2], axis=1)
+    gaba30_3 = np.concatenate((gaba30_3, add), axis=0)
+    add = np.mean(subset_mean[[185,186],2:4], axis=1)
     gaba30_3 = np.concatenate((gaba30_3, add), axis=0) 
     
     gaba30_4 = nanex(np.mean(subset_mean[[169,170,171],2:4], axis=1)) # lidocaine (d10~)
@@ -590,12 +616,12 @@ def dict_gen(target, msset=None, legendsw=None):
                                        , ignore_index=True, axis=1)
         
     elif msset == 'capcfa':
+        base_merge = np.concatenate((saline0, saline1), axis=0)
         name=''
         pain = np.concatenate((cap1, CFA1, CFA2), axis=0)
-        nonpain = np.concatenate((cap0, CFA0), axis=0)
+        nonpain = base_merge
         roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
         
-        base_merge = np.concatenate((cap0, CFA0), axis=0)
         Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(cap1), pd.DataFrame(CFA1) \
                                        , pd.DataFrame(CFA2)], ignore_index=True, axis=1)
         
@@ -651,6 +677,7 @@ def dict_gen(target, msset=None, legendsw=None):
 #model2roi_mean_dict = dict_gen(model2roi_mean)
 
 #### formalin pain
+legendsw = True
 if False:
     Aprism_foramlin_pain = dict_gen(model2, msset='formalin', legendsw=True)
     _ = dict_gen(model2_mean, msset='formalin', legendsw=True)
@@ -661,13 +688,13 @@ if False:
     Aprism_foramlin_movement = dict_gen(movement, msset='formalin', legendsw=True)
     
     # capcfa pain
-    Aprism_capcfa_pain = dict_gen(model2, msset='capcfa', legendsw=True)
-    _ = dict_gen(model2_mean, msset='capcfa', legendsw=True)
-    _ = dict_gen(model2_mean_overtime, msset='capcfa', legendsw=True)
-    
-    
-    _ = dict_gen(model2roi_roi, msset='capcfa', legendsw=True)
-    _ = dict_gen(model2roi_mean, msset='capcfa', legendsw=True)
+    Aprism_capcfa_pain = dict_gen(model2, msset='capcfa', legendsw=legendsw)
+    _ = dict_gen(model2_mean, msset='capcfa', legendsw=legendsw)
+    _ = dict_gen(model2roi_roi, msset='capcfa', legendsw=legendsw)
+    _ = dict_gen(model2roi_mean, msset='capcfa', legendsw=legendsw)
+#    _ = dict_gen(model5, msset='capcfa', legendsw=legendsw)
+    savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+    plt.savefig(savepath2 + 'capcfa_roc', dpi=1000)#
     
     # capcfa movement
     Aprism_capcfa_movement = dict_gen(movement, msset='capcfa', legendsw=True)
@@ -678,18 +705,24 @@ Aprism_psl_pain = dict_gen(model2, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2_mean, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_roi, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2roi_mean, msset='psl', legendsw=legendsw)
-Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
-
 savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
 plt.savefig(savepath2 + 'psl_roc', dpi=1000)#
 
+_ = dict_gen(model2, msset='psl', legendsw=legendsw)
+_ = dict_gen(model5, msset='psl', legendsw=legendsw)
+Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
+plt.savefig(savepath2 + 'psl_roc_models', dpi=1000)#
+
 # psl movement
-Aprism_psl_movement = dict_gen(movement, msset='capcfa', legendsw=True)
+legendsw = True
+Aprism_psl_movement = dict_gen(movement, msset='capcfa', legendsw=legendsw)
+#Aprism_psl_movement = dict_gen(movement, msset='psl', legendsw=True)
 savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
 plt.savefig(savepath2 + 'capcfa_movement_roc', dpi=1000)#
 
-
-
+legendsw = True
+_ = dict_gen(model5, msset='psl', legendsw=legendsw)
+_ = dict_gen(model5, msset='capcfa', legendsw=True)
 # In[]
 import os
 os.sys.exit()
