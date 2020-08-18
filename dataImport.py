@@ -32,12 +32,15 @@ itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
 ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159]
 ipclonidineGroup =  [151,153,154,157,160,161,162,163]
-gabapentinGroup =   [164,165,166,167,168,169,170,171]
+gabapentinGroup =   [164,165,166,167,168,169,170,171,172,173,174,175,176,177, \
+                     178,179,180,181,182,183,184,185,186]
+beevenomGroup =     [187]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
           [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149], \
-          [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168], \
+          [169,170],[172,173],[174,175],[177,178],[179,180]] # baseline 독립, training 때 base를 skip 하지 않음.
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -61,6 +64,8 @@ msGroup['ipsaline_pslGroup'] = ipsaline_pslGroup
 msGroup['ipclonidineGroup'] = ipclonidineGroup
 msGroup['ipclonidineGroup'] = ipclonidineGroup
 msGroup['gabapentinGroup'] = gabapentinGroup
+msGroup['beevenomGroup'] = beevenomGroup
+
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -425,9 +430,9 @@ def msMovementExtraction(list1):
 
 # In[]
 #runlist = [77,123,120,106] + list(range(139,N))
-runlist = range(169, N)
+runlist = range(187, N)
 print('runlist', runlist, '<<<< 확인!!')
- 
+
 mssignal_save(runlist)
 msMovementExtraction(runlist)
 #N, FPS, signalss, bahavss, baseindex, movement, msGroup, basess = msRun('main')
@@ -447,7 +452,7 @@ for SE in range(N2):
     print(SE, N)
     pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw.pickle'
     
-    if os.path.isfile(pickle_savepath):
+    if os.path.isfile(pickle_savepath) and not SE in runlist:
         with open(pickle_savepath, 'rb') as f:  # Python 3: open(..., 'rb')
             msdata_load = pickle.load(f)
             
