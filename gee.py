@@ -124,6 +124,29 @@ fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2
 se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup
 pslset = pslGroup + shamGroup + adenosineGroup
 
+# 제외 roi 적용 (mouse 통합)
+roi_del_ix = msdata_load['roi_del_ix_save']
+skiplist = []
+for SE in range(N):
+    if SE in skiplist: continue
+    setnum = [SE]
+    if SE in msset_total.flatten():
+        row = np.where(msset_total==SE)[0][0]
+        setnum = msset_total[row,:]
+    skiplist += list(setnum)
+    
+    tmp = []
+    for SE2 in setnum:
+        for se in range(5):
+            tmp += list(roi_del_ix[SE2][se])
+    tmp = list(set(tmp))  
+    
+    for SE2 in setnum:
+        for se in range(5):  
+            tix = list(range(signalss[SE2][se].shape[1]))
+            ix = list(set(tix) - set(tmp))
+            signalss[SE2][se] = signalss[SE2][se][:,ix]
+
 def msGrouping_pain_vs_itch(msdata): # psl만 처리
     msdata = np.array(msdata)
     
@@ -699,7 +722,7 @@ if False:
     # capcfa movement
     Aprism_capcfa_movement = dict_gen(movement, msset='capcfa', legendsw=True)
 
-
+legendsw = False
 legendsw = True
 Aprism_psl_pain = dict_gen(model2, msset='psl', legendsw=legendsw)
 _ = dict_gen(model2_mean, msset='psl', legendsw=legendsw)
