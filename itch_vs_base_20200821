@@ -80,6 +80,28 @@ se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chl
 pslset = pslGroup + shamGroup + adenosineGroup
 
 # In[]
+# 제외 roi 적용 (mouse 통합)
+roi_del_ix = msdata_load['roi_del_ix_save']
+skiplist = []
+for SE in range(N):
+    if SE in skiplist: continue
+    setnum = [SE]
+    if SE in msset_total.flatten():
+        row = np.where(msset_total==SE)[0][0]
+        setnum = msset_total[row,:]
+    skiplist += list(setnum)
+    
+    tmp = []
+    for SE2 in setnum:
+        for se in range(5):
+            tmp += list(roi_del_ix[SE2][se])
+    tmp = list(set(tmp))  
+    
+    for SE2 in setnum:
+        for se in range(5):  
+            tix = list(range(signalss[SE2][se].shape[1]))
+            ix = list(set(tix) - set(tmp))
+            signalss[SE2][se] = signalss[SE2][se][:,ix]
 
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
@@ -677,7 +699,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = chloroquineGroup + salineGroup
+    wanted = chloroquineGroup + salineGroup + highGroup + highGroup2 + midleGroup + yohimbineGroup
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
