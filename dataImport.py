@@ -35,12 +35,14 @@ ipclonidineGroup =  [151,153,154,157,160,161,162,163]
 gabapentinGroup =   [164,165,166,167,168,169,170,171,172,173,174,175,176,177, \
                      178,179,180,181,182,183,184,185,186]
 beevenomGroup =     [187]
+oxaliGroup =        [188,189,190,191,192,193,194,195]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
           [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149], \
           [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168], \
-          [169,170],[172,173],[174,175],[177,178],[179,180]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [169,170],[172,173],[174,175],[177,178],[179,180],[188,189],[190,191],[192,193], \
+          [194,195]] # baseline 독립, training 때 base를 skip 하지 않음.
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -65,6 +67,7 @@ msGroup['ipclonidineGroup'] = ipclonidineGroup
 msGroup['ipclonidineGroup'] = ipclonidineGroup
 msGroup['gabapentinGroup'] = gabapentinGroup
 msGroup['beevenomGroup'] = beevenomGroup
+msGroup['oxaliGroup'] = oxaliGroup
 
 
 msGroup['msset'] = msset
@@ -137,22 +140,26 @@ def smoothListGaussian(array1,window):
          smoothed[i]=sum(np.array(array1[i:i+window])*weight)/sum(weight)  
 
      return smoothed  
- 
-skipsw = False
-def mssignal_save(list1):
+
+# In[]
+
+
+def mssignal_save(list1, gfiltersw=True, skipsw = False):
     newformat = list(range(70,N2))
     newformat.remove(74)
     
     for N in list1:
+        print('signal preprosessing...', N)
+        path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
+        
+        if gfiltersw:  savename = path + '\\signal_save.xlsx'
+        elif not(gfiltersw):    savename = path + '\\signal_save_nongaussian.xlsx'
+            
+        if os.path.exists(savename) and skipsw:
+            print('이미 처리됨. skip', savename)
+            continue
+        
         if N not in newformat:
-            print('signal preprosessing...', N)
-            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
-            savename = path + '\\signal_save.xlsx'
-            
-            if os.path.exists(savename) and skipsw:
-                print('이미 처리됨. skip', savename)
-                continue
-            
             loadpath = path + '\\' + raw_filepath
             df = pd.read_excel(loadpath)
             ROI = df.shape[1]
@@ -190,15 +197,7 @@ def mssignal_save(list1):
                 if ix == phaseInfo.shape[0]-1:
                      array2.append(np.array(msraw[s:,1:]))
                      
-        elif N in newformat:
-            print('signal preprosessing...', N)
-            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
-            savename = path + '\\signal_save.xlsx'
-            
-            if os.path.exists(savename) and skipsw:
-                print('이미 처리됨. skip', savename)
-                continue
-            
+        elif N in newformat:  
             loadpath = path + '\\' + raw_filepath
             array0 = []; array2 =[]; k = -1
             while True:
@@ -239,24 +238,27 @@ def mssignal_save(list1):
                 array0[se] = np.array(msraw)
                 array2.append(np.array(array0[se][:,1:]))
             print(str(N) + ' ' +raw_filepath + ' ROI ', array2[0].shape[1])
-                  
-        array3 = list() # after gaussian filter
-        for se in range(len(array2)):
-            matrix = np.array(array2[se])
-            tmp_matrix = list()
-            for neuronNum in range(matrix.shape[1]):
-                tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))
+        
+        if gfiltersw:          
+            array3 = list() # after gaussian filter
+            for se in range(len(array2)):
+                matrix = np.array(array2[se])
+                tmp_matrix = list()
+                for neuronNum in range(matrix.shape[1]):
+                    tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))
+                    
+                tmp_matrix = np.transpose(np.array(tmp_matrix))
                 
-            tmp_matrix = np.transpose(np.array(tmp_matrix))
+                array3.append(tmp_matrix)
+        elif not(gfiltersw):
+            array3 = array2
             
-            array3.append(tmp_matrix)
-            
+        # In F zero 계산
         array4 = list()
         for se in range(len(array3)):
             matrix = np.array(array3[se])
             matrix = np.array(list(matrix[:,:]), dtype=np.float)
             
-            # In F zero 계산 
             f0_vector = list()
             for n in range(matrix.shape[1]):
                 
@@ -292,7 +294,7 @@ def mssignal_save(list1):
 
 # In
 
-def msMovementExtraction(list1):
+def msMovementExtraction(list1, skipsw=False):
 #    movement_thr_save = np.zeros((N2,5))
     for N in list1:
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(N)
@@ -432,118 +434,75 @@ def msMovementExtraction(list1):
 #runlist = [77,123,120,106] + list(range(139,N))
 runlist = range(187, N)
 print('runlist', runlist, '<<<< 확인!!')
+msMovementExtraction(runlist)
 
 mssignal_save(runlist)
-msMovementExtraction(runlist)
+runlist = range(0, N)
+
+signalss, bahavss = mssignal_save(runlist, gfiltersw=True)
+signalss, bahavss = mssignal_save(runlist, gfiltersw=False)
 #N, FPS, signalss, bahavss, baseindex, movement, msGroup, basess = msRun('main')
 
 
 # In[] signal & behavior import
 #signalss = list(); bahavss = list()
-
-signalss=[];[signalss.append([]) for u in range(N2)]
-bahavss=[];[bahavss.append([]) for u in range(N2)]
-
-RESULT_SAVE_PATH = msdir + '\\raw_tmpsave\\'
-if not os.path.exists(RESULT_SAVE_PATH):
-    os.mkdir(RESULT_SAVE_PATH)
-
-for SE in range(N2):
-    print(SE, N)
-    pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw.pickle'
+def signalss_save(gfiltersw=True, skipsw=True):
+    signalss=[];[signalss.append([]) for u in range(N2)]
+    bahavss=[];[bahavss.append([]) for u in range(N2)]
     
-    if os.path.isfile(pickle_savepath) and not SE in runlist:
-        with open(pickle_savepath, 'rb') as f:  # Python 3: open(..., 'rb')
-            msdata_load = pickle.load(f)
-            
-        signals = msdata_load['signals']
-        behavs = msdata_load['behavs']
+    RESULT_SAVE_PATH = msdir + '\\raw_tmpsave\\'
+    
+    if not os.path.exists(RESULT_SAVE_PATH):
+        os.mkdir(RESULT_SAVE_PATH)
+    
+    for SE in range(N2):
+        print(SE, N)
+        if gfiltersw: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw.pickle'
+        else: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw_nongaussian.pickle'
         
-    else:
-        path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-    #    loadpath = path + '\\events_save.xlsx'
-        loadpath2 = path + '\\signal_save.xlsx'
-        
-        signals = list(); behavs = list() # events = list(); 
-        os.chdir(path)
-        
-        df2 = None
-        for se in range(5):
-            try:
-                df2 = pd.read_excel(loadpath2, header=None, sheet_name=se)
-                df3 = np.array(pd.read_csv('MS_' + behav_data[se]))
-        
-                signals.append(np.array(df2))
-                behavs.append(np.array(df3))
+        if os.path.isfile(pickle_savepath) and skipsw:
+            with open(pickle_savepath, 'rb') as f:  # Python 3: open(..., 'rb')
+                msdata_load = pickle.load(f)
                 
-            except:
-                if se < 3:
-                    print('se 3 이하 session은 필수입니다.')
-                    import sys
-                    sys.exit
+            signals = msdata_load['signals']
+            behavs = msdata_load['behavs']
+            
+        else:
+            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+        #    loadpath = path + '\\events_save.xlsx'
+            loadpath2 = path + '\\signal_save.xlsx'
+            
+            signals = list(); behavs = list() # events = list(); 
+            os.chdir(path)
+            
+            df2 = None
+            for se in range(5):
+                try:
+                    df2 = pd.read_excel(loadpath2, header=None, sheet_name=se)
+                    df3 = np.array(pd.read_csv('MS_' + behav_data[se]))
+            
+                    signals.append(np.array(df2))
+                    behavs.append(np.array(df3))
                     
-                print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
-                signals.append(np.array(df2))
-                behavs.append(np.array(df3))
+                except:
+                    if se < 3:
+                        print('se 3 이하 session은 필수입니다.')
+                        import sys
+                        sys.exit
+                        
+                    print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
+                    signals.append(np.array(df2))
+                    behavs.append(np.array(df3))
+                    
+            tmp1 = { 'signals' : signals, 'behavs' : behavs}
+            with open(pickle_savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+                pickle.dump(tmp1, f, pickle.HIGHEST_PROTOCOL)
+                print(pickle_savepath, '저장되었습니다.')
                 
-        tmp1 = { 'signals' : signals, 'behavs' : behavs}
-        with open(pickle_savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-            pickle.dump(tmp1, f, pickle.HIGHEST_PROTOCOL)
-            print(pickle_savepath, '저장되었습니다.')
-            
-    signalss[SE] = signals
-    bahavss[SE] = behavs
+        signalss[SE] = signals
+        bahavss[SE] = behavs
+    return signalss, bahavss
     # In
-# In QC
-# delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
-thr = 10
-for SE in range(N2):
-    print(SE)
-    signals = signalss[SE]
-    rois = np.zeros(signals[0].shape[1])
-     
-    for se in range(5):
-        wsw = True
-        while wsw:
-            wsw = False
-            signal = np.array(signalss[SE][se])
-            for n in range(signal.shape[1]):
-                msplot = np.zeros(signal.shape[0]-1)
-                for frame in range(signal.shape[0]-1):
-                    msplot[frame] = np.abs(signal[frame+1,n] - signal[frame,n])
-    
-                    if msplot[frame] > thr and rois[n] < 20:
-                        wsw = True
-                        rois[n] += 1
-                        print(SE, se, n, msplot[frame], frame+1)
-                        signalss[SE][se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
-        
-    for se in range(5):
-        signal = np.array(signalss[SE][se])
-        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
-        print('ROI delete', SE, se, np.where(rois==20)[0])
-                    
-#                    print(signalss[SE][se][frame+1,n], signal[frame,n])
-
-        
-# In nmr factor (ROI 갯수)추정, or ROI 검사 (df/d0 0.3을 한번도 넘지 못한 ROI의 존재 유무)
-for SE in range(N):
-    signals = signalss[SE]  
-    
-    ROIsw = np.zeros(np.array(signals[0]).shape[1])
-    for n in range(np.array(signals[0]).shape[1]):
-        sw = 0
-        for se in range(5):
-            signal = np.array(signals[se])
-        
-            if np.max(signal[:,n]) > 0.3: # 0.3에 특별한 의미는 없고, 경험적으로 한번도 0.3을 못넘는 ROI는 발견되지 않음.
-                ROIsw[n] = 1
-                break
-            
-    if np.sum(ROIsw) != np.array(signals[0]).shape[1]:
-        print("signal이 없는 ROI가 존재함")
-
-# In
 from scipy.stats.stats import pearsonr 
 def msbehav_syn(behav, signal): # behav syn 맞추기 
     behav = np.array(behav)
@@ -559,84 +518,69 @@ def msbehav_syn(behav, signal): # behav syn 맞추기
             
     return behav_syn  
 
-# syn를 위한 상수 계산
-
-synsave = np.zeros((N,5))
-SE = 6; se = 1    
-for SE in range(N):
-    signals = signalss[SE]
-    behavs = bahavss[SE] 
-    for se in range(5):
-        signal = np.array(signals[se])
-        meansignal = np.mean(signal,1) 
+def QC():
+    # In QC
+    # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
+    thr = 10
+    
+    roi_del_ix_save = []
+    [roi_del_ix_save.append([]) for u in range(N2)]
+    for i in range(N2):
+        [roi_del_ix_save[i].append([]) for u in range(5)]
+    
+    for SE in range(N2):
+        print(SE)
+        signals = signalss[SE]
+        rois = np.zeros(signals[0].shape[1])
+         
+        for se in range(5):
+            wsw = True
+            while wsw:
+                wsw = False
+                signal = np.array(signalss[SE][se])
+                for n in range(signal.shape[1]):
+                    msplot = np.zeros(signal.shape[0]-1)
+                    for frame in range(signal.shape[0]-1):
+                        msplot[frame] = np.abs(signal[frame+1,n] - signal[frame,n])
         
-        behav = np.array(behavs[se])
-        behav_syn = msbehav_syn(behav, signal)
-                
-        xaxis = list(); yaxis = list()
-        if np.mean(behav) > 0.01 or (SE == 36 and se == 3):
-            synlist = np.arange(-300,301,1)
+                        if msplot[frame] > thr and rois[n] < 20:
+                            wsw = True
+                            rois[n] += 1
+                            print(SE, se, n, msplot[frame], frame+1)
+                            signalss[SE][se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
             
-            if (SE == 36 and se == 3) or (SE == 1 and se == 2) or (SE == 38 and se == 2) or (SE == 42 and se == 1): # 예외처리
-                 synlist = np.arange(-50,50,1)
-                
-            for syn in synlist:
-                syn = int(round(syn))
-                   
-                if syn >= 0:
-                    singal_syn = meansignal[syn:]
-                    sz = singal_syn.shape[0]
-                    behav_syn2 = behav_syn[:sz]
-                    
-                elif syn <0:
-                    singal_syn = meansignal[:syn]
-                    behav_syn2 = behav_syn[-syn:]
-                    
-                msexcept = not((SE == 40 and se == 1) or (SE == 6 and se == 1) or (SE == 8 and se == 3) \
-                               or (SE == 10 and se == 1) or (SE == 10 and se == 3) or (SE == 11 and se == 1) \
-                               or (SE == 15 and se == 2) or (SE == 19 and se == 4) or (SE == 21 and se == 1) \
-                               or (SE == 22 and se == 0) or (SE == 32 and se == 4) or (SE == 34 and se == 0) \
-                               or (SE == 35 and se == 1) or (SE == 36 and se == 0) or (SE == 37 and se == 0) \
-                               or (SE == 37 and se == 1) or (SE == 37 and se == 4) or (SE == 38 and se == 2) \
-                               or (SE == 39 and se == 4) or (SE == 40 and se == 4) or (SE == 41 and se == 1) \
-                               or (SE == 42 and se == 0) or (SE == 41 and se == 1) or (SE == 42 and se == 0) \
-                               or (SE == 42 and se == 1))
-                
-                if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept:
-                    continue
- 
-                if not np.sum(behav_syn2) == 0:
-                    r = pearsonr(singal_syn, behav_syn2)[0]
-                elif np.sum(behav_syn2) == 0:
-                    r = 0
-                    
-                xaxis.append(syn)
-                yaxis.append(r)
-                
-                if np.sum(np.isnan(yaxis)) < 0:
-                    print(SE,se, 'nan 있어요')
+            # 이상신호가 20개 이상일때 ROI 제거되도록 설계되었으나,
+            # 20200818, traial간 ROI tracking을 위해서 바로 제거하지 않고, 제거 정보만 넘기는 것으로 수정하겠음.
+        for se in range(5):
+            signal = np.array(signalss[SE][se])
+    #        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
+            print('ROI delete', SE, se, np.where(rois==20)[0])
+            roi_del_ix = np.where(rois==20)[0]
+            roi_del_ix_save[SE][se] = roi_del_ix
+    #                    print(signalss[SE][se][frame+1,n], signal[frame,n])
+
+        
+    # In nmr factor (ROI 갯수)추정, or ROI 검사 (df/d0 0.3을 한번도 넘지 못한 ROI의 존재 유무)
+    for SE in range(N):
+        signals = signalss[SE]  
+        
+        ROIsw = np.zeros(np.array(signals[0]).shape[1])
+        for n in range(np.array(signals[0]).shape[1]):
+#            sw = 0
+            for se in range(5):
+                signal = np.array(signals[se])
             
-#            plt.plot(xaxis,yaxis)
-            maxsyn = xaxis[np.argmax(yaxis)]
-        else:
-            maxsyn = 0
-        
-        synsave[SE,se] = maxsyn
-        
-# 예외처리
-synsave[12,4] = 0
-synsave[18,4] = 0
-synsave[43,3] = 0 
-synsave[43,4] = 0
-#synsave[39,3] = 0
-#SE = 1; se = 1
-#SE = 8; se = 4
+                if np.max(signal[:,n]) > 0.3: # 0.3에 특별한 의미는 없고, 경험적으로 한번도 0.3을 못넘는 ROI는 발견되지 않음.
+                    ROIsw[n] = 1
+                    break
+                
+        if np.sum(ROIsw) != np.array(signals[0]).shape[1]:
+            print("signal이 없는 ROI가 존재함, 강제종료합니다.")
+            import sys; sys.exit()
+            
+    return signalss, roi_del_ix_save
 
-fixlist = [[1,1],[8,4]]
-print('다음 session은 syn가 안맞으므로 수정합니다.')
-print(fixlist)
-
-# In
+signalss, roi_del_ix_save = QC()
 
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
@@ -649,32 +593,115 @@ def downsampling(msssignal, wanted_size):
         
     return np.array(downsignal)
 
-behavss2 = list()
-for SE in range(N):
-    behavss2.append([])
-    for se in range(5):
-        
-        msbehav = np.array(bahavss[SE][se])
-        behav_syn = downsampling(msbehav, signalss[SE][se].shape[0])
-        
-        if [SE, se] in fixlist:
-            fix = np.zeros(behav_syn.shape[0])
-            s = int(synsave[SE,se])
-            if s > 0:
-                fix[s:] = behav_syn[:-s]
-            elif s < 0:
-                s = -s
-                fix[:-s] = behav_syn[s:]
-                
-            plt.plot(np.mean(signalss[SE][se], axis=1))
-            plt.plot(fix)
+# syn를 위한 상수 계산
+def behavss2():
+    synsave = np.zeros((N,5))
+    SE = 6; se = 1    
+    for SE in range(N):
+        signals = signalss[SE]
+        behavs = bahavss[SE] 
+        for se in range(5):
+            signal = np.array(signals[se])
+            meansignal = np.mean(signal,1) 
             
-        else:
-            fix = behav_syn
-               
-        behavss2[SE].append(fix)
+            behav = np.array(behavs[se])
+            behav_syn = msbehav_syn(behav, signal)
+                    
+            xaxis = list(); yaxis = list()
+            if np.mean(behav) > 0.01 or (SE == 36 and se == 3):
+                synlist = np.arange(-300,301,1)
+                
+                if (SE == 36 and se == 3) or (SE == 1 and se == 2) or (SE == 38 and se == 2) or (SE == 42 and se == 1): # 예외처리
+                     synlist = np.arange(-50,50,1)
+                    
+                for syn in synlist:
+                    syn = int(round(syn))
+                       
+                    if syn >= 0:
+                        singal_syn = meansignal[syn:]
+                        sz = singal_syn.shape[0]
+                        behav_syn2 = behav_syn[:sz]
+                        
+                    elif syn <0:
+                        singal_syn = meansignal[:syn]
+                        behav_syn2 = behav_syn[-syn:]
+                        
+                    msexcept = not((SE == 40 and se == 1) or (SE == 6 and se == 1) or (SE == 8 and se == 3) \
+                                   or (SE == 10 and se == 1) or (SE == 10 and se == 3) or (SE == 11 and se == 1) \
+                                   or (SE == 15 and se == 2) or (SE == 19 and se == 4) or (SE == 21 and se == 1) \
+                                   or (SE == 22 and se == 0) or (SE == 32 and se == 4) or (SE == 34 and se == 0) \
+                                   or (SE == 35 and se == 1) or (SE == 36 and se == 0) or (SE == 37 and se == 0) \
+                                   or (SE == 37 and se == 1) or (SE == 37 and se == 4) or (SE == 38 and se == 2) \
+                                   or (SE == 39 and se == 4) or (SE == 40 and se == 4) or (SE == 41 and se == 1) \
+                                   or (SE == 42 and se == 0) or (SE == 41 and se == 1) or (SE == 42 and se == 0) \
+                                   or (SE == 42 and se == 1))
+                    
+                    if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept:
+                        continue
+     
+                    if not np.sum(behav_syn2) == 0:
+                        r = pearsonr(singal_syn, behav_syn2)[0]
+                    elif np.sum(behav_syn2) == 0:
+                        r = 0
+                        
+                    xaxis.append(syn)
+                    yaxis.append(r)
+                    
+                    if np.sum(np.isnan(yaxis)) < 0:
+                        print(SE,se, 'nan 있어요')
+                
+    #            plt.plot(xaxis,yaxis)
+                maxsyn = xaxis[np.argmax(yaxis)]
+            else:
+                maxsyn = 0
+            
+            synsave[SE,se] = maxsyn
+            
+    # 예외처리
+    synsave[12,4] = 0
+    synsave[18,4] = 0
+    synsave[43,3] = 0 
+    synsave[43,4] = 0
+    #synsave[39,3] = 0
+    #SE = 1; se = 1
+    #SE = 8; se = 4
     
-if True: # 시각화 저장
+    fixlist = [[1,1],[8,4]]
+    print('다음 session은 syn가 안맞으므로 수정합니다.')
+    print(fixlist)
+
+# In
+
+
+    behavss2 = list()
+    for SE in range(N):
+        behavss2.append([])
+        for se in range(5):
+            
+            msbehav = np.array(bahavss[SE][se])
+            behav_syn = downsampling(msbehav, signalss[SE][se].shape[0])
+            
+            if [SE, se] in fixlist:
+                fix = np.zeros(behav_syn.shape[0])
+                s = int(synsave[SE,se])
+                if s > 0:
+                    fix[s:] = behav_syn[:-s]
+                elif s < 0:
+                    s = -s
+                    fix[:-s] = behav_syn[s:]
+                    
+                plt.plot(np.mean(signalss[SE][se], axis=1))
+                plt.plot(fix)
+                
+            else:
+                fix = behav_syn
+                   
+            behavss2[SE].append(fix)
+    return behavss2
+    
+behavss2 = behavss2()
+
+def visualizaiton_save():
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0709'
     print('signal, movement 시각화는', savepath, '에 저장됩니다.')
     
@@ -718,22 +745,33 @@ if True: # 시각화 저장
             plt.savefig(mstitle)
             plt.close(SE)
 
-
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'
-print('savepath', savepath)
+def dict_save(savepath):
+    msdata = {
+            'FPS' : FPS,
+            'N' : N,
+            'bahavss' : bahavss, # behavior 원본 
+            'behavss2' : behavss2, # behavior frame fix
+            'msGroup' : msGroup,
+            'msdir' : msdir,
+            'signalss' : signalss,
+            'roi_del_ix_save' : roi_del_ix_save
+            }
+    
+    with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+        pickle.dump(msdata, f, pickle.HIGHEST_PROTOCOL)
+        print('mspickle.pickle 저장되었습니다.')
 
-msdata = {
-        'FPS' : FPS,
-        'N' : N,
-        'bahavss' : bahavss, # behavior 원본 
-        'behavss2' : behavss2, # behavior frame fix
-        'msGroup' : msGroup,
-        'msdir' : msdir,
-        'signalss' : signalss
-        }
 
-with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(msdata, f, pickle.HIGHEST_PROTOCOL)
-    print('mspickle.pickle 저장되었습니다.')
+
+
+
+
+
+
+
+
+
+
 
 
