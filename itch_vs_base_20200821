@@ -34,49 +34,59 @@ from keras.optimizers import Adam
 # set pathway
 try:
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\'; os.chdir(savepath)
+    gsync = 'D:\\mscore\\syncbackup\\google_syn\\'
 except:
     try:
-        savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
+        savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
     except:
         try:
-            savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
+            savepath = 'C:\\Users\\skklab\\Google 드라이브\\save\\tensorData\\'; os.chdir(savepath);
         except:
             savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 
 # var import
-with open('mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
      
 FPS = msdata_load['FPS']
 N = msdata_load['N']
-bahavss = msdata_load['bahavss']   # 움직임 정보
-msGroup = msdata_load['msGroup'] # 그룹정보
-msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
-signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
-
-highGroup = msGroup['highGroup']    # 5% formalin
-midleGroup = msGroup['midleGroup']  # 1% formalin
-lowGroup = msGroup['lowGroup']      # 0.25% formalin
-salineGroup = msGroup['salineGroup']    # saline control
-restrictionGroup = msGroup['restrictionGroup']  # 5% formalin + restriciton
-ketoGroup = msGroup['ketoGroup'] # 5% formalin + keto 100
-lidocaineGroup = msGroup['lidocaineGroup'] # 5% formalin + lidocaine
-capsaicinGroup = msGroup['capsaicinGroup'] # capsaicin
-yohimbineGroup = msGroup['yohimbineGroup'] # 5% formalin + yohimbine
-pslGroup = msGroup['pslGroup'] # partial sciatic nerve injury model
+bahavss = msdata_load['bahavss']
+behavss2 = msdata_load['behavss2']
+msGroup = msdata_load['msGroup']
+msdir = msdata_load['msdir']
+signalss = msdata_load['signalss']
+    
+highGroup = msGroup['highGroup']
+midleGroup = msGroup['midleGroup']
+lowGroup = msGroup['lowGroup']
+salineGroup = msGroup['salineGroup']
+restrictionGroup = msGroup['restrictionGroup']
+ketoGroup = msGroup['ketoGroup']
+lidocaineGroup = msGroup['lidocaineGroup']
+capsaicinGroup = msGroup['capsaicinGroup']
+yohimbineGroup = msGroup['yohimbineGroup']
+pslGroup = msGroup['pslGroup']
 shamGroup = msGroup['shamGroup']
 adenosineGroup = msGroup['adenosineGroup']
 highGroup2 = msGroup['highGroup2']
 CFAgroup = msGroup['CFAgroup']
 chloroquineGroup = msGroup['chloroquineGroup']
- 
+itSalineGroup = msGroup['itSalineGroup']
+itClonidineGroup = msGroup['itClonidineGroup']
+ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
+ipclonidineGroup = msGroup['ipclonidineGroup']
+gabapentinGroup = msGroup['gabapentinGroup']
+
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
-se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup # for test only
+skiplist = restrictionGroup + lowGroup
+
+fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup
 pslset = pslGroup + shamGroup + adenosineGroup
 
 # In[]
@@ -397,7 +407,8 @@ for q in project_list:
     
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
-    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup
+    set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup + ipclonidineGroup + \
+    gabapentinGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -669,7 +680,7 @@ for q in project_list:
     # training set 재설정
     trainingset = trainingset
     print('trainingset #, pre', len(trainingset))
-    etc = []
+    etc = highGroup + highGroup2 + midleGroup + yohimbineGroup
     forlist = list(trainingset)
     for SE in forlist:
         c1 = np.sum(indexer[:,0]==SE) == 0 # 옥으로 전혀 선택되지 않았다면 test set으로 빼지 않음
@@ -699,7 +710,7 @@ for q in project_list:
     
     # 학습할 set 결정, 따로 조작하지 않을 땐 mouselist로 설정하면 됨.
     
-    wanted = chloroquineGroup + salineGroup + highGroup + highGroup2 + midleGroup + yohimbineGroup
+    wanted = [etc[0]]
 #    wanted = np.sort(wanted)
     mannual = [] # 절대 아무것도 넣지마 
 
