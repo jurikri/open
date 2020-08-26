@@ -74,6 +74,7 @@ itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
 ipclonidineGroup = msGroup['ipclonidineGroup']
 gabapentinGroup = msGroup['gabapentinGroup']
+oxaliGroup = msGroup['oxaliGroup']
  
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -352,7 +353,7 @@ for nix, q in enumerate(project_list):
     set2 = highGroup + midleGroup + yohimbineGroup + ketoGroup + capsaicinGroup + highGroup2
     set1 = lowGroup + lidocaineGroup + restrictionGroup + salineGroup
     set3 = pslGroup + adenosineGroup + shamGroup + CFAgroup + chloroquineGroup + itSalineGroup + itClonidineGroup + ipsaline_pslGroup + ipclonidineGroup + \
-    gabapentinGroup
+    gabapentinGroup + oxaliGroup
     for msdel in msset_total[:,1]:
         set3.remove(msdel)
     
@@ -789,7 +790,7 @@ def nanex(array1):
     return array1
 
 # In[]
-testlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup
+testlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup
 pathsave = []
 #valid = valid_generation(testlist, only_se=None)   
 for si in [1]:    
