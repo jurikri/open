@@ -112,6 +112,7 @@ itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
 ipclonidineGroup = msGroup['ipclonidineGroup']
 gabapentinGroup = msGroup['gabapentinGroup']
+oxaliGroup = msGroup['oxaliGroup']
 
 msset = msGroup['msset']
 msset2 = msGroup['msset2']
@@ -624,7 +625,12 @@ def dict_gen(target, msset=None, legendsw=None):
     itclonidine1 = nanex(subset_mean[itClonidineGroup,1])
     itclonidine2 = nanex(subset_mean[itClonidineGroup,2])
     
-
+    #
+    oxali0 = nanex(subset_mean[oxaliGroup,0])
+    oxali1 = nanex(subset_mean[oxaliGroup,1])
+    oxali2 = nanex(subset_mean[[192,194],2])
+    oxali3 = np.concatenate((subset_mean[[188],2], subset_mean[[192,194],3]), axis=0)
+    
     if msset == 'formalin':
         name=''
         pain = np.concatenate((high1, midle1), axis=0)
@@ -647,6 +653,24 @@ def dict_gen(target, msset=None, legendsw=None):
         
         Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(cap1), pd.DataFrame(CFA1) \
                                        , pd.DataFrame(CFA2)], ignore_index=True, axis=1)
+            
+    elif msset == 'cap':
+        base_merge = np.concatenate((saline0, saline1), axis=0)
+        name='cap'
+        pain = cap1
+        nonpain = base_merge
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        
+        Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(cap1)], ignore_index=True, axis=1)
+            
+    elif msset == 'cfa':
+        base_merge = CFA0
+        name='cfa'
+        pain = np.concatenate((CFA1, CFA2), axis=0)
+        nonpain = base_merge
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        
+        Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(CFA1), pd.DataFrame(CFA2)], ignore_index=True, axis=1)
         
     elif msset == 'psl':
         name=''
@@ -684,7 +708,14 @@ def dict_gen(target, msset=None, legendsw=None):
               pd.DataFrame(sham1), pd.DataFrame(psl3_merge), pd.DataFrame(gaba30_1), pd.DataFrame(gaba120_1), \
               pd.DataFrame(sham2), pd.DataFrame(psl10_merge), pd.DataFrame(gaba30_3), pd.DataFrame(gaba120_2)],ignore_index=True, axis=1)
         
-
+    elif msset == 'oxali':
+        name='oxali'
+        pain = np.concatenate((oxali1, oxali2), axis=0)
+        nonpain = np.concatenate((oxali0, oxali3), axis=0)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        
+        Aprism = pd.concat([pd.DataFrame(oxali0), pd.DataFrame(oxali1), pd.DataFrame(oxali2), pd.DataFrame(oxali3)], ignore_index=True, axis=1)
+        
     return Aprism
 
 # In[]
@@ -699,10 +730,61 @@ def dict_gen(target, msset=None, legendsw=None):
 #model2roi_roi_dict = dict_gen(model2roi_roi)
 #model2roi_mean_dict = dict_gen(model2roi_mean)
 
-#### formalin pain
+# 이름결정
 legendsw = True
+Aprism_capcfa_pain = dict_gen(model2, msset='cap', legendsw=legendsw)
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'cap_aionly', dpi=1000)#
+
+Aprism_capcfa_pain = dict_gen(model2, msset='cfa', legendsw=legendsw)
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'cfa_aionly', dpi=1000)#
+
+legendsw = True
+Aprism_capcfa_pain = dict_gen(model2_mean, msset='cap', legendsw=legendsw)
+Aprism_capcfa_pain = dict_gen(model2_mean, msset='cfa', legendsw=legendsw)
+
+
+# capsaicin 4
+legendsw = True
+legendsw = False
+Aprism_capcfa_pain = dict_gen(model2, msset='cap', legendsw=legendsw)
+vAprism_capcfa_pain = dict_gen(model2_mean, msset='cap', legendsw=legendsw)
+Aprism_capcfa_pain = dict_gen(model2roi_roi, msset='cap', legendsw=legendsw)
+Aprism_capcfa_pain = dict_gen(model2roi_mean, msset='cap', legendsw=legendsw)
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'cap_4ways', dpi=1000)#
+
+# cfa 4
+legendsw = True
+legendsw = False
+Aprism_capcfa_pain = dict_gen(model2, msset='cfa', legendsw=legendsw)
+vAprism_capcfa_pain = dict_gen(model2_mean, msset='cfa', legendsw=legendsw)
+Aprism_capcfa_pain = dict_gen(model2roi_roi, msset='cfa', legendsw=legendsw)
+Aprism_capcfa_pain = dict_gen(model2roi_mean, msset='cfa', legendsw=legendsw)
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'cfa_4ways', dpi=1000)#
+
+# psl 4
+legendsw = True
+legendsw = False
+Aprism_capcfa_pain = dict_gen(model2, msset='psl', legendsw=legendsw)
+vAprism_capcfa_pain = dict_gen(model2_mean, msset='psl', legendsw=legendsw)
+Aprism_capcfa_pain = dict_gen(model2roi_roi, msset='psl', legendsw=legendsw)
+Aprism_capcfa_pain = dict_gen(model2roi_mean, msset='psl', legendsw=legendsw)
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'psl_4ways', dpi=1000)#
+
+# Psl AI, model2, model3
+
+
+#### formalin pain
+legendsw = False
 if False:
-    Aprism_foramlin_pain = dict_gen(model2, msset='formalin', legendsw=True)
+    Aprism_foramlin_pain = dict_gen(model2, msset='formalin', legendsw=legendsw)
+    savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+    plt.savefig(savepath2 + 'formalin_aionly', dpi=1000)#
+    
     _ = dict_gen(model2_mean, msset='formalin', legendsw=True)
     _ = dict_gen(model2roi_roi, msset='formalin', legendsw=True)
     _ = dict_gen(model2roi_mean, msset='formalin', legendsw=True)
@@ -731,6 +813,11 @@ _ = dict_gen(model2roi_mean, msset='psl', legendsw=legendsw)
 savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
 plt.savefig(savepath2 + 'psl_roc', dpi=1000)#
 
+Aprism_psl_pain = dict_gen(model3, msset='psl', legendsw=legendsw)
+savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+plt.savefig(savepath2 + 'psl_roc', dpi=1000)#
+
+
 _ = dict_gen(model2, msset='psl', legendsw=legendsw)
 _ = dict_gen(model5, msset='psl', legendsw=legendsw)
 Aprism_psl_pain3 = dict_gen(model3, msset='psl', legendsw=legendsw)
@@ -746,6 +833,13 @@ plt.savefig(savepath2 + 'capcfa_movement_roc', dpi=1000)#
 legendsw = True
 _ = dict_gen(model5, msset='psl', legendsw=legendsw)
 _ = dict_gen(model5, msset='capcfa', legendsw=True)
+
+
+Aprism_oxli_t4 = dict_gen(t4, msset='oxali', legendsw=True)
+Aprism_oxli_movement = dict_gen(movement, msset='oxali', legendsw=True)
+Aprism_oxli_semi_bRNN = dict_gen(model3, msset='oxali', legendsw=True)
+
+
 # In[]
 import os
 os.sys.exit()
@@ -758,7 +852,7 @@ with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'wb')
     
 pain = cerebellum_capsaicin[:7,1]
 nonpain = np.concatenate((cerebellum_capsaicin[7:,:].flatten(), cerebellum_capsaicin[:7,0], cerebellum_capsaicin[:7,2]),axis=0)
-roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw=True)
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw=True, legendsw=legendsw)
 plt.savefig(savepath2 + 'cerebellum_ROC.png', dpi=1000)
 
 
@@ -793,7 +887,7 @@ if True:
     
 #    nonpain = np.array(model_itch_vs_nonitch[chloroquineGroup,0])
 
-    roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw=True)
+    roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw=True, legendsw=legendsw)
     
     # saline inter를 사용할이유가?
     # saline을 모두 빼고, ROC 및 본 그래프 수정
@@ -845,7 +939,7 @@ if True:
         
     pain = df1[:,0]
     nonpain = df1[:,1]
-    roc_auc, _, _ = msacc(nonpain, pain, mslabel='', figsw=True)
+    roc_auc, _, _ = msacc(nonpain, pain, mslabel='', figsw=True, legendsw=legendsw)
     plt.savefig(savepath2 + 'itch_vs_pain_ROC.png', dpi=1000)
 
 
