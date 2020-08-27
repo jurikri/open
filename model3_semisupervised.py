@@ -268,7 +268,7 @@ dropout_rate2 = 0.05 #
 trainingsw = True # training 하려면 True 
 statelist = ['exp'] # ['exp', 'con']  # random shuffled control 사용 유무
 validation_sw = True # 시각화목적으로만 test set을 validset으로 배치함.
-testsw2 = True
+testsw2 = False
 testsw3 = True
 #if testsw2:
 ##    import os
