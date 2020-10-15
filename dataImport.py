@@ -12,11 +12,10 @@ N값 자동화함. Group 지정만,
 
 # In[] Group 지정
 highGroup =         [0,2,3,4,5,6,8,9,10,11,59] # 5%                 
-# exclude 7, 이유: basline부터 발이 부어있음. inter phase에 movement ratio가 매우 이례적임 (3SD 이상일듯)
 # 1추가 제거
 midleGroup =        [20,21,22,23,24,25,26,57] # 1%
 restrictionGroup =  [27,28,29,30,43,44,45] # restriction 5%
-lowGroup =          [31,32,33,35,36,37,38]  # 0.25%                  # exclude 34는 overapping이 전혀 안됨
+lowGroup =          [31,32,33,35,36,37,38]  # 0.25%                 
 salineGroup =       [12,13,14,15,16,17,18,19,47,48,52,53,56,58] # control
 ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
@@ -26,7 +25,7 @@ pslGroup =          [70,71,72,73,75,76,77,78,79,80,84,85,86,87,88,93,94]
 shamGroup =         [81,89,90,91,92,97]
 adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
 CFAgroup =          [106,107,108,109,116,117]
-highGroup2 =        [95,96] # 학습용, late ,recovery는 애초에 분석되지 않음, base movement data 없음
+highGroup2 =        [95,96] 
 chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
 itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
@@ -34,15 +33,22 @@ ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159
 ipclonidineGroup =  [151,153,154,157,160,161,162,163]
 gabapentinGroup =   [164,165,166,167,168,169,170,171,172,173,174,175,176,177, \
                      178,179,180,181,182,183,184,185,186]
+
 beevenomGroup =     [187]
-oxaliGroup =        [188,189,190,191,192,193,194,195]
+oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203]
+glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215]
+
+PSLscsaline =       [216,217,218,219]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
           [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149], \
           [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168], \
           [169,170],[172,173],[174,175],[177,178],[179,180],[188,189],[190,191],[192,193], \
-          [194,195]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [194,195],[196,197],[198,199]] # baseline 독립, training 때 base를 skip 하지 않음.
+
+for i in range(200,219,2):
+    msset2.append([i, i+1])
 
 msGroup = dict()
 msGroup['highGroup'] = highGroup
@@ -68,7 +74,8 @@ msGroup['ipclonidineGroup'] = ipclonidineGroup
 msGroup['gabapentinGroup'] = gabapentinGroup
 msGroup['beevenomGroup'] = beevenomGroup
 msGroup['oxaliGroup'] = oxaliGroup
-
+msGroup['glucoseGroup'] = glucoseGroup
+msGroup['PSLscsaline'] = PSLscsaline
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -430,20 +437,6 @@ def msMovementExtraction(list1, skipsw=False):
             msout.to_csv(savename, index=False, header=False)
     return None
 
-# In[]
-#runlist = [77,123,120,106] + list(range(139,N))
-runlist = range(187, N)
-print('runlist', runlist, '<<<< 확인!!')
-msMovementExtraction(runlist)
-
-mssignal_save(runlist)
-runlist = range(0, N)
-
-signalss, bahavss = mssignal_save(runlist, gfiltersw=True)
-signalss, bahavss = mssignal_save(runlist, gfiltersw=False)
-#N, FPS, signalss, bahavss, baseindex, movement, msGroup, basess = msRun('main')
-
-
 # In[] signal & behavior import
 #signalss = list(); bahavss = list()
 def signalss_save(gfiltersw=True, skipsw=True):
@@ -580,8 +573,6 @@ def QC():
             
     return signalss, roi_del_ix_save
 
-signalss, roi_del_ix_save = QC()
-
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
     downsignal = np.zeros(wanted_size)
@@ -594,7 +585,7 @@ def downsampling(msssignal, wanted_size):
     return np.array(downsignal)
 
 # syn를 위한 상수 계산
-def behavss2():
+def behavss2_calc():
     synsave = np.zeros((N,5))
     SE = 6; se = 1    
     for SE in range(N):
@@ -699,8 +690,6 @@ def behavss2():
             behavss2[SE].append(fix)
     return behavss2
     
-behavss2 = behavss2()
-
 def visualizaiton_save():
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0709'
     print('signal, movement 시각화는', savepath, '에 저장됩니다.')
@@ -745,7 +734,7 @@ def visualizaiton_save():
             plt.savefig(mstitle)
             plt.close(SE)
 
-savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'
+
 def dict_save(savepath):
     msdata = {
             'FPS' : FPS,
@@ -760,12 +749,29 @@ def dict_save(savepath):
     
     with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
         pickle.dump(msdata, f, pickle.HIGHEST_PROTOCOL)
-        print('mspickle.pickle 저장되었습니다.')
+        print(savepath, '저장되었습니다.')
 
+runlist = range(192, N)
+mssignal_save(runlist)
 
+runlist = range(192, N)
+mssignal_save(runlist, gfiltersw=False)
 
+msMovementExtraction(runlist)
 
+signalss, bahavss = signalss_save(gfiltersw=True, skipsw=True)
+signalss, roi_del_ix_save = QC()
+behavss2 = behavss2_calc()
+visualizaiton_save()
+savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'
+dict_save(savepath)
 
+signalss, bahavss = signalss_save(gfiltersw=False, skipsw=True)
+signalss, roi_del_ix_save = QC()
+behavss2 = behavss2_calc()
+#visualizaiton_save()
+savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_nongaus.pickle'
+dict_save(savepath)
 
 
 
