@@ -162,7 +162,7 @@ keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
 
-def msacc(class0, class1, mslabel='None', figsw=False, fontsz=15, fontloc="lower right", legendsw=True):
+def msacc(class0, class1, mslabel='None', figsw=False, fontsz=15, fontloc="lower right", legendsw=True, figsw2=False):
     pos_label = 1; roc_auc = -np.inf; fig = None
     while roc_auc < 0.5:
         class0 = np.array(class0); class1 = np.array(class1)
@@ -192,8 +192,20 @@ def msacc(class0, class1, mslabel='None', figsw=False, fontsz=15, fontloc="lower
         if legendsw:
             plt.legend(loc="lower right", prop={'size': fontsz})
             
+    if figsw2:
+        sz = 0.5
+        fig = plt.figure(1, figsize=(7*sz, 7*sz))
+        lw = 2
+        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))), alpha=1)
+        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        if legendsw:
+            plt.legend(loc="lower right", prop={'size': fontsz})
+            
     return roc_auc, accuracy, fig
 
+#Aprism_foramlin_pain = dict_gen(model2, msset='formalin', figsw=False, figsw2=True)
 
 def nanex(array1):
     array1 = np.array(array1)
@@ -509,7 +521,7 @@ movement_filter = np.array(movement)
         
 # In[]
 # target = np.array(model3); fsw=True
-def dict_gen(target, msset=None, legendsw=None):
+def dict_gen(target, msset=None, legendsw=None, figsw=False, figsw2=False):
     if msset is None:
         print('set mssset')
         pass
@@ -628,14 +640,14 @@ def dict_gen(target, msset=None, legendsw=None):
     #
     oxali0 = nanex(subset_mean[oxaliGroup,0])
     oxali1 = nanex(subset_mean[oxaliGroup,1])
-    oxali2 = nanex(subset_mean[[192,194],2])
-    oxali3 = np.concatenate((subset_mean[[188],2], subset_mean[[192,194],3]), axis=0)
+    oxali2 = nanex(subset_mean[[list(range(192,200))],2])
+    oxali3 = np.concatenate((subset_mean[[188,189],2], subset_mean[list(range(192,198)),3]), axis=0)
     
     if msset == 'formalin':
         name=''
         pain = np.concatenate((high1, midle1), axis=0)
         nonpain = np.concatenate((high0, midle0, saline0, saline1), axis=0)
-        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
         
         base_merge = np.concatenate((saline0, saline1), axis=0)
         Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(high0), pd.DataFrame(high1) \
@@ -649,7 +661,7 @@ def dict_gen(target, msset=None, legendsw=None):
         name=''
         pain = np.concatenate((cap1, CFA1, CFA2), axis=0)
         nonpain = base_merge
-        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
         
         Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(cap1), pd.DataFrame(CFA1) \
                                        , pd.DataFrame(CFA2)], ignore_index=True, axis=1)
@@ -659,7 +671,7 @@ def dict_gen(target, msset=None, legendsw=None):
         name='cap'
         pain = cap1
         nonpain = base_merge
-        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
         
         Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(cap1)], ignore_index=True, axis=1)
             
@@ -668,7 +680,7 @@ def dict_gen(target, msset=None, legendsw=None):
         name='cfa'
         pain = np.concatenate((CFA1, CFA2), axis=0)
         nonpain = base_merge
-        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
         
         Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(CFA1), pd.DataFrame(CFA2)], ignore_index=True, axis=1)
         
@@ -676,7 +688,7 @@ def dict_gen(target, msset=None, legendsw=None):
         name=''
         pain = np.concatenate((psl1, psl2), axis=0)
         nonpain = np.concatenate((psl0, sham0, sham1, sham2), axis=0)
-        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
         
         base_merge = np.concatenate((sham0, psl0, ipsaline0, ipclonidine0), axis=0)
         psl3_merge = np.concatenate((psl1, ipsaline1, ipclonidine1), axis=0)
@@ -712,7 +724,7 @@ def dict_gen(target, msset=None, legendsw=None):
         name='oxali'
         pain = np.concatenate((oxali1, oxali2), axis=0)
         nonpain = np.concatenate((oxali0, oxali3), axis=0)
-        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=True, legendsw=legendsw)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
         
         Aprism = pd.concat([pd.DataFrame(oxali0), pd.DataFrame(oxali1), pd.DataFrame(oxali2), pd.DataFrame(oxali3)], ignore_index=True, axis=1)
         
@@ -781,11 +793,23 @@ plt.savefig(savepath2 + 'psl_4ways', dpi=1000)#
 #### formalin pain
 legendsw = False
 if False:
-    Aprism_foramlin_pain = dict_gen(model2, msset='formalin', legendsw=legendsw)
+    Aprism_foramlin_pain = dict_gen(model2, msset='formalin', legendsw=legendsw, figsw2=True)
     savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
     plt.savefig(savepath2 + 'formalin_aionly', dpi=1000)#
     
-    _ = dict_gen(model2_mean, msset='formalin', legendsw=True)
+    Aprism_foramlin_pain = dict_gen(model2, msset='cap', legendsw=legendsw, figsw2=True)
+    savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+    plt.savefig(savepath2 + 'cap_aionly', dpi=1000)#
+    
+    Aprism_foramlin_pain = dict_gen(model2, msset='cfa', legendsw=legendsw, figsw2=True)
+    savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+    plt.savefig(savepath2 + 'cfa_aionly', dpi=1000)#
+    
+    Aprism_foramlin_pain = dict_gen(model3, msset='psl', legendsw=legendsw, figsw2=True)
+    savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
+    plt.savefig(savepath2 + 'psl_aionly', dpi=1000)#    
+    
+    _ = dict_gen(model2_mean, msset='formalin', legendsw=legendsw, figsw2=True)
     _ = dict_gen(model2roi_roi, msset='formalin', legendsw=True)
     _ = dict_gen(model2roi_mean, msset='formalin', legendsw=True)
     
@@ -817,6 +841,8 @@ Aprism_psl_pain = dict_gen(model3, msset='psl', legendsw=legendsw)
 savepath2 = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\psl_visualization\\'
 plt.savefig(savepath2 + 'psl_roc', dpi=1000)#
 
+Aprism_psl_pain = dict_gen(t4, msset='psl', legendsw=legendsw)
+Aprism_psl_pain_ratio = dict_gen(engram_activity, msset='psl', legendsw=legendsw)
 
 _ = dict_gen(model2, msset='psl', legendsw=legendsw)
 _ = dict_gen(model5, msset='psl', legendsw=legendsw)
@@ -833,7 +859,6 @@ plt.savefig(savepath2 + 'capcfa_movement_roc', dpi=1000)#
 legendsw = True
 _ = dict_gen(model5, msset='psl', legendsw=legendsw)
 _ = dict_gen(model5, msset='capcfa', legendsw=True)
-
 
 Aprism_oxli_t4 = dict_gen(t4, msset='oxali', legendsw=True)
 Aprism_oxli_movement = dict_gen(movement, msset='oxali', legendsw=True)
@@ -852,13 +877,13 @@ with open(picklesavename, 'rb') as f:  # Python 3: open(..., 'wb')
     
 pain = cerebellum_capsaicin[:7,1]
 nonpain = np.concatenate((cerebellum_capsaicin[7:,:].flatten(), cerebellum_capsaicin[:7,0], cerebellum_capsaicin[:7,2]),axis=0)
-roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw=True, legendsw=legendsw)
+roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw2=True, legendsw=legendsw)
 plt.savefig(savepath2 + 'cerebellum_ROC.png', dpi=1000)
 
 
 # In[] itch vs non-itch
 if True:
-    savepath = 'D:\\mscore\\syncbackup\\save\\tensorData\\result\\'    
+    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\tensorData\\result\\'    
     project_list = []
 
     project_list.append(['20200308_itch_vs_before', 111, None])
@@ -879,6 +904,14 @@ if True:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model_itch_vs_nonitch = np.nanmean(testsw3_mean, axis=2)
     
+    fset2 = highGroup + midleGroup + highGroup2 
+    Aprism_itch_late = model_itch_vs_nonitch[fset2,:]
+    Aprism_itch_late2 = model2[fset2,:]
+    
+    Aprism_itch_late_yohimibine = model_itch_vs_nonitch[yohimbineGroup,:]
+    Aprism_itch_late_yohimibine2 = model2[yohimbineGroup,:]
+    
+    
     pain = model_itch_vs_nonitch[chloroquineGroup,1]
     
     tmp1 = model_itch_vs_nonitch[chloroquineGroup,0]
@@ -887,7 +920,7 @@ if True:
     
 #    nonpain = np.array(model_itch_vs_nonitch[chloroquineGroup,0])
 
-    roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw=True, legendsw=legendsw)
+    roc_auc, _, _ = msacc(nonpain, pain, mslabel='AUC:', figsw2=True, legendsw=legendsw)
     
     # saline inter를 사용할이유가?
     # saline을 모두 빼고, ROC 및 본 그래프 수정
@@ -928,6 +961,7 @@ if False:
                                 print('nan')
         model_itch_vs_pain = np.nanmean(testsw3_mean, axis=2)
         
+        
         a1 = model_itch_vs_pain[highGroup,1]
         model_itch_vs_pain[highGroup2,1]
         a2 = model_itch_vs_pain[chloroquineGroup,1]           
@@ -939,7 +973,7 @@ if True:
         
     pain = df1[:,0]
     nonpain = df1[:,1]
-    roc_auc, _, _ = msacc(nonpain, pain, mslabel='', figsw=True, legendsw=legendsw)
+    roc_auc, _, _ = msacc(nonpain, pain, mslabel='', figsw2=True, legendsw=legendsw)
     plt.savefig(savepath2 + 'itch_vs_pain_ROC.png', dpi=1000)
 
 
