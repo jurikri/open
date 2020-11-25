@@ -313,7 +313,7 @@ if True:
     
 # In Formalin CV-- model2_roi_roi (II)
  
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2-roi\\'               
     project_list = []
 
@@ -335,7 +335,7 @@ if True:
     
 # In Formalin CV-- model2_roi_eman (IA)
  
-if True:
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2-roi\\'               
     project_list = []
 
