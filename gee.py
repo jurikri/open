@@ -81,7 +81,7 @@ print('savepath', savepath)
 #
 
 # var import
-with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+with open('D:\\mscore\\syncbackup\\paindecoder\\data\\mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
     
 FPS = msdata_load['FPS']
@@ -162,49 +162,6 @@ keylist = list(msGroup.keys())
 for k in range(len(keylist)):
     grouped_total_list += msGroup[keylist[k]]
 
-def msacc(class0, class1, mslabel='None', figsw=False, fontsz=15, fontloc="lower right", legendsw=True, figsw2=False):
-    pos_label = 1; roc_auc = -np.inf; fig = None
-    while roc_auc < 0.5:
-        class0 = np.array(class0); class1 = np.array(class1)
-        class0 = class0[np.isnan(class0)==0]; class1 = class1[np.isnan(class1)==0]
-        
-        anstable = list(np.ones(class1.shape[0])) + list(np.zeros(class0.shape[0]))
-        predictValue = np.array(list(class1)+list(class0)); predictAns = np.array(anstable)
-        #            
-        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=pos_label)
-        
-        maxix = np.argmax((1-fpr) * tpr)
-        specificity = 1-fpr[maxix]; sensitivity = tpr[maxix]
-        accuracy = ((class1.shape[0] * sensitivity) + (class0.shape[0]  * specificity)) / (class1.shape[0] + class0.shape[0])
-        roc_auc = metrics.auc(fpr,tpr)
-        
-        if roc_auc < 0.5:
-            pos_label = 0
-            
-    if figsw:
-        sz = 0.9
-        fig = plt.figure(1, figsize=(7*sz, 5*sz))
-        lw = 2
-        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))), alpha=1)
-        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        if legendsw:
-            plt.legend(loc="lower right", prop={'size': fontsz})
-            
-    if figsw2:
-        sz = 0.5
-        fig = plt.figure(1, figsize=(7*sz, 7*sz))
-        lw = 2
-        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))), alpha=1)
-        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        if legendsw:
-            plt.legend(loc="lower right", prop={'size': fontsz})
-            
-    return roc_auc, accuracy, fig
-
 #Aprism_foramlin_pain = dict_gen(model2, msset='formalin', figsw=False, figsw2=True)
 
 def nanex(array1):
@@ -262,7 +219,7 @@ if False:
 # In[] Formalin CV-- model2 (AI)
  
 if True:
-    savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
+    savepath = 'D:\\mscore\\syncbackup\\google_syn\\kerasdata\\model2\\'               
     project_list = []
 
     project_list.append(['foramlin_only_1', 100, None])
@@ -285,9 +242,12 @@ if True:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model2 = np.nanmean(testsw3_mean, axis=2)
     
+np.nanmean(model2)    
 # In Formalin CV-- model2 - mean (AA)
  
-if True:
+    
+    
+if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
     project_list = []
 
@@ -360,7 +320,7 @@ if True:
     t = 10
     testsw3_mean = np.zeros((N,5,t)); testsw3_mean[:] = np.nan         
     for i in range(t):
-        path1 = 'D:\\mscore\\syncbackup\\google_syn\\model3\\'
+        path1 = 'D:\\mscore\\syncbackup\\google_syn\kerasdata\\model3\\'
         path2 = 'fset + baseonly + CFAgroup + capsaicinGroup_0.69_0415_t' + str(i) + '.h5'
         path3 = path1+ path2
         
@@ -370,6 +330,33 @@ if True:
                 testsw3_mean[:testsw3.shape[0],:,i] = testsw3
     model3 = np.nanmean(testsw3_mean, axis=2)
     
+###
+
+subset_mean = model3
+
+tmp1 = subset_mean[[169,170],0:2].flatten() # 14
+tmp2 = subset_mean[[171],0:2].flatten() # 9
+tmp3 = subset_mean[[176,183,184],0:2].flatten() # 10
+tmp4 = subset_mean[[185,186],2:4].flatten() # 20
+
+
+
+gbvx10 = np.concatenate((tmp1, tmp2, tmp3, tmp4), axis=0)
+            
+
+np.mean(gbvx10) + np.std(gbvx10, ddof=1) * 3
+
+
+
+
+
+
+
+
+
+
+
+
     
         # In[] model4 load
 if False:
@@ -412,7 +399,36 @@ if True:
                     testsw5 = pickle.load(f)
                 testsw5_mean[SE,:,ix] = testsw5[SE,:]
     model5 = np.nanmean(testsw5_mean, axis=2)
-   
+
+# In[] model_basic _ oxaliplatin
+    
+msdir2 = 'D:\\mscore\\code_lab\\'
+import sys; sys.path.append(msdir2); 
+import msFunction
+
+if True:
+    savepath = 'D:\\mscore\\syncbackup\\google_syn\\kerasdata\\'               
+    project_list = ['20201020_basic_1', '20201020_basic_2', '20201020_basic_3', '20201020_basic_4', '20201020_basic_5']
+    
+    mssave = msFunction.msarray([N,5])
+    for i in range(len(project_list)):
+        loadpath = savepath + project_list[i] + '\\exp\\result_matrix.h5'
+        if os.path.isfile(loadpath):
+          with open(loadpath, 'rb') as f:  # Python 3: open(..., 'rb')
+                resultmatrix = pickle.load(f) # [SE][se][epoch] # epoch 평균내어 사용
+        for SE in range(N):
+            for se in range(5):
+                mssave[SE][se].append(np.nanmean(resultmatrix[SE][se]))
+
+model_basic = np.zeros((N,5))
+for SE in range(N):
+    for se in range(5):
+        model_basic[SE,se] = np.nanmean(mssave[SE][se])
+
+import paindecoder_grouping
+
+target = np.array(model_basic)
+aprism_oxali = paindecoder_grouping.dict_gen(target, msset='oxali', legendsw=True, figsw=True, figsw2=False)
 # In[] raw test (구버전) - with model3
     
 if True:
@@ -521,17 +537,64 @@ movement_filter = np.array(movement)
         
 # In[]
 # target = np.array(model3); fsw=True
+def msacc(class0, class1, mslabel='None', figsw=False, fontsz=15, fontloc="lower right", legendsw=True, figsw2=False):
+    pos_label = 1; roc_auc = -np.inf; fig = None
+    while roc_auc < 0.5:
+        class0 = np.array(class0); class1 = np.array(class1)
+        class0 = class0[np.isnan(class0)==0]; class1 = class1[np.isnan(class1)==0]
+        
+        anstable = list(np.ones(class1.shape[0])) + list(np.zeros(class0.shape[0]))
+        predictValue = np.array(list(class1)+list(class0)); predictAns = np.array(anstable)
+        #            
+        fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=pos_label)
+        
+        maxix = np.argmax((1-fpr) * tpr)
+        specificity = 1-fpr[maxix]; sensitivity = tpr[maxix]
+        accuracy = ((class1.shape[0] * sensitivity) + (class0.shape[0]  * specificity)) / (class1.shape[0] + class0.shape[0])
+        roc_auc = metrics.auc(fpr,tpr)
+        
+        if roc_auc < 0.5:
+            pos_label = 0
+            
+    if figsw:
+        sz = 0.9
+        fig = plt.figure(1, figsize=(7*sz, 5*sz))
+        lw = 2
+        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))), alpha=1)
+        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        if legendsw:
+            plt.legend(loc="lower right", prop={'size': fontsz})
+            
+    if figsw2:
+        sz = 0.5
+        fig = plt.figure(1, figsize=(5*sz, 5*sz))
+        lw = 2
+        plt.plot(fpr, tpr, lw=lw, label = (mslabel + ' ' + str(round(roc_auc,2))), alpha=1)
+        plt.plot([0, 1], [0, 1], lw=lw, linestyle='--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        print('roc_auc', roc_auc)
+        if legendsw:
+            plt.legend(loc="lower right", prop={'size': fontsz})
+            
+    return roc_auc, accuracy, fig
+
+
+target = model2
 def dict_gen(target, msset=None, legendsw=None, figsw=False, figsw2=False):
     if msset is None:
         print('set mssset')
         pass
     
     target = np.array(target)
-    print(target.shape, movement_filter.shape)
-    
+#    print(target.shape, movement_filter.shape)
+#    
     if msset in ['psl'] and False:
         print('movement > 0.5 filter')
-        ix = np.where(movement_filter[:,0] > 0.5)[0]
+        ix = np.where(movement[:,0] > 0.5)[0]
+        print('mov out', ix)
         target[ix,:] = np.nan
         
     # subset 평균처리        
@@ -640,11 +703,21 @@ def dict_gen(target, msset=None, legendsw=None, figsw=False, figsw2=False):
     #
     oxali0 = nanex(subset_mean[oxaliGroup,0])
     oxali1 = nanex(subset_mean[oxaliGroup,1])
-    oxali2 = nanex(subset_mean[[list(range(192,200))],2])
-    oxali3 = np.concatenate((subset_mean[[188,189],2], subset_mean[list(range(192,198)),3]), axis=0)
+    oxali2 = nanex(subset_mean[[list(range(192,200)) + [202,203,220,221]],2]) # for pain
+    tmp1 = nanex(subset_mean[[188,189,200,201],2]) # for nonpain
+    tmp2 = nanex(subset_mean[list(range(192,198)) + [202,203,220,221],3])
+    oxali3 = nanex(np.concatenate((tmp1, tmp2), axis=0))
+    
+    glucose0 = nanex(np.concatenate((subset_mean[[204,205],0],subset_mean[list(range(206,216)),0]), axis=0))
+    glucose1 = nanex(np.concatenate((subset_mean[[204,205],1],subset_mean[list(range(206,216)),1]), axis=0))
+    glucose2 = nanex(subset_mean[list(range(206,216)),2])
+    glucose3 = nanex(np.concatenate((subset_mean[[204,205],2],subset_mean[list(range(206,216)),3]), axis=0))
+    
+    scSaline0 = nanex(subset_mean[list(range(216,220)) + [204,205],0])
+    scSaline1 = nanex(subset_mean[list(range(216,220)) + [204,205],1:3])
     
     if msset == 'formalin':
-        name=''
+        name='formalin'
         pain = np.concatenate((high1, midle1), axis=0)
         nonpain = np.concatenate((high0, midle0, saline0, saline1), axis=0)
         roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
@@ -658,7 +731,7 @@ def dict_gen(target, msset=None, legendsw=None, figsw=False, figsw2=False):
         
     elif msset == 'capcfa':
         base_merge = np.concatenate((saline0, saline1), axis=0)
-        name=''
+        name='capcfa'
         pain = np.concatenate((cap1, CFA1, CFA2), axis=0)
         nonpain = base_merge
         roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
@@ -685,7 +758,7 @@ def dict_gen(target, msset=None, legendsw=None, figsw=False, figsw2=False):
         Aprism = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(CFA1), pd.DataFrame(CFA2)], ignore_index=True, axis=1)
         
     elif msset == 'psl':
-        name=''
+        name='psl'
         pain = np.concatenate((psl1, psl2), axis=0)
         nonpain = np.concatenate((psl0, sham0, sham1, sham2), axis=0)
         roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
@@ -697,8 +770,8 @@ def dict_gen(target, msset=None, legendsw=None, figsw=False, figsw2=False):
         Aprism = [[], [], [], []]
         
         # base, sham, psl
-        Aprism[0] = pd.concat([pd.DataFrame(base_merge), pd.DataFrame(sham1), pd.DataFrame(psl3_merge), \
-                            pd.DataFrame(sham2), pd.DataFrame(psl10_merge)], \
+        Aprism[0] = pd.concat([pd.DataFrame(sham0), pd.DataFrame(psl0), pd.DataFrame(sham1), pd.DataFrame(psl1), \
+                            pd.DataFrame(sham2), pd.DataFrame(psl2)], \
                             ignore_index=True, axis=1)
         
         # psl+ipsaline, psl+ipclonidine, psl+ipGB/VX
@@ -723,14 +796,44 @@ def dict_gen(target, msset=None, legendsw=None, figsw=False, figsw2=False):
     elif msset == 'oxali':
         name='oxali'
         pain = np.concatenate((oxali1, oxali2), axis=0)
-        nonpain = np.concatenate((oxali0, oxali3), axis=0)
+        nonpain = np.concatenate((oxali0, oxali3, glucose0, glucose1, glucose2, glucose3), axis=0)
+        
+        
+        # 3일차 oxali vs 3일차 vehicle
+        pain = np.concatenate((oxali1, []), axis=0)
+        nonpain = np.concatenate((glucose1, []), axis=0)
         roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
         
-        Aprism = pd.concat([pd.DataFrame(oxali0), pd.DataFrame(oxali1), pd.DataFrame(oxali2), pd.DataFrame(oxali3)], ignore_index=True, axis=1)
         
+        Aprism = pd.concat([pd.DataFrame(glucose0), pd.DataFrame(glucose1), pd.DataFrame(glucose2), pd.DataFrame(glucose3), \
+                            pd.DataFrame(oxali0), pd.DataFrame(oxali1), pd.DataFrame(oxali2), pd.DataFrame(oxali3)], ignore_index=True, axis=1)
+            
+    elif msset == 'scSaline':
+        name='scSaline'
+        pain = np.concatenate((scSaline1, []), axis=0)
+        nonpain = np.concatenate((scSaline0, []), axis=0)
+        roc_auc, _, _ = msacc(nonpain, pain, mslabel= name + ', AUC:', figsw=figsw, figsw2=figsw2, legendsw=legendsw)
+        
+        Aprism = pd.concat([pd.DataFrame(scSaline0), pd.DataFrame(scSaline1)], ignore_index=True, axis=1)
+             
     return Aprism
 
 # In[]
+
+legendsw = False; figsw2 = True
+
+Aprism_capcfa_pain = dict_gen(model2, msset='cap', legendsw=legendsw, figsw2=figsw2)
+Aprism_capcfa_pain = dict_gen(model2, msset='cfa', legendsw=legendsw, figsw2=figsw2)
+Aprism_capcfa_pain = dict_gen(model_basic, msset='oxali', legendsw=legendsw, figsw2=figsw2)
+
+savepath2 = 'D:\\mscore\\syncbackup\\google_syn\\prismdata\\'
+plt.savefig(savepath2 + 'roc_cap_cfa_oxali.png', dpi=1000)#
+
+
+Aprism_capcfa_pain = dict_gen(model3, msset='psl', legendsw=legendsw, figsw2=figsw2)
+
+savepath2 = 'D:\\mscore\\syncbackup\\google_syn\\prismdata\\'
+plt.savefig(savepath2 + 'roc_psl.png', dpi=1000)#
 
 #model1_dict = dict_gen(model1)
 #model3_dict = dict_gen(model3)
@@ -997,6 +1100,8 @@ roc_auc, _, _ = msacc(nonpain, pain, mslabel='S1, itch vs pain, AUC:', \
 
 plt.savefig(savepath2 + 'etc_ROC_HR.png', dpi=1000)
 
+
+#%%
 
 
 
