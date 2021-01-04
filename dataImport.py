@@ -32,22 +32,22 @@ itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분�
 ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159]
 ipclonidineGroup =  [151,153,154,157,160,161,162,163]
 gabapentinGroup =   [164,165,166,167,168,169,170,171,172,173,174,175,176,177, \
-                     178,179,180,181,182,183,184,185,186]
+                     178,179,180,181,182,183,184,185,186, 226, 227, 228, 229]
 
 beevenomGroup =     [187]
-oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203]
-glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215]
+oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,220,221]
+glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
 
-PSLscsaline =       [216,217,218,219]
+PSLscsaline =       [216,217,218,219,224,225]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
           [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149], \
           [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168], \
           [169,170],[172,173],[174,175],[177,178],[179,180],[188,189],[190,191],[192,193], \
-          [194,195],[196,197],[198,199]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [194,195],[196,197],[198,199],[226,227],[228,229]] # baseline 독립, training 때 base를 skip 하지 않음.
 
-for i in range(200,219,2):
+for i in range(200,226,2):
     msset2.append([i, i+1])
 
 msGroup = dict()
@@ -147,9 +147,6 @@ def smoothListGaussian(array1,window):
          smoothed[i]=sum(np.array(array1[i:i+window])*weight)/sum(weight)  
 
      return smoothed  
-
-# In[]
-
 
 def mssignal_save(list1, gfiltersw=True, skipsw = False):
     newformat = list(range(70,N2))
@@ -406,6 +403,13 @@ def msMovementExtraction(list1, skipsw=False):
                 thr = 1
             if N == 154 and i in [3]:
                 thr = 1
+                #
+            if N == 223 and i in [0]:
+                thr = 1.4
+            if N == 224 and i in [1]:
+                thr = 1.6
+            if N == 224 and i in [2]:
+                thr = 1.3
                    
             aline = np.zeros(diffplot.shape[0]); aline[:] = thr
 #            movement_thr_save[SE,se] = thr
@@ -431,6 +435,10 @@ def msMovementExtraction(list1, skipsw=False):
 
             # raw
             msmatrix[msmatrix<thr] = 0
+            
+            # exception
+            if N == 223 and i in [3]: msmatrix[:5000] = 0
+            
             savems = msmatrix
 
             msout = pd.DataFrame(savems ,index=None, columns=None)
@@ -600,7 +608,7 @@ def behavss2_calc():
                     
             xaxis = list(); yaxis = list()
             if np.mean(behav) > 0.01 or (SE == 36 and se == 3):
-                synlist = np.arange(-300,301,1)
+                synlist = np.arange(-300,300,1)
                 
                 if (SE == 36 and se == 3) or (SE == 1 and se == 2) or (SE == 38 and se == 2) or (SE == 42 and se == 1): # 예외처리
                      synlist = np.arange(-50,50,1)
@@ -625,16 +633,16 @@ def behavss2_calc():
                                    or (SE == 37 and se == 1) or (SE == 37 and se == 4) or (SE == 38 and se == 2) \
                                    or (SE == 39 and se == 4) or (SE == 40 and se == 4) or (SE == 41 and se == 1) \
                                    or (SE == 42 and se == 0) or (SE == 41 and se == 1) or (SE == 42 and se == 0) \
-                                   or (SE == 42 and se == 1))
+                                   or (SE == 42 and se == 1) or (SE == 220 and se == 2))
                     
-                    if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept:
-                        continue
+                    if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept: continue
      
                     if not np.sum(behav_syn2) == 0:
                         r = pearsonr(singal_syn, behav_syn2)[0]
                     elif np.sum(behav_syn2) == 0:
                         r = 0
                         
+#                    print(syn, r)
                     xaxis.append(syn)
                     yaxis.append(r)
                     
@@ -657,13 +665,11 @@ def behavss2_calc():
     #SE = 1; se = 1
     #SE = 8; se = 4
     
-    fixlist = [[1,1],[8,4]]
+    fixlist = [[1,1],[8,4],[220,2],[220,3]]
     print('다음 session은 syn가 안맞으므로 수정합니다.')
     print(fixlist)
 
-# In
-
-
+#%
     behavss2 = list()
     for SE in range(N):
         behavss2.append([])
@@ -680,7 +686,9 @@ def behavss2_calc():
                 elif s < 0:
                     s = -s
                     fix[:-s] = behav_syn[s:]
-                    
+                
+                plt.figure()
+                plt.title('synfix ' + str(SE) + '_' + str(se))
                 plt.plot(np.mean(signalss[SE][se], axis=1))
                 plt.plot(fix)
                 
@@ -754,8 +762,6 @@ def dict_save(savepath):
 runlist = range(192, N)
 mssignal_save(runlist)
 
-runlist = range(192, N)
-mssignal_save(runlist, gfiltersw=False)
 
 msMovementExtraction(runlist)
 
@@ -766,12 +772,6 @@ visualizaiton_save()
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'
 dict_save(savepath)
 
-signalss, bahavss = signalss_save(gfiltersw=False, skipsw=True)
-signalss, roi_del_ix_save = QC()
-behavss2 = behavss2_calc()
-#visualizaiton_save()
-savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_nongaus.pickle'
-dict_save(savepath)
 
 
 
