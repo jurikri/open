@@ -26,7 +26,6 @@ shamGroup =         [81,89,90,91,92,97]
 adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
 CFAgroup =          [106,107,108,109,116,117]
 highGroup2 =        [95,96]  # base / ealry / inter
-highGroup3 =        list(range(230,239))
 chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
 itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
@@ -34,12 +33,13 @@ ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159
 ipclonidineGroup =  [151,153,154,157,160,161,162,163]
 gabapentinGroup =   [164,165,166,167,168,169,170,171,172,173,174,175,176,177, \
                      178,179,180,181,182,183,184,185,186, 226, 227, 228, 229]
-
 beevenomGroup =     [187]
 oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,220,221]
 glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
-
 PSLscsaline =       [216,217,218,219,224,225]
+
+highGroup3 =        list(range(230,239))
+testGroup =         [239]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
@@ -77,6 +77,7 @@ msGroup['beevenomGroup'] = beevenomGroup
 msGroup['oxaliGroup'] = oxaliGroup
 msGroup['glucoseGroup'] = glucoseGroup
 msGroup['PSLscsaline'] = PSLscsaline
+msGroup['highGroup3'] = highGroup3
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -91,7 +92,8 @@ sys.path.append('C:\\Users\\skklab\\Documents\\mscode')
 sys.path.append('D:\\mscore\\code_lab')
 import msFunction
 import msfilepath
-import pickle
+try: import pickle5 as pickle
+except: import pickle
 import hdf5storage
 import matplotlib.pyplot as plt
 
@@ -103,7 +105,8 @@ while not(endsw):
 N = cnt; N2 = N
 print('totnal N', N)
 
-FPS = 4.3650966869   
+FPS = 4.3650966869
+SNU_FPS = 4.3650966869
 runlist = range(N)
    
 #%
@@ -150,30 +153,47 @@ def smoothListGaussian(array1,window):
      for i in range(len(smoothed)):  
          smoothed[i]=sum(np.array(array1[i:i+window])*weight)/sum(weight)  
 
-     return smoothed  
-
-def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True):
+     return smoothed
+ 
+def ms_syn(target_signal=None, FPS=None):
+    downratio = FPS / SNU_FPS
+    wanted_size = int(round(target_signal.shape[0] / downratio))
+    allo = np.zeros(wanted_size) * np.nan
+    
+    for frame in range(wanted_size):
+        s = int(round(frame*downratio))
+        e = int(round(frame*downratio+downratio))
+        allo[frame] = np.mean(target_signal[s:e])
+        
+    return allo
+#%%
+gfiltersw=True; skipsw = False; dfsw=True; SE = 0
+ 
+def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffset=None):
     signalss = msFunction.msarray([N, 5])
     behavss = msFunction.msarray([N, 5])
     roi_del_ix_save = msFunction.msarray([N, 5]); thr = 10 # df limit
     
     snuformat1 = list(range(0,70)) + [74]
     snuformat2 = list(range(70,230)); snuformat2.remove(74)
-    khuformat = list(range(230,N2)) # 서울대 8 bit -> 경희대 16 bit 이므로, 경희대 data / (2 ** 8) 으로 nmr
+    khuformat = list(range(230,N2)) 
 
     for SE in list1:
         print('signal preprosessing...', SE)
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-        if dfsw: savepath = path + '\\singalss_behavss.pickle'
+        if dfsw: 
+            savepath = path + '\\singalss_behavss.pickle'
+            savepath = path + '\\singalss_behavss_offset.pickle'
         else: 
             savepath = path + '\\singalss_behavss_zscore.pickle'
             savepath = path + '\\singalss_behavss_zscore_biex.pickle'
+#            savepath = path + '\\singalss_behavss_zscore_biex_offset.pickle'
 #        savepath = path + '\\singalss_behavss_zscore_meannmr.pickle'
         
 #        if gfiltersw:  savename = path + '\\signal_save.xlsx'
 #        elif not(gfiltersw): savename = path + '\\signal_save_nongaussian.xlsx'
             
-        if not(os.path.exists(savepath) and skipsw): 
+        if not(os.path.exists(savepath) and skipsw and not(SE in khuformat)): 
             if SE in snuformat1:
                 loadpath = path + '\\' + raw_filepath
                 df = pd.read_excel(loadpath)
@@ -253,7 +273,8 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True):
                     array0[se] = np.array(msraw)
                     array2.append(np.array(array0[se][:,1:]))
                 print(str(SE) + ' ' +raw_filepath + ' ROI ', array2[0].shape[1])
-                
+
+### KHU format              
             elif SE in khuformat:
                 loadpath = path + '\\' + raw_filepath
                 array0 = []; array2 =[]; k = -1
@@ -266,7 +287,8 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True):
                     except:
                         break
                 
-                print(SE, 'newformat으로 처리됩니다.', 'total session #', k)    
+                print(SE, 'newformat으로 처리됩니다.', 'total session #', k)
+                se = 0
                 for se in range(k):
                     ROInum = array0[se].shape[1]
                     for col in range(ROInum):
@@ -283,7 +305,27 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True):
                             break
     
                     array0[se] = np.array(array0[se][:timeend,:ROInum])
-#                    array0[se] = array0[se] / np.mean(array0) # (2**8) # khuformat specific process
+                    array0[se] = array0[se] - khuoffset
+                    array0[se][np.where(array0[se]<0)] = 0
+                    
+                    KHU_FPS = 1/0.191001
+                    if SE in [231, 232, 233, 234]: 
+                        KHU_FPS = 1/0.2291
+                        print(SE, 'Galvano scanner FPS', KHU_FPS)
+                    
+#                    import matplotlib.pyplot as plt
+#                    
+#                    array0[se].shape
+#                    plt.figure(); plt.plot(array0[se][:,1])
+
+                    savematrix = []
+                    for ROI in range(0, array0[se].shape[1]):
+                        savematrix.append(ms_syn(target_signal=array0[se][:,ROI], FPS=KHU_FPS))
+                    array0[se] = np.transpose(np.array(savematrix))
+                    
+#                    array0[se].shape
+#                    plt.figure(); plt.plot(array0[se][:,1])
+
                     print(str(SE) + ' max ' + str(np.max(np.max(array0[se]))) + \
                           ' min ' +  str(np.min(np.min(array0[se]))))
                     
@@ -312,7 +354,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True):
                 
             # In F zero 계산
             if dfsw:
-                array4 = list()
+                array4 = list(); se = 0; n = 0
                 for se in range(len(array3)):
                     matrix = np.array(array3[se])
                     matrix = np.array(list(matrix[:,:]), dtype=np.float)
@@ -597,62 +639,62 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
 
 # signal & behavior import
 #signalss = list(); bahavss = list()
-def signalss_save(gfiltersw=True, skipsw=True):
-    signalss=[];[signalss.append([]) for u in range(N2)]
-    bahavss=[];[bahavss.append([]) for u in range(N2)]
-    
-    RESULT_SAVE_PATH = msdir + '\\raw_tmpsave\\'
-    
-    if not os.path.exists(RESULT_SAVE_PATH):
-        os.mkdir(RESULT_SAVE_PATH)
-    
-    for SE in range(N2):
-        print(SE, N)
-        if gfiltersw: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw.pickle'
-        else: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw_nongaussian.pickle'
-        
-        if os.path.isfile(pickle_savepath) and skipsw:
-            with open(pickle_savepath, 'rb') as f:  # Python 3: open(..., 'rb')
-                msdata_load = pickle.load(f)
-                
-            signals = msdata_load['signals']
-            behavs = msdata_load['behavs']
-            
-        else:
-            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-        #    loadpath = path + '\\events_save.xlsx'
-            loadpath2 = path + '\\signal_save.xlsx'
-            
-            signals = list(); behavs = list() # events = list(); 
-            os.chdir(path)
-            
-            df2 = None
-            for se in range(5):
-                try:
-                    df2 = pd.read_excel(loadpath2, header=None, sheet_name=se)
-                    df3 = np.array(pd.read_csv('MS_' + behav_data[se]))
-            
-                    signals.append(np.array(df2))
-                    behavs.append(np.array(df3))
-                    
-                except:
-                    if se < 3:
-                        print('se 3 이하 session은 필수입니다.')
-                        import sys
-                        sys.exit
-                        
-                    print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
-                    signals.append(np.array(df2))
-                    behavs.append(np.array(df3))
-                    
-            tmp1 = { 'signals' : signals, 'behavs' : behavs}
-            with open(pickle_savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump(tmp1, f, pickle.HIGHEST_PROTOCOL)
-                print(pickle_savepath, '저장되었습니다.')
-                
-        signalss[SE] = signals
-        bahavss[SE] = behavs
-    return signalss, bahavss
+#def signalss_save(gfiltersw=True, skipsw=True):
+#    signalss=[];[signalss.append([]) for u in range(N2)]
+#    bahavss=[];[bahavss.append([]) for u in range(N2)]
+#    
+#    RESULT_SAVE_PATH = msdir + '\\raw_tmpsave\\'
+#    
+#    if not os.path.exists(RESULT_SAVE_PATH):
+#        os.mkdir(RESULT_SAVE_PATH)
+#    
+#    for SE in range(N2):
+#        print(SE, N)
+#        if gfiltersw: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw.pickle'
+#        else: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw_nongaussian.pickle'
+#        
+#        if os.path.isfile(pickle_savepath) and skipsw:
+#            with open(pickle_savepath, 'rb') as f:  # Python 3: open(..., 'rb')
+#                msdata_load = pickle.load(f)
+#                
+#            signals = msdata_load['signals']
+#            behavs = msdata_load['behavs']
+#            
+#        else:
+#            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+#        #    loadpath = path + '\\events_save.xlsx'
+#            loadpath2 = path + '\\signal_save.xlsx'
+#            
+#            signals = list(); behavs = list() # events = list(); 
+#            os.chdir(path)
+#            
+#            df2 = None
+#            for se in range(5):
+#                try:
+#                    df2 = pd.read_excel(loadpath2, header=None, sheet_name=se)
+#                    df3 = np.array(pd.read_csv('MS_' + behav_data[se]))
+#            
+#                    signals.append(np.array(df2))
+#                    behavs.append(np.array(df3))
+#                    
+#                except:
+#                    if se < 3:
+#                        print('se 3 이하 session은 필수입니다.')
+#                        import sys
+#                        sys.exit
+#                        
+#                    print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
+#                    signals.append(np.array(df2))
+#                    behavs.append(np.array(df3))
+#                    
+#            tmp1 = { 'signals' : signals, 'behavs' : behavs}
+#            with open(pickle_savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+#                pickle.dump(tmp1, f, pickle.HIGHEST_PROTOCOL)
+#                print(pickle_savepath, '저장되었습니다.')
+#                
+#        signalss[SE] = signals
+#        bahavss[SE] = behavs
+#    return signalss, bahavss
     # In
 from scipy.stats.stats import pearsonr 
 def msbehav_syn(behav, signal): # behav syn 맞추기 
@@ -669,61 +711,61 @@ def msbehav_syn(behav, signal): # behav syn 맞추기
             
     return behav_syn  
 
-def QC():
-    # In QC
-    # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
-    thr = 10
-    roi_del_ix_save = msFunction.msarray([N2, 5])
-    
-    for SE in range(N2):
-        print(SE)
-        signals = signalss[SE]
-        rois = np.zeros(signals[0].shape[1])
-         
-        for se in range(5):
-            wsw = True
-            while wsw:
-                wsw = False
-                signal = np.array(signalss[SE][se])
-                for n in range(signal.shape[1]):
-                    msplot = np.zeros(signal.shape[0]-1)
-                    for frame in range(signal.shape[0]-1):
-                        msplot[frame] = np.abs(signal[frame+1,n] - signal[frame,n])
-        
-                        if msplot[frame] > thr and rois[n] < 20:
-                            wsw = True
-                            rois[n] += 1
-#                            print(SE, se, n, msplot[frame], frame+1)
-                            signalss[SE][se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
-            
-            # 이상신호가 20개 이상일때 ROI 제거되도록 설계되었으나,
-            # 20200818, traial간 ROI tracking을 위해서 바로 제거하지 않고, 제거 정보만 넘기는 것으로 수정하겠음.
-        for se in range(5):
-            signal = np.array(signalss[SE][se])
-    #        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
-            if se == 0: print('ROI delete', SE, se, np.where(rois==20)[0])
-            roi_del_ix = np.where(rois==20)[0]
-            roi_del_ix_save[SE][se] = roi_del_ix
-  
-    # 모든 session을 통틀어 df/d0 0.3을 한번도 넘지 못한 ROI의 존재 유무
-    # 못넘으면 ROI에서 제거
-    
-    for SE in range(N):
-        ROInum = np.array(signalss[SE][0]).shape[1]
-        for ROI in range(ROInum):
-            if not ROI in roi_del_ix:
-                passsw = False
-                for se in range(5):
-                    if np.max(signalss[SE][se][:,ROI]) > 0.3:
-                        passsw = True
-                        break
-                if not(passsw):
-                    print('SE', SE, 'ROI', ROI, "signal max가 0.3이하인 ROI가 존재함")
-                    print('ROI 에서 제거후 진행')
-                    tmp = list(roi_del_ix_save[SE][se]) + [ROI]
-                    roi_del_ix_save[SE][se] = np.array(tmp)
-                    
-    return signalss, roi_del_ix_save
+#def QC():
+#    # In QC
+#    # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
+#    thr = 10
+#    roi_del_ix_save = msFunction.msarray([N2, 5])
+#    
+#    for SE in range(N2):
+#        print(SE)
+#        signals = signalss[SE]
+#        rois = np.zeros(signals[0].shape[1])
+#         
+#        for se in range(5):
+#            wsw = True
+#            while wsw:
+#                wsw = False
+#                signal = np.array(signalss[SE][se])
+#                for n in range(signal.shape[1]):
+#                    msplot = np.zeros(signal.shape[0]-1)
+#                    for frame in range(signal.shape[0]-1):
+#                        msplot[frame] = np.abs(signal[frame+1,n] - signal[frame,n])
+#        
+#                        if msplot[frame] > thr and rois[n] < 20:
+#                            wsw = True
+#                            rois[n] += 1
+##                            print(SE, se, n, msplot[frame], frame+1)
+#                            signalss[SE][se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
+#            
+#            # 이상신호가 20개 이상일때 ROI 제거되도록 설계되었으나,
+#            # 20200818, traial간 ROI tracking을 위해서 바로 제거하지 않고, 제거 정보만 넘기는 것으로 수정하겠음.
+#        for se in range(5):
+#            signal = np.array(signalss[SE][se])
+#    #        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
+#            if se == 0: print('ROI delete', SE, se, np.where(rois==20)[0])
+#            roi_del_ix = np.where(rois==20)[0]
+#            roi_del_ix_save[SE][se] = roi_del_ix
+#  
+#    # 모든 session을 통틀어 df/d0 0.3을 한번도 넘지 못한 ROI의 존재 유무
+#    # 못넘으면 ROI에서 제거
+#    
+#    for SE in range(N):
+#        ROInum = np.array(signalss[SE][0]).shape[1]
+#        for ROI in range(ROInum):
+#            if not ROI in roi_del_ix:
+#                passsw = False
+#                for se in range(5):
+#                    if np.max(signalss[SE][se][:,ROI]) > 0.3:
+#                        passsw = True
+#                        break
+#                if not(passsw):
+#                    print('SE', SE, 'ROI', ROI, "signal max가 0.3이하인 ROI가 존재함")
+#                    print('ROI 에서 제거후 진행')
+#                    tmp = list(roi_del_ix_save[SE][se]) + [ROI]
+#                    roi_del_ix_save[SE][se] = np.array(tmp)
+#                    
+#    return signalss, roi_del_ix_save
 
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
@@ -908,16 +950,18 @@ runlist = range(0, N)
 
 msMovementExtraction(runlist, skipsw=True, skipfig=True)
 
-signalss, behavss, roi_del_ix_save = mssignal_save(list1=runlist, gfiltersw=True, skipsw=True, dfsw=False)
+signalss, behavss, roi_del_ix_save = mssignal_save(list1=runlist, \
+                                                   gfiltersw=True, skipsw=True, dfsw=True, khuoffset = 130)
+
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
-
-#signalss, behavss, roi_del_ix_save = signalss_save(gfiltersw=True, skipsw=True)
-#signalss, behavss, roi_del_ix_save = QC()
 
 visualizaiton_save(runlist =  range(230, N))
 
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'; dict_save(savepath)
+
+import sys; sys.exit()
+
 
 
 #%%
@@ -951,32 +995,62 @@ df2 = pd.read_excel(path+filename2, header=None, sheet_name=0)
 print(np.max(np.array(df2.iloc[:,1:])), np.min(np.array(df2.iloc[:,1:])))
 
 #%%
-
-snuformat1 = list(range(0,70)) + [74]
-snuformat2 = list(range(70,230)); snuformat2.remove(74)
-khuformat = list(range(230,N2)) # 서울대 8 bit -> 경희대 16 bit 이므로, 경희대 data / (2 ** 8) 으로 nmr
-
-
-t4 = np.zeros((N,5)) * np.nan
-
-for SE in range(N):
-    path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+def lossval():
+    snuformat1 = list(range(0,70)) + [74]
+    snuformat2 = list(range(70,230)); snuformat2.remove(74)
+    khuformat = list(range(230,N2)) # 서울대 8 bit -> 경희대 16 bit 이므로, 경희대 data / (2 ** 8) 으로 nmr
     
-    for se in [0,1]:
-        t4[SE,se] = np.mean(signalss[SE][se])
+    
+    t4 = np.zeros((N,5)) * np.nan
+    
+    for SE in range(N):
+        path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
         
-        
-print(np.mean(t4[highGroup,:], axis=0))
-print(np.mean(t4[highGroup3,:], axis=0))
-print(np.mean(t4[midleGroup,:], axis=0))
-print(np.mean(t4[salineGroup,:], axis=0))
+        for se in [0,1]:
+            t4[SE,se] = np.mean(signalss[SE][se])
             
-Aprism = pd.concat([pd.DataFrame(t4[highGroup3,0]), pd.DataFrame(t4[highGroup3,1]), \
-                    pd.DataFrame(t4[highGroup,0]), pd.DataFrame(t4[highGroup,1]), \
-                    pd.DataFrame(t4[midleGroup,0]), pd.DataFrame(t4[midleGroup,1]), \
-                    pd.DataFrame(t4[salineGroup,0]), pd.DataFrame(t4[salineGroup,1])], \
-                    ignore_index=True, axis=1)
             
+    print(np.mean(t4[highGroup,:], axis=0))
+    print(np.mean(t4[highGroup3,:], axis=0))
+    print(np.mean(t4[midleGroup,:], axis=0))
+    print(np.mean(t4[salineGroup,:], axis=0))
+                
+    Aprism = pd.concat([pd.DataFrame(t4[highGroup3,0]), pd.DataFrame(t4[highGroup3,1]), \
+                        pd.DataFrame(t4[highGroup,0]), pd.DataFrame(t4[highGroup,1]), \
+                        pd.DataFrame(t4[midleGroup,0]), pd.DataFrame(t4[midleGroup,1]), \
+                        pd.DataFrame(t4[salineGroup,0]), pd.DataFrame(t4[salineGroup,1])], \
+                        ignore_index=True, axis=1)
+                
+    
+    pre1 = list(np.mean(t4[highGroup,:2], axis=0))
+    pre2 = list(np.mean(t4[midleGroup,:2], axis=0))
+    pre3 = list(np.mean(t4[salineGroup,:2], axis=0))
+    
+    post = list(np.mean(t4[highGroup3,:2], axis=0))
+    
+    
+    m = np.mean(pre1 + pre2 + pre3)
+    sd = np.std(pre1 + pre2 + pre3, ddof=1)
+    
+    loss = np.abs((np.mean(post) - m )/ sd)
+    print('loss', loss)
+    return loss
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
