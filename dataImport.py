@@ -39,14 +39,14 @@ glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
 PSLscsaline =       [216,217,218,219,224,225]
 
 highGroup3 =        list(range(230,239))
-testGroup =         [239]
+PSLgroup_khu =      [239, 240, 241, 242, 243, 244]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
           [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149], \
           [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168], \
           [169,170],[172,173],[174,175],[177,178],[179,180],[188,189],[190,191],[192,193], \
-          [194,195],[196,197],[198,199],[226,227],[228,229]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [194,195],[196,197],[198,199],[226,227],[228,229],[239,240],[241,242],[243,244]] # baseline 독립, training 때 base를 skip 하지 않음.
 
 for i in range(200,226,2):
     msset2.append([i, i+1])
@@ -78,6 +78,7 @@ msGroup['oxaliGroup'] = oxaliGroup
 msGroup['glucoseGroup'] = glucoseGroup
 msGroup['PSLscsaline'] = PSLscsaline
 msGroup['highGroup3'] = highGroup3
+msGroup['PSLgroup_khu'] = PSLgroup_khu
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -171,6 +172,7 @@ gfiltersw=True; skipsw = False; dfsw=True; SE = 0
  
 def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffset=None):
     signalss = msFunction.msarray([N, 5])
+    signalss_raw = msFunction.msarray([N, 5])
     behavss = msFunction.msarray([N, 5])
     roi_del_ix_save = msFunction.msarray([N, 5]); thr = 10 # df limit
     
@@ -182,8 +184,9 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
         print('signal preprosessing...', SE)
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
         if dfsw: 
-            savepath = path + '\\singalss_behavss.pickle'
-            savepath = path + '\\singalss_behavss_offset.pickle'
+            savepath = path + '\\singalss_behavss_withrow.pickle'
+#            savepath = path + '\\singalss_behavss_offset.pickle'
+#            savepath = path + '\\singalss_behavss_noneoffset.pickle'
         else: 
             savepath = path + '\\singalss_behavss_zscore.pickle'
             savepath = path + '\\singalss_behavss_zscore_biex.pickle'
@@ -337,92 +340,97 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     array0[se] = np.array(msraw)
                     array2.append(np.array(array0[se][:,1:]))
                 print(str(SE) + ' ' +raw_filepath + ' ROI ', array2[0].shape[1])
-            
-            if gfiltersw:          
-                array3 = list() # after gaussian filter
-                for se in range(len(array2)):
-                    matrix = np.array(array2[se])
-                    tmp_matrix = list()
-                    for neuronNum in range(matrix.shape[1]):
-                        tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))
-                        
-                    tmp_matrix = np.transpose(np.array(tmp_matrix))
-                    
-                    array3.append(tmp_matrix)
-            elif not(gfiltersw):
-                array3 = array2
                 
-            # In F zero 계산
-            if dfsw:
-                array4 = list(); se = 0; n = 0
-                for se in range(len(array3)):
-                    matrix = np.array(array3[se])
-                    matrix = np.array(list(matrix[:,:]), dtype=np.float)
+            #%%
+            if True:
+                if gfiltersw:          
+                    array3 = list() # after gaussian filter
+                    for se in range(len(array2)):
+                        matrix = np.array(array2[se])
+                        tmp_matrix = list()
+                        for neuronNum in range(matrix.shape[1]):
+                            tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))
+                            
+                        tmp_matrix = np.transpose(np.array(tmp_matrix))
+                        
+                        array3.append(tmp_matrix)
+                elif not(gfiltersw):
+                    array3 = array2
                     
-                    f0_vector = list()
-                    for n in range(matrix.shape[1]):
+                # In F zero 계산
+                if dfsw:
+                    array4 = list(); se = 0; n = 0
+                    for se in range(len(array3)):
+                        matrix = np.array(array3[se])
+                        matrix = np.array(list(matrix[:,:]), dtype=np.float)
                         
-                        msmatrix = np.array(matrix[:,n])
-                        
-                        f0 = np.mean(np.sort(msmatrix)[0:int(round(msmatrix.shape[0]*0.3))])
-                        f0_vector.append(f0)
-                        
-                        if False:
-                            plt.figure(n, figsize=(18, 9))
-                            plt.title(n)
-                            plt.plot(msmatrix)
-                            aline = np.zeros(matrix[:,0].shape[0]); aline[:] = f0
-                            plt.plot(aline)
-                            print(f0, np.median(msmatrix))
+                        f0_vector = list()
+                        for n in range(matrix.shape[1]):
+                            
+                            msmatrix = np.array(matrix[:,n])
+                            
+                            f0 = np.mean(np.sort(msmatrix)[0:int(round(msmatrix.shape[0]*0.3))])
+                            f0_vector.append(f0)
+                            
+                            if False:
+                                plt.figure(n, figsize=(18, 9))
+                                plt.title(n)
+                                plt.plot(msmatrix)
+                                aline = np.zeros(matrix[:,0].shape[0]); aline[:] = f0
+                                plt.plot(aline)
+                                print(f0, np.median(msmatrix))
+        
+                        f0_vector = np.array(f0_vector)   
+                        f_signal = np.zeros(matrix.shape)
+                        for frame in range(matrix.shape[0]):
+                            f_signal[frame,:] = (array2[se][frame, :] - f0_vector) / f0_vector
+                        array4.append(f_signal)
     
-                    f0_vector = np.array(f0_vector)   
-                    f_signal = np.zeros(matrix.shape)
-                    for frame in range(matrix.shape[0]):
-                        f_signal[frame,:] = (array2[se][frame, :] - f0_vector) / f0_vector
-                    array4.append(f_signal)
-                    
-                    # Zscore 계산
-            if not(dfsw):
-                array4 = list()
-                for se in range(len(array3)):
-                    matrix = np.array(array3[se])
-                    matrix = np.array(list(matrix[:,:]), dtype=np.float)
-#                    matrix = matrix / np.mean(matrix)
-                    
-                    z_matrix = np.zeros(matrix.shape) * np.nan
-                    for ROI in range(matrix.shape[1]):
-                        base = np.sort(matrix[:,ROI])[0:int(round(matrix.shape[1]*0.3))]
-                        base_mean = np.mean(base)
-                        base_sd = np.std(base, ddof=1)
+                        # Zscore 계산
+                if not(dfsw):
+                    array4 = list()
+                    for se in range(len(array3)):
+                        matrix = np.array(array3[se])
+                        matrix = np.array(list(matrix[:,:]), dtype=np.float)
+    #                    matrix = matrix / np.mean(matrix)
                         
-                        z_matrix[:,ROI] = (matrix[:,ROI] - base_mean) / base_sd
-                    
-                    # 양극단 제거 시작
-                    biex_num = 2
-                    lowix = np.argsort(np.mean(z_matrix, axis=0))[:biex_num]
-                    highix = np.argsort(np.mean(z_matrix, axis=0))[::-1][:biex_num]
-                    z_matrix = np.delete(z_matrix, [lowix] + [highix], axis=1)
-                    # 양극단 제거 끝
-                    
-                    array4.append(z_matrix)
-                 
+                        z_matrix = np.zeros(matrix.shape) * np.nan
+                        for ROI in range(matrix.shape[1]):
+                            base = np.sort(matrix[:,ROI])[0:int(round(matrix.shape[1]*0.3))]
+                            base_mean = np.mean(base)
+                            base_sd = np.std(base, ddof=1)
+                            
+                            z_matrix[:,ROI] = (matrix[:,ROI] - base_mean) / base_sd
+                        
+                        # 양극단 제거 시작
+                        biex_num = 2
+                        lowix = np.argsort(np.mean(z_matrix, axis=0))[:biex_num]
+                        highix = np.argsort(np.mean(z_matrix, axis=0))[::-1][:biex_num]
+                        z_matrix = np.delete(z_matrix, [lowix] + [highix], axis=1)
+                        # 양극단 제거 끝
+                        
+                        array4.append(z_matrix)
+                 #%%
             # session 분리
 #            loadpath2 = path + '\\signal_save.xlsx'
-            signals = []; behavs = []
+            signals = []; behavs = []; signals_raw = []
             for se in range(5):
                 try:
                     df2 = array4[se]
                     df3 = np.array(pd.read_csv(path + '\\MS_' + behav_data[se]))
+                    df4 = array2[se]
             
                     signals.append(np.array(df2))
                     behavs.append(np.array(df3))
+                    signals_raw.append(np.array(df4))
                     
                 except:  
                     print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
                     signals.append(np.array(df2))
                     behavs.append(np.array(df3))
+                    signals_raw.append(np.array(df4))
                     
-            msdict = {'signals': signals, 'behavs': behavs}
+            msdict = {'signals': signals, 'behavs': behavs, 'signals_raw': signals_raw}
             with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
                 print(savepath, '저장되었습니다.')
@@ -431,9 +439,11 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
             with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
                 msdict = pickle.load(f)
             signals = msdict['signals']
+            signals_raw = msdict['signals_raw']
             behavs = msdict['behavs']
                 
         signalss[SE] = signals
+        signalss_raw[SE] = signals_raw
         behavss[SE] = behavs
     
         # QC (in SE for)
@@ -488,7 +498,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 
         roi_del_ix_save[SE] = np.array(roi_del_ix)
             
-    return signalss, behavss, roi_del_ix_save
+    return signalss, behavss, signalss_raw, roi_del_ix_save
 
 def msMovementExtraction(list1, skipsw=False, skipfig=False):
 #    movement_thr_save = np.zeros((N2,5))
@@ -636,65 +646,6 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
             msout = pd.DataFrame(savems ,index=None, columns=None)
             msout.to_csv(savename, index=False, header=False)
     return None
-
-# signal & behavior import
-#signalss = list(); bahavss = list()
-#def signalss_save(gfiltersw=True, skipsw=True):
-#    signalss=[];[signalss.append([]) for u in range(N2)]
-#    bahavss=[];[bahavss.append([]) for u in range(N2)]
-#    
-#    RESULT_SAVE_PATH = msdir + '\\raw_tmpsave\\'
-#    
-#    if not os.path.exists(RESULT_SAVE_PATH):
-#        os.mkdir(RESULT_SAVE_PATH)
-#    
-#    for SE in range(N2):
-#        print(SE, N)
-#        if gfiltersw: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw.pickle'
-#        else: pickle_savepath = RESULT_SAVE_PATH + str(SE) + '_raw_nongaussian.pickle'
-#        
-#        if os.path.isfile(pickle_savepath) and skipsw:
-#            with open(pickle_savepath, 'rb') as f:  # Python 3: open(..., 'rb')
-#                msdata_load = pickle.load(f)
-#                
-#            signals = msdata_load['signals']
-#            behavs = msdata_load['behavs']
-#            
-#        else:
-#            path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-#        #    loadpath = path + '\\events_save.xlsx'
-#            loadpath2 = path + '\\signal_save.xlsx'
-#            
-#            signals = list(); behavs = list() # events = list(); 
-#            os.chdir(path)
-#            
-#            df2 = None
-#            for se in range(5):
-#                try:
-#                    df2 = pd.read_excel(loadpath2, header=None, sheet_name=se)
-#                    df3 = np.array(pd.read_csv('MS_' + behav_data[se]))
-#            
-#                    signals.append(np.array(df2))
-#                    behavs.append(np.array(df3))
-#                    
-#                except:
-#                    if se < 3:
-#                        print('se 3 이하 session은 필수입니다.')
-#                        import sys
-#                        sys.exit
-#                        
-#                    print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
-#                    signals.append(np.array(df2))
-#                    behavs.append(np.array(df3))
-#                    
-#            tmp1 = { 'signals' : signals, 'behavs' : behavs}
-#            with open(pickle_savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-#                pickle.dump(tmp1, f, pickle.HIGHEST_PROTOCOL)
-#                print(pickle_savepath, '저장되었습니다.')
-#                
-#        signalss[SE] = signals
-#        bahavss[SE] = behavs
-#    return signalss, bahavss
     # In
 from scipy.stats.stats import pearsonr 
 def msbehav_syn(behav, signal): # behav syn 맞추기 
@@ -710,62 +661,6 @@ def msbehav_syn(behav, signal): # behav syn 맞추기
             behav_syn[imagingframe] += 1
             
     return behav_syn  
-
-#def QC():
-#    # In QC
-#    # delta df/f0 / frame 이 thr 을 넘기는 경우 이상신호로 간주
-#    thr = 10
-#    roi_del_ix_save = msFunction.msarray([N2, 5])
-#    
-#    for SE in range(N2):
-#        print(SE)
-#        signals = signalss[SE]
-#        rois = np.zeros(signals[0].shape[1])
-#         
-#        for se in range(5):
-#            wsw = True
-#            while wsw:
-#                wsw = False
-#                signal = np.array(signalss[SE][se])
-#                for n in range(signal.shape[1]):
-#                    msplot = np.zeros(signal.shape[0]-1)
-#                    for frame in range(signal.shape[0]-1):
-#                        msplot[frame] = np.abs(signal[frame+1,n] - signal[frame,n])
-#        
-#                        if msplot[frame] > thr and rois[n] < 20:
-#                            wsw = True
-#                            rois[n] += 1
-##                            print(SE, se, n, msplot[frame], frame+1)
-#                            signalss[SE][se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
-#            
-#            # 이상신호가 20개 이상일때 ROI 제거되도록 설계되었으나,
-#            # 20200818, traial간 ROI tracking을 위해서 바로 제거하지 않고, 제거 정보만 넘기는 것으로 수정하겠음.
-#        for se in range(5):
-#            signal = np.array(signalss[SE][se])
-#    #        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
-#            if se == 0: print('ROI delete', SE, se, np.where(rois==20)[0])
-#            roi_del_ix = np.where(rois==20)[0]
-#            roi_del_ix_save[SE][se] = roi_del_ix
-#  
-#    # 모든 session을 통틀어 df/d0 0.3을 한번도 넘지 못한 ROI의 존재 유무
-#    # 못넘으면 ROI에서 제거
-#    
-#    for SE in range(N):
-#        ROInum = np.array(signalss[SE][0]).shape[1]
-#        for ROI in range(ROInum):
-#            if not ROI in roi_del_ix:
-#                passsw = False
-#                for se in range(5):
-#                    if np.max(signalss[SE][se][:,ROI]) > 0.3:
-#                        passsw = True
-#                        break
-#                if not(passsw):
-#                    print('SE', SE, 'ROI', ROI, "signal max가 0.3이하인 ROI가 존재함")
-#                    print('ROI 에서 제거후 진행')
-#                    tmp = list(roi_del_ix_save[SE][se]) + [ROI]
-#                    roi_del_ix_save[SE][se] = np.array(tmp)
-#                    
-#    return signalss, roi_del_ix_save
 
 def downsampling(msssignal, wanted_size):
     downratio = msssignal.shape[0]/wanted_size
@@ -926,7 +821,6 @@ def visualizaiton_save(runlist):
             #       
             plt.savefig(mstitle)
             plt.close(SE)
-
 def dict_save(savepath):
     msdata = {
             'FPS' : FPS,
@@ -936,6 +830,7 @@ def dict_save(savepath):
             'msGroup' : msGroup,
             'msdir' : msdir,
             'signalss' : signalss,
+            'signalss_raw' : signalss_raw,
             'roi_del_ix_save' : roi_del_ix_save
             }
     
@@ -948,103 +843,24 @@ def dict_save(savepath):
 runlist = range(0, N)
 #runlist = highGroup + highGroup3 + midleGroup + salineGroup
 
-msMovementExtraction(runlist, skipsw=True, skipfig=True)
+msMovementExtraction(runlist, skipsw=True, skipfig=True) 
 
-signalss, behavss, roi_del_ix_save = mssignal_save(list1=runlist, \
-                                                   gfiltersw=True, skipsw=True, dfsw=True, khuoffset = 130)
+signalss, behavss, signalss_raw, roi_del_ix_save = mssignal_save(list1=runlist, \
+                                                   gfiltersw=True, skipsw=False, dfsw=True, khuoffset = 0)
 
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
 
-visualizaiton_save(runlist =  range(230, N))
-
+visualizaiton_save(runlist =  range(239, N))
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'; dict_save(savepath)
 
+#savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_raw.pickle'; dict_save(savepath)
+
 import sys; sys.exit()
 
 
 
 #%%
-
-import sys; sys.exit()
-
-path = 'C:\\Users\\MSBak\\Downloads\\카카오톡 받은 파일\\'
-filename1 = 's1029_PSL_t1.xlsx'
-df1 = pd.read_excel(path+filename1, header=None, sheet_name=0)
-print(np.max(np.array(df1.iloc[:,1:])), np.min(np.array(df1.iloc[:,1:])))
-
-
-filename2 = 's201127_1_5%F.xlsx'
-df2 = pd.read_excel(path+filename2, header=None, sheet_name=0)
-print(np.max(np.array(df2.iloc[:,1:])), np.min(np.array(df2.iloc[:,1:])))
-
-
-filename2 = 's0828_1_Oxa_t1.xlsx'
-df2 = pd.read_excel(path+filename2, header=None, sheet_name=0)
-print(np.max(np.array(df2.iloc[:,1:])), np.min(np.array(df2.iloc[:,1:])))
-
-
-
-filename2 = 's201130_1_5%F.xlsx'
-df2 = pd.read_excel(path+filename2, header=None, sheet_name=0)
-print(np.max(np.array(df2.iloc[:,1:])), np.min(np.array(df2.iloc[:,1:])))
-
-
-filename2 = 's0918_2_PSL.xlsx'
-df2 = pd.read_excel(path+filename2, header=None, sheet_name=0)
-print(np.max(np.array(df2.iloc[:,1:])), np.min(np.array(df2.iloc[:,1:])))
-
-#%%
-def lossval():
-    snuformat1 = list(range(0,70)) + [74]
-    snuformat2 = list(range(70,230)); snuformat2.remove(74)
-    khuformat = list(range(230,N2)) # 서울대 8 bit -> 경희대 16 bit 이므로, 경희대 data / (2 ** 8) 으로 nmr
-    
-    
-    t4 = np.zeros((N,5)) * np.nan
-    
-    for SE in range(N):
-        path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-        
-        for se in [0,1]:
-            t4[SE,se] = np.mean(signalss[SE][se])
-            
-            
-    print(np.mean(t4[highGroup,:], axis=0))
-    print(np.mean(t4[highGroup3,:], axis=0))
-    print(np.mean(t4[midleGroup,:], axis=0))
-    print(np.mean(t4[salineGroup,:], axis=0))
-                
-    Aprism = pd.concat([pd.DataFrame(t4[highGroup3,0]), pd.DataFrame(t4[highGroup3,1]), \
-                        pd.DataFrame(t4[highGroup,0]), pd.DataFrame(t4[highGroup,1]), \
-                        pd.DataFrame(t4[midleGroup,0]), pd.DataFrame(t4[midleGroup,1]), \
-                        pd.DataFrame(t4[salineGroup,0]), pd.DataFrame(t4[salineGroup,1])], \
-                        ignore_index=True, axis=1)
-                
-    
-    pre1 = list(np.mean(t4[highGroup,:2], axis=0))
-    pre2 = list(np.mean(t4[midleGroup,:2], axis=0))
-    pre3 = list(np.mean(t4[salineGroup,:2], axis=0))
-    
-    post = list(np.mean(t4[highGroup3,:2], axis=0))
-    
-    
-    m = np.mean(pre1 + pre2 + pre3)
-    sd = np.std(pre1 + pre2 + pre3, ddof=1)
-    
-    loss = np.abs((np.mean(post) - m )/ sd)
-    print('loss', loss)
-    return loss
-
-
-
-
-
-
-
-
-
-
 
 
 
