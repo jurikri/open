@@ -38,15 +38,18 @@ oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202
 glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
 PSLscsaline =       [216,217,218,219,224,225]
 
-highGroup3 =        list(range(230,239))
-PSLgroup_khu =      [239, 240, 241, 242, 243, 244]
+highGroup3 =        list(range(230,239)) + list(range(247,253))
+PSLgroup_khu =      [239, 240, 241, 242, 243, 244, 245, 246]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
           [134,135],[136,137],[128,138],[130,139],[129,140],[144,147],[145,148],[146,149], \
           [153,154],[152,155],[150,156],[151,157],[158,159],[161,160],[162,163],[167,168], \
           [169,170],[172,173],[174,175],[177,178],[179,180],[188,189],[190,191],[192,193], \
-          [194,195],[196,197],[198,199],[226,227],[228,229],[239,240],[241,242],[243,244]] # baseline 독립, training 때 base를 skip 하지 않음.
+          [194,195],[196,197],[198,199],[226,227],[228,229],[239,240],[241,242],[243,244], \
+          [245,246]] # baseline 독립, training 때 base를 skip 하지 않음.
+
+nmr_list = [81,89,90,91,92,70,71,72]
 
 for i in range(200,226,2):
     msset2.append([i, i+1])
@@ -96,7 +99,7 @@ import msfilepath
 try: import pickle5 as pickle
 except: import pickle
 import hdf5storage
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 
 endsw=False; cnt=-1
 while not(endsw):
@@ -175,6 +178,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
     signalss_raw = msFunction.msarray([N, 5])
     behavss = msFunction.msarray([N, 5])
     roi_del_ix_save = msFunction.msarray([N, 5]); thr = 10 # df limit
+    nmr_value = np.zeros((N,5)) * np.nan
     
     snuformat1 = list(range(0,70)) + [74]
     snuformat2 = list(range(70,230)); snuformat2.remove(74)
@@ -196,9 +200,12 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
 #        if gfiltersw:  savename = path + '\\signal_save.xlsx'
 #        elif not(gfiltersw): savename = path + '\\signal_save_nongaussian.xlsx'
             
-        if not(os.path.exists(savepath) and skipsw and not(SE in khuformat)): 
+        if not(os.path.exists(savepath) and skipsw): 
             if SE in snuformat1:
                 loadpath = path + '\\' + raw_filepath
+                
+#                if SE in nmr_list: loadpath = loadpath[:-5] + '_m.xlsx'
+                
                 df = pd.read_excel(loadpath)
                 ROI = df.shape[1]
                 for col in range(df.shape[1]):
@@ -290,7 +297,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     except:
                         break
                 
-                print(SE, 'newformat으로 처리됩니다.', 'total session #', k)
+                print(SE, 'khu format으로 처리됩니다.', 'total session #', k)
                 se = 0
                 for se in range(k):
                     ROInum = array0[se].shape[1]
@@ -342,79 +349,84 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 print(str(SE) + ' ' +raw_filepath + ' ROI ', array2[0].shape[1])
                 
             #%%
-            if True:
-                if gfiltersw:          
-                    array3 = list() # after gaussian filter
-                    for se in range(len(array2)):
-                        matrix = np.array(array2[se])
-                        tmp_matrix = list()
-                        for neuronNum in range(matrix.shape[1]):
-                            tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))
-                            
-                        tmp_matrix = np.transpose(np.array(tmp_matrix))
+#            if True:
+#            if SE in nmr_list:
+#                for se in range(len(array2)):
+#                    nmr_value[SE, se] = np.nanmedian(np.array(array2[se])[:,-1])
+#                    array2[se] = np.array(array2[se])[:,:-1]
+            
+            if gfiltersw:          
+                array3 = list() # after gaussian filter
+                for se in range(len(array2)):
+                    matrix = np.array(array2[se])
+                    tmp_matrix = list()
+                    for neuronNum in range(matrix.shape[1]):
+                        tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))
                         
-                        array3.append(tmp_matrix)
-                elif not(gfiltersw):
-                    array3 = array2
+                    tmp_matrix = np.transpose(np.array(tmp_matrix))
                     
-                # In F zero 계산
-                if dfsw:
-                    array4 = list(); se = 0; n = 0
-                    for se in range(len(array3)):
-                        matrix = np.array(array3[se])
-                        matrix = np.array(list(matrix[:,:]), dtype=np.float)
+                    array3.append(tmp_matrix)
+            elif not(gfiltersw):
+                array3 = array2
+                
+            # In F zero 계산
+            if dfsw:
+                array4 = list(); se = 0; n = 0
+                for se in range(len(array3)):
+                    matrix = np.array(array3[se])
+                    matrix = np.array(list(matrix[:,:]), dtype=np.float)
+                    
+                    f0_vector = list()
+                    for n in range(matrix.shape[1]):
                         
-                        f0_vector = list()
-                        for n in range(matrix.shape[1]):
-                            
-                            msmatrix = np.array(matrix[:,n])
-                            
-                            f0 = np.mean(np.sort(msmatrix)[0:int(round(msmatrix.shape[0]*0.3))])
-                            f0_vector.append(f0)
-                            
-                            if False:
-                                plt.figure(n, figsize=(18, 9))
-                                plt.title(n)
-                                plt.plot(msmatrix)
-                                aline = np.zeros(matrix[:,0].shape[0]); aline[:] = f0
-                                plt.plot(aline)
-                                print(f0, np.median(msmatrix))
-        
-                        f0_vector = np.array(f0_vector)   
-                        f_signal = np.zeros(matrix.shape)
-                        for frame in range(matrix.shape[0]):
-                            f_signal[frame,:] = (array2[se][frame, :] - f0_vector) / f0_vector
-                        array4.append(f_signal)
+                        msmatrix = np.array(matrix[:,n])
+                        
+                        f0 = np.mean(np.sort(msmatrix)[0:int(round(msmatrix.shape[0]*0.3))])
+                        f0_vector.append(f0)
+                        
+                        if False:
+                            plt.figure(n, figsize=(18, 9))
+                            plt.title(n)
+                            plt.plot(msmatrix)
+                            aline = np.zeros(matrix[:,0].shape[0]); aline[:] = f0
+                            plt.plot(aline)
+                            print(f0, np.median(msmatrix))
     
-                        # Zscore 계산
-                if not(dfsw):
-                    array4 = list()
-                    for se in range(len(array3)):
-                        matrix = np.array(array3[se])
-                        matrix = np.array(list(matrix[:,:]), dtype=np.float)
-    #                    matrix = matrix / np.mean(matrix)
+                    f0_vector = np.array(f0_vector)   
+                    f_signal = np.zeros(matrix.shape)
+                    for frame in range(matrix.shape[0]):
+                        f_signal[frame,:] = (array2[se][frame, :] - f0_vector) / f0_vector
+                    array4.append(f_signal)
+
+                    # Zscore 계산
+            if not(dfsw):
+                array4 = list()
+                for se in range(len(array3)):
+                    matrix = np.array(array3[se])
+                    matrix = np.array(list(matrix[:,:]), dtype=np.float)
+#                    matrix = matrix / np.mean(matrix)
+                    
+                    z_matrix = np.zeros(matrix.shape) * np.nan
+                    for ROI in range(matrix.shape[1]):
+                        base = np.sort(matrix[:,ROI])[0:int(round(matrix.shape[1]*0.3))]
+                        base_mean = np.mean(base)
+                        base_sd = np.std(base, ddof=1)
                         
-                        z_matrix = np.zeros(matrix.shape) * np.nan
-                        for ROI in range(matrix.shape[1]):
-                            base = np.sort(matrix[:,ROI])[0:int(round(matrix.shape[1]*0.3))]
-                            base_mean = np.mean(base)
-                            base_sd = np.std(base, ddof=1)
-                            
-                            z_matrix[:,ROI] = (matrix[:,ROI] - base_mean) / base_sd
-                        
-                        # 양극단 제거 시작
-                        biex_num = 2
-                        lowix = np.argsort(np.mean(z_matrix, axis=0))[:biex_num]
-                        highix = np.argsort(np.mean(z_matrix, axis=0))[::-1][:biex_num]
-                        z_matrix = np.delete(z_matrix, [lowix] + [highix], axis=1)
-                        # 양극단 제거 끝
-                        
-                        array4.append(z_matrix)
+                        z_matrix[:,ROI] = (matrix[:,ROI] - base_mean) / base_sd
+                    
+                    # 양극단 제거 시작
+                    biex_num = 2
+                    lowix = np.argsort(np.mean(z_matrix, axis=0))[:biex_num]
+                    highix = np.argsort(np.mean(z_matrix, axis=0))[::-1][:biex_num]
+                    z_matrix = np.delete(z_matrix, [lowix] + [highix], axis=1)
+                    # 양극단 제거 끝
+                    
+                    array4.append(z_matrix)
                  #%%
             # session 분리
 #            loadpath2 = path + '\\signal_save.xlsx'
             signals = []; behavs = []; signals_raw = []
-            for se in range(5):
+            for se in range(len(array4)):
                 try:
                     df2 = array4[se]
                     df3 = np.array(pd.read_csv(path + '\\MS_' + behav_data[se]))
@@ -498,7 +510,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 
         roi_del_ix_save[SE] = np.array(roi_del_ix)
             
-    return signalss, behavss, signalss_raw, roi_del_ix_save
+    return signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value
 
 def msMovementExtraction(list1, skipsw=False, skipfig=False):
 #    movement_thr_save = np.zeros((N2,5))
@@ -831,7 +843,8 @@ def dict_save(savepath):
             'msdir' : msdir,
             'signalss' : signalss,
             'signalss_raw' : signalss_raw,
-            'roi_del_ix_save' : roi_del_ix_save
+            'roi_del_ix_save' : roi_del_ix_save,
+            'nmr_value' : nmr_value
             }
     
     with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
@@ -845,13 +858,13 @@ runlist = range(0, N)
 
 msMovementExtraction(runlist, skipsw=True, skipfig=True) 
 
-signalss, behavss, signalss_raw, roi_del_ix_save = mssignal_save(list1=runlist, \
-                                                   gfiltersw=True, skipsw=False, dfsw=True, khuoffset = 0)
+signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value = mssignal_save(list1=runlist, \
+                                                   gfiltersw=True, skipsw=True, dfsw=True, khuoffset = 0)
 
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
 
-visualizaiton_save(runlist =  range(239, N))
+visualizaiton_save(runlist =  range(245, N))
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'; dict_save(savepath)
 
 #savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_raw.pickle'; dict_save(savepath)
