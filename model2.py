@@ -154,13 +154,13 @@ for SE in range(N):
         
         # khu formalin
         painc.append(SE in list(range(230, 239)) and se in [1])
-        painc.append(SE in [247,248,250,251] and se in [5])
-        painc.append(SE in [252] and se in [2])
+        painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
+        painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] and se in [2])
         
         nonpainc.append(SE in list(range(230, 239)) and se in [0])
-        nonpainc.append(SE in list(range(247, 253)) and se in [0, 1])
-        nonpainc.append(SE in list(range(247, 252)) and se in [2])
-        nonpainc.append(SE in [247,248,250,251] and se in [3,4])
+        nonpainc.append(SE in list(range(247, 253)) + list(range(253,268)) and se in [0, 1])
+        nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] and se in [2])
+        nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
         
         # khu psl
         nonpainc.append(SE in PSLgroup_khu and se in [0])
@@ -180,20 +180,17 @@ for SE in range(N):
                 group_nonpain_training.append([SE, se])
 
 #%% khu t4 check
-
-nonpain1, nonpain2, pain = [], [], []
-
-for SE in list(range(230, 239)) + list(range(247, 252)):
-    for se in range(MAXSE):
-        if SE in list(range(247, 252)) and se in [2]: # saline s.c.
-            nonpain2.append(t4[SE,se])
-        else:
+if False:
+    nonpain1, nonpain2, pain = [], [], []
+    
+    for SE in highGroup3:
+        for se in range(MAXSE):
             if [SE, se] in group_nonpain_test: nonpain1.append(t4[SE,se])
             if [SE, se] in group_pain_test: pain.append(t4[SE,se])
-        
-print(np.mean(nonpain1), np.mean(nonpain2), np.mean(pain))
-accuracy, roc_auc = msROC(nonpain1 + nonpain2, pain)
-print(accuracy, roc_auc)
+            
+    print(np.mean(nonpain1), np.mean(nonpain2), np.mean(pain))
+    accuracy, roc_auc = msROC(nonpain1 + nonpain2, pain)
+    print(accuracy, roc_auc)
 
 # t4 만으로 formalin이 나뉠수 있음.
 # 하지만 nonpain mov와 t4의 corr이 있으면, mov 정도에 의해 얼마든지 오측정 될 가능성이 있음.
@@ -296,7 +293,7 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False):
 #Xsave, Ysave, Zsave = ms_sampling(forlist=[70])
 # X_tmp = X_tr; Y_tmp = Y_tr; Z_tmp = Z_tr
 def upsampling(X_tmp, Y_tmp, Z_tmp, offsw=False):
-    dup = 5
+    dup = 10
     X = np.array(X_tmp)
     Y = np.array(Y_tmp)
     Z = np.array(Z_tmp)
@@ -314,7 +311,7 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, offsw=False):
             
             print('ratio', maxnum / minnum)
             if maxnum / minnum > dup:
-                print('1/' + str(dup) + 'down')
+                print('1/' + str(dup) + ' down')
                 downix = np.where(Y[:,np.argmax([nnum, pnum])]==1)[0]
                 rix = random.sample(list(downix), int(len(downix)/dup*(dup-1)))
                 
@@ -443,6 +440,10 @@ for nix, q in enumerate(project_list):
     RESULT_SAVE_PATH = gsync + 'kerasdata\\' + settingID + '\\'
     if not os.path.exists(RESULT_SAVE_PATH):
         os.mkdir(RESULT_SAVE_PATH)
+        
+#    RESULT_SAVE_PATH = gsync + 'kerasdata\\' + settingID + '\\model\\'
+#    if not os.path.exists(RESULT_SAVE_PATH):
+#        os.mkdir(RESULT_SAVE_PATH)
     
     model = keras_setup(lr=lr, seed=seed)
     initial_weightsave = RESULT_SAVE_PATH + 'initial_weight.h5'
@@ -450,13 +451,20 @@ for nix, q in enumerate(project_list):
 
 ### wantedlist
     runlist = highGroup3
-    validlist =  [PSLgroup_khu[2]] # [highGroup3[0]];
+    validlist =  PSLgroup_khu # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
 
 #%% learning 
     mslog = msFunction.msarray([N]); k=0
+    
+    savepath_pickle = RESULT_SAVE_PATH + 'resultsave.pickle'
+    if os.path.isfile(savepath_pickle) and True:
+        with open(savepath_pickle, 'rb') as f:  # Python 3: open(..., 'rb')
+            mssave = pickle.load(f)
+            
+    elif not(os.path.isfile(savepath_pickle)):
+        mssave = np.zeros((N, MAXSE)) * np.nan 
+
     for k in range(len(validlist)):
-        #%%
-        
         stopsw = False
         vlist = validlist[k]
         if not(type(vlist)==list): vlist = [vlist]
@@ -468,7 +476,7 @@ for nix, q in enumerate(project_list):
                 if validlist[k] in msset_total[:,1:].flatten(): stopsw = True
                 
         if not(stopsw): 
-            final_weightsave = RESULT_SAVE_PATH + 'model\\' + str(validlist[k]) + '_final.h5'
+            final_weightsave = RESULT_SAVE_PATH + str(validlist[k]) + '_final.h5'
             if not(os.path.isfile(final_weightsave)) or True:
                 vlist += addset
                 print('learning 시작합니다. validation mouse #', validlist[k])
@@ -489,7 +497,37 @@ for nix, q in enumerate(project_list):
                 model = keras_setup(lr=lr, seed=seed)
                 model.load_weights(initial_weightsave)
                 
-                hist = model.fit(X_tr, Y_tr, batch_size=2**9, epochs=200, verbose=1, validation_data = (X_te, Y_te))   
+                hist = model.fit(X_tr, Y_tr, batch_size=2**9, epochs=200, verbose=1, validation_data = (X_te, Y_te))
+                
+                s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[];
+                s_loss += list(np.array(hist.history['loss']))
+                s_acc += list(np.array(hist.history['accuracy']))
+                sval_loss += list(np.array(hist.history['val_loss']))
+                sval_acc += list(np.array(hist.history['val_accuracy']))
+      
+                # save
+                mssave_tmp = {'s_loss': s_loss, 's_acc': s_acc, \
+                              'sval_loss': sval_loss, 'sval_acc': sval_acc}
+
+                model.save_weights(final_weightsave)
+                
+                savepath_log = RESULT_SAVE_PATH + str(k) + '_log.pickle'
+                with open(savepath_log, 'wb') as f:  # Python 3: open(..., 'wb')
+                    pickle.dump(mssave_tmp, f, pickle.HIGHEST_PROTOCOL)
+                    print(savepath_log, '저장되었습니다.')
+                
+                for fignum in range(2):
+                    plt.figure()
+                    if fignum == 0:
+                        figname = str(k) + '_loss_save.png'
+                        plt.plot(s_loss)
+                        plt.plot(sval_loss)
+                    if fignum == 1:
+                        figname = str(k) + '_acc_save.png'
+                        plt.plot(s_acc)
+                        plt.plot(sval_acc)
+                    plt.savefig(RESULT_SAVE_PATH + figname)
+                    plt.close()
                 
                 # test
                 # valSE = vlist[0]
@@ -500,12 +538,53 @@ for nix, q in enumerate(project_list):
                         pain = np.mean(predict[:,1])
                         print()
                         print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
+                        mssave[valSE, valse] = pain
+
+    with open(savepath_pickle, 'wb') as f:  # Python 3: open(..., 'wb')
+        pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
+        print(savepath_pickle, '저장되었습니다.')
 
 
+#%% prism 복붙용 변수생성
 
+pain_time = msFunction.msarray([MAXSE])
+nonpain_time = msFunction.msarray([MAXSE])
 
+target = np.array(mssave)
+for row in range(len(target)):
+    target[row,:] = target[row,:] - target[row,0]
 
+nonpain1, nonpain2, pain = [], [], []
+for SE in range(N):
+    if SE in PSLgroup_khu: # filter
+        for se in range(MAXSE):
+            if [SE, se] in group_nonpain_test:
+                nonpain_time[se].append(target[SE,se])
+            if [SE, se] in group_pain_test:
+                pain_time[se].append(target[SE,se])
 
+def to_prism(target):
+    Aprism = pd.DataFrame([])
+    for row in range(len(target)):
+        Aprism = pd.concat((Aprism, pd.DataFrame(target[row])), ignore_index=True, axis=1)
+    return Aprism
+
+Aprism_nonpain = to_prism(nonpain_time)
+Aprism_pain = to_prism(pain_time)
+
+# 직렬화
+def to_linear(target):
+    linear = []
+    for row in range(len(target)):
+        linear += target[row]
+    return linear
+
+nonpain = to_linear(nonpain_time)
+pain = to_linear(pain_time)
+
+print(np.mean(nonpain), np.mean(pain))
+accuracy, roc_auc = msROC(nonpain, pain)
+print(accuracy, roc_auc)
 
 
 
