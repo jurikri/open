@@ -174,11 +174,11 @@ def ms_syn(target_signal=None, FPS=None):
 gfiltersw=True; skipsw = False; dfsw=True; SE = 0
  
 def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffset=None):
-    signalss = msFunction.msarray([N, 5])
-    signalss_raw = msFunction.msarray([N, 5])
-    behavss = msFunction.msarray([N, 5])
-    roi_del_ix_save = msFunction.msarray([N, 5]); thr = 10 # df limit
-    nmr_value = np.zeros((N,5)) * np.nan
+    signalss = msFunction.msarray([N])
+    signalss_raw = msFunction.msarray([N])
+    behavss = msFunction.msarray([N])
+    roi_del_ix_save = msFunction.msarray([N]); thr = 10 # df limit
+    nmr_value = np.zeros((N)) * np.nan
     
     snuformat1 = list(range(0,70)) + [74]
     snuformat2 = list(range(70,230)); snuformat2.remove(74)
@@ -462,7 +462,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
         savepath2 = path + '\\roi_del.pickle'
         if not(os.path.isfile(savepath2)):
             rois = np.zeros(signalss[SE][0].shape[1]) 
-            for se in range(5):
+            for se in range(len(signalss[SE])):
                 wsw = True
                 while wsw:
                     wsw = False
@@ -480,17 +480,16 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 
                 # 이상신호가 20개 이상일때 ROI 제거되도록 설계되었으나,
                 # 20200818, traial간 ROI tracking을 위해서 바로 제거하지 않고, 제거 정보만 넘기는 것으로 수정하겠음.
-            for se in range(5):
-                signal = np.array(signalss[SE][se])
-        #        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
-                if se == 0: print('ROI delete', SE, se, np.where(rois==20)[0])
-                roi_del_ix = np.where(rois==20)[0]
-                
+#            for se in range(signalss[SE][0].shape[1]):
+#                signal = np.array(signalss[SE][se])
+#        #        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
+#                if se == 0: print('ROI delete', SE, se, np.where(rois==20)[0])
+            roi_del_ix = np.where(rois==20)[0]
             ROInum = np.array(signalss[SE][0]).shape[1]
             for ROI in range(ROInum):
                 if not ROI in roi_del_ix:
                     passsw = False
-                    for se in range(5):
+                    for se in range(len(signalss[SE])):
                         if np.max(signalss[SE][se][:,ROI]) > 0.3:
                             passsw = True
                             break
@@ -499,7 +498,8 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                         print('ROI 에서 제거후 진행')
                         tmp = list(roi_del_ix) + [ROI]
                         roi_del_ix = tmp
-                        
+            
+            print(str(SE), 'roi_del_ix', roi_del_ix)
             with open(savepath2, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump(roi_del_ix, f, pickle.HIGHEST_PROTOCOL)
                 print(savepath2, '저장되었습니다.')    
@@ -687,12 +687,12 @@ def downsampling(msssignal, wanted_size):
 
 # syn를 위한 상수 계산
 def behavss2_calc(signalss, behavss):
-    synsave = np.zeros((N,5))
+    synsave = msFunction.msarray([N])
     SE = 6; se = 1    
     for SE in range(N):
         signals = signalss[SE]
         behavs = behavss[SE] 
-        for se in range(5):
+        for se in range(len(signals)):
             signal = np.array(signals[se])
             meansignal = np.mean(signal,1) 
             
@@ -747,13 +747,13 @@ def behavss2_calc(signalss, behavss):
             else:
                 maxsyn = 0
             
-            synsave[SE,se] = maxsyn
+            synsave[SE].append(maxsyn)
             
     # 예외처리
-    synsave[12,4] = 0
-    synsave[18,4] = 0
-    synsave[43,3] = 0 
-    synsave[43,4] = 0
+    synsave[12][4] = 0
+    synsave[18][4] = 0
+    synsave[43][3] = 0 
+    synsave[43][4] = 0
     #synsave[39,3] = 0
     #SE = 1; se = 1
     #SE = 8; se = 4
@@ -766,13 +766,13 @@ def behavss2_calc(signalss, behavss):
     behavss2 = list()
     for SE in range(N):
         behavss2.append([])
-        for se in range(5):
+        for se in range(len(signalss[SE])):
             msbehav = np.array(behavss[SE][se])
             behav_syn = downsampling(msbehav, signalss[SE][se].shape[0])
             
             if [SE, se] in fixlist:
                 fix = np.zeros(behav_syn.shape[0])
-                s = int(synsave[SE,se])
+                s = int(synsave[SE][se])
                 if s > 0:
                     fix[s:] = behav_syn[:-s]
                 elif s < 0:
@@ -800,7 +800,7 @@ def visualizaiton_save(runlist):
         print('save msplot', SE)
         signals = signalss[SE]
         behavs = behavss2[SE]
-        for se in range(5):
+        for se in range(len(signals)):
             behav = np.array(behavs[se])
             signal = np.array(signals[se])
     
@@ -856,11 +856,10 @@ def dict_save(savepath):
 runlist = range(0, N)
 #runlist = highGroup + highGroup3 + midleGroup + salineGroup
 
-msMovementExtraction(runlist, skipsw=True, skipfig=True) 
+msMovementExtraction(runlist, skipsw=False, skipfig=True) 
 
 signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value = mssignal_save(list1=runlist, \
                                                    gfiltersw=True, skipsw=True, dfsw=True, khuoffset = 0)
-
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
 
