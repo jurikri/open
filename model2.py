@@ -91,7 +91,7 @@ se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chl
 pslset = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
 fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
 baseonly = lowGroup + lidocaineGroup + restrictionGroup
-#%%
+#%
 
 def msROC(class0, class1):
     import numpy as np
@@ -162,12 +162,16 @@ for SE in range(N):
         nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] and se in [2])
         nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
         
+        # snu psl pain
+        painc.append(SE in pslGroup and se in [1,2])
+        
+        
         # khu psl
         nonpainc.append(SE in PSLgroup_khu and se in [0])
         painc.append(SE in PSLgroup_khu and se in [1,2])
         
         # test only
-        test_only.append(SE in PSLgroup_khu and se in [1,2])
+#        test_only.append(SE in PSLgroup_khu and se in [1,2])
         
         if np.sum(np.array(painc)) > 0:
             group_pain_test.append([SE, se])
@@ -367,10 +371,10 @@ BINS = 10 # 최소 time frame 간격 # hyper
 epochs = 1 # 
 lr = 5e-4 # learning rate
 
-n_hidden = int(2**3) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(2**3) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(2**4) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(2**4) # fully conneted laye node 갯수 # 8 # 원래 6 
 
-l2_rate = 1e-5
+l2_rate = 1e-6
 dropout_rate1 = 0.1 # dropout rate
 dropout_rate2 = 0.1 # 
 
@@ -417,7 +421,7 @@ print(model.summary())
 
 #%%     project_list
 project_list = []
-project_list.append(['20210517_PDanalysis', 100]) # project name, seed
+project_list.append(['20210517_PDanalysis_snupsl', 100]) # project name, seed
 
 
 # scoresave_total = []
@@ -450,7 +454,7 @@ for nix, q in enumerate(project_list):
     model.save_weights(initial_weightsave)
 
 ### wantedlist
-    runlist = highGroup3
+    runlist = highGroup3 + PSLgroup_khu + pslGroup + PSLgroup_khu
     validlist =  PSLgroup_khu # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
 
 #%% learning 
@@ -585,6 +589,18 @@ pain = to_linear(pain_time)
 print(np.mean(nonpain), np.mean(pain))
 accuracy, roc_auc = msROC(nonpain, pain)
 print(accuracy, roc_auc)
+
+#%% PD 분석 - 후처리
+PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\raw\\'
+pickle_save_tmp = PATH + 'mspickle_PD.pickle'    
+
+with open(pickle_save_tmp, 'rb') as f:  # Python 3: open(..., 'rb')
+    signalss_PD = pickle.load(f)
+
+for SE in range(len(signalss_PD)):
+    for se in range(len(signalss_PD[SE])):
+        signalss_PD[SE][se]
+
 
 
 
