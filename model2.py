@@ -243,7 +243,8 @@ def XYZgen(SE=None, se=None, msclass=None, testsw2=False):
     return X_tmp, Y_tmp, Z_tmp
 
 # forlist = trlist; seset=None;
-def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False):
+    
+def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fixlabel=False):
 # label 지정
     X, Y, Z = [], [], [];
     ROI = 0 # dummy
@@ -262,7 +263,8 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False):
                  if [SE, se] in group_pain_test: msclass = [0, 1] # for pain
                  if [SE, se] in group_nonpain_test: msclass = [1, 0]  # for nonpain
             
-#            if not fixlabel is None: msclass = [0, 1] # for pain # 사용되지 않음. dummy
+            if fixlabel: msclass = [0, 1] # test 전용
+            
             if not(msclass is None):
                 if not(ROIsw):
                     msbins = np.arange(0, signalss[SE][se].shape[0]-FS+1, BINS) 
@@ -576,7 +578,7 @@ def to_prism(target):
 Aprism_nonpain = to_prism(nonpain_time)
 Aprism_pain = to_prism(pain_time)
 
-# 직렬화
+# ROC 판정용 - 직렬화
 def to_linear(target):
     linear = []
     for row in range(len(target)):
@@ -596,14 +598,17 @@ pickle_save_tmp = PATH + 'mspickle_PD.pickle'
 
 with open(pickle_save_tmp, 'rb') as f:  # Python 3: open(..., 'rb')
     signalss_PD = pickle.load(f)
+    
+mssave_PD = np.zeros((len(signalss_PD), MAXSE)) * np.nan 
 
-for SE in range(len(signalss_PD)):
-    for se in range(len(signalss_PD[SE])):
-        signalss_PD[SE][se]
-
-
-
-
+for valSE in range(len(signalss_PD)):
+    for valse in range(len(signalss_PD[SE])):
+        X_te, Y_te, Z_te =  ms_sampling(forlist=[valSE], seset=[valse], signalss=signalss_PD, ROIsw=True, fixlabel=True)
+        predict = model.predict(X_te)
+        pain = np.mean(predict[:,1])
+        print()
+        print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
+        mssave_PD[valSE, valse] = pain
 
 
 
