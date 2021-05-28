@@ -27,7 +27,7 @@ try:
 except:
     try:
         savepath = 'C:\\titan_savepath\\'; os.chdir(savepath);
-        gsync = 'C:\\Users\\skklab\\Google 드라이브\\google_syn\\'
+        gsync = 'C:\\mass_save\\'
     except:
         try:
             savepath = 'D:\\painDecorder\\save\\tensorData\\'; os.chdir(savepath);
@@ -155,15 +155,16 @@ for SE in range(N):
         # khu formalin
         painc.append(SE in list(range(230, 239)) and se in [1])
         painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
-        painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] and se in [2])
+        painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
         
         nonpainc.append(SE in list(range(230, 239)) and se in [0])
-        nonpainc.append(SE in list(range(247, 253)) + list(range(253,268)) and se in [0, 1])
-        nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] and se in [2])
+        nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
+        nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] + [268, 270, 271] and se in [2])
         nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
         
         # snu psl pain
-        painc.append(SE in pslGroup and se in [1,2])
+        # nonpainc.append(SE in pslGroup and se in [0])
+        # painc.append(SE in pslGroup and se in [1,2])
         
         
         # khu psl
@@ -373,10 +374,10 @@ BINS = 10 # 최소 time frame 간격 # hyper
 epochs = 1 # 
 lr = 5e-4 # learning rate
 
-n_hidden = int(2**4) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(2**4) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(2**7) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(2**7) # fully conneted laye node 갯수 # 8 # 원래 6 
 
-l2_rate = 1e-6
+l2_rate = 1e-3
 dropout_rate1 = 0.1 # dropout rate
 dropout_rate2 = 0.1 # 
 
@@ -405,7 +406,11 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1):
 
     input1 = keras.layers.Input(shape=(FS, 1)) 
     input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=50, strides=1, activation='relu')(input1_1)
+    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
+    input1_1 = Conv1D(filters=2**4, kernel_size=30, strides=5, activation='relu')(input1_1)
+    input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=5, activation='relu')(input1_1)
+    input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=5, activation='relu')(input1_1)
+
     input1_1 = Flatten()(input1_1)
 
     input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1_1) # fully conneted layers, relu
@@ -459,7 +464,7 @@ for nix, q in enumerate(project_list):
         
 ### wantedlist
     runlist = highGroup3 + PSLgroup_khu + pslGroup + PSLgroup_khu
-    validlist =  PSLgroup_khu # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
+    validlist =  PSLgroup_khu[:] # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
 
 #%% learning 
     mslog = msFunction.msarray([N]); k=0
@@ -468,7 +473,7 @@ for nix, q in enumerate(project_list):
     model.save_weights(initial_weightsave)
     
     savepath_pickle = RESULT_SAVE_PATH + 'resultsave.pickle'
-    if os.path.isfile(savepath_pickle) and True:
+    if os.path.isfile(savepath_pickle) and False:
         with open(savepath_pickle, 'rb') as f:  # Python 3: open(..., 'rb')
             mssave = pickle.load(f)
             
@@ -488,14 +493,14 @@ for nix, q in enumerate(project_list):
                 
         if not(stopsw): 
             final_weightsave = RESULT_SAVE_PATH + str(validlist[k]) + '_final.h5'
-            if not(os.path.isfile(final_weightsave)) or True:
+            if not(os.path.isfile(final_weightsave)) or False:
                 vlist += addset
                 print('learning 시작합니다. validation mouse #', validlist[k])
             
                 trlist = list(set(runlist) - set(vlist))
 
                 # training set
-                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist)
+                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=True)
                 print('tr set num #', len(Y_tr), np.mean(np.array(Y_tr), axis=0))
                 X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr, offsw=False) # ratio 10 초과시 random down -> 1:1로 upsample, -> shuffle
                 print('trainingset bias', np.mean(Y_tr, axis=0))
@@ -508,8 +513,9 @@ for nix, q in enumerate(project_list):
                 model = keras_setup(lr=lr, seed=seed)
                 model.load_weights(initial_weightsave)
                 
-                hist = model.fit(X_tr, Y_tr, batch_size=2**9, epochs=200, verbose=1, validation_data = (X_te, Y_te))
-                
+                # for j in range(10):
+                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=3, verbose=1, validation_data = (X_te, Y_te))
+              
                 s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[];
                 s_loss += list(np.array(hist.history['loss']))
                 s_acc += list(np.array(hist.history['accuracy']))
@@ -543,6 +549,7 @@ for nix, q in enumerate(project_list):
                 # test
                 # valSE = vlist[0]
                 for valSE in vlist:
+                    model.load_weights(final_weightsave)
                     for valse in range(len(signalss[valSE])):
                         X_te, Y_te, Z_te = ms_sampling(forlist = [valSE], seset=[valse], ROIsw=True)
                         predict = model.predict(X_te)
@@ -563,7 +570,8 @@ nonpain_time = msFunction.msarray([MAXSE])
 
 target = np.array(mssave)
 for row in range(len(target)):
-    target[row,:] = target[row,:] - target[row,0]
+    target[row,:] = target[row,:] / target[row,0]
+    print(target[row,:4])
 
 nonpain1, nonpain2, pain = [], [], []
 for SE in range(N):
@@ -597,23 +605,51 @@ print(np.mean(nonpain), np.mean(pain))
 accuracy, roc_auc = msROC(nonpain, pain)
 print(accuracy, roc_auc)
 
+#%%
+# SE = PSLgroup_khu[0]
+target = np.array(mssave)
+for row in range(len(target)):
+    target[row,:] = target[row,:] / target[row,0]
+
+nonpain, pain = [], []
+
+for SE in range(N):
+    if SE in PSLgroup_khu: # filter
+        stopsw = False
+        addset = []
+        if SE in msset_total[:,0]: 
+            addset += list(msset_total[np.where(msset_total[:,0]==SE)[0],:][0][1:])
+        if SE in msset_total[:,1:].flatten(): stopsw = True
+        if not(stopsw):
+            testset = [SE] + addset
+            print(np.mean(target[testset,:3], axis=0))
+
+            nonpain += list(np.mean(target[testset,:3], axis=0)[0:1])
+            pain += list(np.mean(target[testset,:3], axis=0)[1:])
+
+accuracy, roc_auc = msROC(nonpain, pain)
+print(accuracy, roc_auc)
+
+
 #%% PD 분석 - 후처리
-PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\raw\\'
-pickle_save_tmp = PATH + 'mspickle_PD.pickle'    
+# PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\raw\\'
+pickle_save_tmp = 'C:\\mass_save\\' + 'mspickle_PD.pickle'    
 
 with open(pickle_save_tmp, 'rb') as f:  # Python 3: open(..., 'rb')
     signalss_PD = pickle.load(f)
     
 mssave_PD = np.zeros((len(signalss_PD), MAXSE)) * np.nan 
 
-for valSE in range(len(signalss_PD)):
-    for valse in range(len(signalss_PD[SE])):
-        X_te, Y_te, Z_te =  ms_sampling(forlist=[valSE], seset=[valse], signalss=signalss_PD, ROIsw=True, fixlabel=True)
-        predict = model.predict(X_te)
-        pain = np.mean(predict[:,1])
-        print()
-        print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
-        mssave_PD[valSE, valse] = pain
+for valSE in range(8, len(signalss_PD)):
+    for valse in range(len(signalss_PD[valSE])):
+        if len(signalss_PD[valSE][valse]) > 0:
+            if signalss_PD[valSE][valse].shape[0] > 200:
+                X_te, Y_te, Z_te =  ms_sampling(forlist=[valSE], seset=[valse], signalss=signalss_PD, ROIsw=True, fixlabel=True)
+                predict = model.predict(X_te)
+                pain = np.mean(predict[:,1])
+                print()
+                print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
+                mssave_PD[valSE, valse] = pain
 
 
 
