@@ -37,7 +37,7 @@ print('savepath', savepath)
 
 with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
-     
+
 FPS = msdata_load['FPS']
 N = msdata_load['N']
 bahavss = msdata_load['bahavss']   # 움직임 정보
@@ -394,6 +394,8 @@ from keras.layers import BatchNormalization
 
 from numpy.random import seed as nseed #
 import tensorflow as tf
+from keras.layers import Conv1D
+from keras.layers import Flatten
 
 
 def keras_setup(lr=0.01, batchnmr=False, seed=1):
@@ -402,13 +404,21 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1):
     init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
 
     input1 = keras.layers.Input(shape=(FS, 1)) 
-    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=False))(input1)
-    input10 = Dense(n_hidden, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1_1)
+    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
+    input1_1 = Conv1D(filters=2**4, kernel_size=50, strides=1, activation='relu')(input1_1)
+    input1_1 = Flatten()(input1_1)
 
-    for l in range(3):
-        input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
-        if batchnmr: input10 = BatchNormalization()(input10)
-        input10 = Dropout(dropout_rate1)(input10) # dropout
+    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1_1) # fully conneted layers, relu
+    if batchnmr: input10 = BatchNormalization()(input10)
+    input10 = Dropout(dropout_rate1)(input10) # dropout
+    
+    input10 = Dense(int(layer_1/2), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
+    if batchnmr: input10 = BatchNormalization()(input10)
+    input10 = Dropout(dropout_rate1)(input10) # dropout
+    
+    input10 = Dense(int(layer_1/4), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(input10) # fully conneted layers, relu
+    if batchnmr: input10 = BatchNormalization()(input10)
+    input10 = Dropout(dropout_rate1)(input10) # dropout
 
     merge_4 = Dense(2, kernel_initializer = init, activation='softmax')(input10) # fully conneted layers, relu
 
@@ -447,20 +457,15 @@ for nix, q in enumerate(project_list):
     if not os.path.exists(RESULT_SAVE_PATH):
         os.mkdir(RESULT_SAVE_PATH)
         
-#    RESULT_SAVE_PATH = gsync + 'kerasdata\\' + settingID + '\\model\\'
-#    if not os.path.exists(RESULT_SAVE_PATH):
-#        os.mkdir(RESULT_SAVE_PATH)
-    
-    model = keras_setup(lr=lr, seed=seed)
-    initial_weightsave = RESULT_SAVE_PATH + 'initial_weight.h5'
-    model.save_weights(initial_weightsave)
-
 ### wantedlist
     runlist = highGroup3 + PSLgroup_khu + pslGroup + PSLgroup_khu
     validlist =  PSLgroup_khu # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
 
 #%% learning 
     mslog = msFunction.msarray([N]); k=0
+    model = keras_setup(lr=lr, seed=seed)
+    initial_weightsave = RESULT_SAVE_PATH + 'initial_weight.h5'
+    model.save_weights(initial_weightsave)
     
     savepath_pickle = RESULT_SAVE_PATH + 'resultsave.pickle'
     if os.path.isfile(savepath_pickle) and True:
