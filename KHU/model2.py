@@ -212,37 +212,6 @@ def xarray_fn(X_tr=None, fn=None):
             tmp4.append(np.array(X_tr[n,h], dtype=float))
         X_tr2[h] = np.array(tmp4)
     return X_tr2
-
-def XYZgen(SE=None, se=None, msclass=None, testsw2=False):
-    X_tmp=[]; Y_tmp=[]; Z_tmp=[]; # ROI=None
-    msbins = np.arange(0, signalss[SE][se].shape[0]-FS+1, BINS) 
-    
-#    if testsw2: 
-#    engram = list(range(signalss[SE][se].shape[1]))
-    
-#    if roisw:
-    if testsw2:
-        for ROI in range(signalss[SE][se].shape[1]):
-            mssignal = np.array(signalss[SE][se][:,ROI])
-            for u in msbins:
-                    # feature 1
-                ft1 = np.array(mssignal[u:u+FS])
-                ft1 = np.reshape(ft1, (ft1.shape[0], 1))  
-               
-                X_tmp.append(ft1);
-                Y_tmp.append(msclass); 
-                Z_tmp.append([SE, se]) #; T_tmp += t4_save
-    else:
-        for u in msbins:
-            ft1 = np.mean(np.array(signalss[SE][se][u:u+FS,:]), axis=1)
-            ft1 = np.reshape(ft1, (ft1.shape[0], 1))  
-           
-            X_tmp.append(ft1);
-            Y_tmp.append(msclass); 
-            Z_tmp.append([SE, se]) #; T_tmp += t4_save 
-          
-    return X_tmp, Y_tmp, Z_tmp
-
 # forlist = trlist; seset=None;
     
 def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fixlabel=False):
@@ -281,6 +250,7 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fi
                         Y.append(msclass); 
                         Z.append([SE, se, u, ROI])
                 elif ROIsw:
+                    X_tmp, Y_tmp, Z_tmp = [], [], []
                     msbins = np.arange(0, signalss[SE][se].shape[0]-FS+1, BINS) 
                     for ROI in range(signalss[SE][se].shape[1]):
                         mssignal = np.array(signalss[SE][se])[:,ROI]
@@ -290,9 +260,22 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fi
                             ft1 = np.array(mssignal[u:u+FS])
                             ft1 = np.reshape(ft1, (ft1.shape[0], 1))  
                            
-                            X.append(ft1);
-                            Y.append(msclass); 
-                            Z.append([SE, se, u, ROI])
+                            X_tmp.append(ft1);
+                            Y_tmp.append(msclass); 
+                            Z_tmp.append([SE, se, u, ROI])
+                            
+                    t4matrix = np.zeros(len(X_tmp))
+                    for n in range(len(X_tmp)):
+                        t4matrix[n] = np.mean(X_tmp[n])
+                        
+                    vix = np.argsort(t4matrix)[::-1][:int(len(t4matrix)*0.4)]
+                    X_tmp2 = np.array(X_tmp)[vix]
+                    Y_tmp2 = np.array(Y_tmp)[vix]
+                    Z_tmp2 = np.array(Z_tmp)[vix]
+                    for n2 in range(len(X_tmp2)):
+                        X.append(X_tmp2[n2,:,:])
+                        Y.append(list(Y_tmp2[n2]))
+                        Z.append(list(Z_tmp2[n2,:]))
                      
     X, Y, Z = np.array(X), np.array(Y), np.array(Z)
     return X, Y, Z
@@ -438,7 +421,7 @@ print(model.summary())
 
 #%%     project_list
 project_list = []
-project_list.append(['20210517_PDanalysis_snupsl', 100]) # project name, seed
+project_list.append(['20210517_PDanalysis_snupsl_2', 100]) # project name, seed
 
 
 # scoresave_total = []
@@ -474,7 +457,7 @@ for nix, q in enumerate(project_list):
     
     savepath_pickle = RESULT_SAVE_PATH + 'resultsave.pickle'
     if os.path.isfile(savepath_pickle) and False:
-        with open(savepath_pickle, 'rb') as f:  # Python 3: open(..., 'rb')
+        with open(savepath_pickle, 'rb') as f:  # Python 3: open(...,l 'rb')
             mssave = pickle.load(f)
             
     elif not(os.path.isfile(savepath_pickle)):
