@@ -71,6 +71,7 @@ oxaliGroup =  msGroup['oxaliGroup']
 glucoseGroup =  msGroup['glucoseGroup']
 PSLscsaline =  msGroup['PSLscsaline']
 highGroup3 =  msGroup['highGroup3']
+highGroup3 = list(set(highGroup3) - set([231, 232, 233, 234]))
 PSLgroup_khu =  msGroup['PSLgroup_khu']
 
 grouped_total_list = []
@@ -389,10 +390,10 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1):
 
     input1 = keras.layers.Input(shape=(FS, 1)) 
     input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
-    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=30, strides=5, activation='relu')(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=5, activation='relu')(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=5, activation='relu')(input1_1)
+    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1_1)
+    input1_1 = Conv1D(filters=2**4, kernel_size=30, strides=2, activation='relu')(input1_1)
+    input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=2, activation='relu')(input1_1)
+    input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=2, activation='relu')(input1_1)
 
     input1_1 = Flatten()(input1_1)
 
@@ -421,10 +422,30 @@ print(model.summary())
 
 #%%     project_list
 project_list = []
-project_list.append(['20210517_PDanalysis_snupsl_2', 100]) # project name, seed
+project_list.append(['20210531_PDanalysis_snupsl', 100]) # project name, seed
 
+from keras.callbacks import EarlyStopping
+Callback = EarlyStopping
+class EarlyStopping_ms(Callback):
+    def __init__(self, monitor='accuracy', value=0.7, verbose=1, baseline=0.):
+        super(Callback, self).__init__()
+        self.monitor = monitor
+        self.value = value
+        self.verbose = verbose
+        self.baseline = baseline
 
-# scoresave_total = []
+    def on_epoch_end(self, epoch, logs={}):
+        current = logs.get(self.monitor)
+        # print('current', current, self.value)
+        if current is None:
+            warnings.warn("Early stopping requires %s available!" % self.monitor, RuntimeWarning)
+
+        if current > self.value:
+            # print('current', current, 'over thr')
+            if self.verbose > 0:
+                print("Epoch %05d: early stopping THR" % epoch)
+            self.model.stop_training = True
+callbacks = [EarlyStopping_ms(monitor='accuracy', value=0.91, verbose=1)]   
 
 #%%
 
@@ -447,7 +468,7 @@ for nix, q in enumerate(project_list):
         
 ### wantedlist
     runlist = highGroup3 + PSLgroup_khu + pslGroup + PSLgroup_khu
-    validlist =  PSLgroup_khu[:] # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
+    validlist =  PSLgroup_khu[1:] + highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
 
 #%% learning 
     mslog = msFunction.msarray([N]); k=0
@@ -476,7 +497,7 @@ for nix, q in enumerate(project_list):
                 
         if not(stopsw): 
             final_weightsave = RESULT_SAVE_PATH + str(validlist[k]) + '_final.h5'
-            if not(os.path.isfile(final_weightsave)) or False:
+            if not(os.path.isfile(final_weightsave)) or True:
                 vlist += addset
                 print('learning 시작합니다. validation mouse #', validlist[k])
             
@@ -497,7 +518,8 @@ for nix, q in enumerate(project_list):
                 model.load_weights(initial_weightsave)
                 
                 # for j in range(10):
-                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=3, verbose=1, validation_data = (X_te, Y_te))
+                hist = model.fit(X_tr, Y_tr, batch_size=2**11, \
+                                 epochs=99999, verbose=1, validation_data = (X_te, Y_te), callbacks=callbacks)
               
                 s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[];
                 s_loss += list(np.array(hist.history['loss']))
@@ -616,11 +638,6 @@ print(accuracy, roc_auc)
 
 #%% PD 분석 - 후처리
 # PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\raw\\'
-pickle_save_tmp = 'C:\\mass_save\\' + 'mspickle_PD.pickle'    
-
-with open(pickle_save_tmp, 'rb') as f:  # Python 3: open(..., 'rb')
-    signalss_PD = pickle.load(f)
-    
 mssave_PD = np.zeros((len(signalss_PD), MAXSE)) * np.nan 
 
 for valSE in range(8, len(signalss_PD)):
@@ -633,6 +650,11 @@ for valSE in range(8, len(signalss_PD)):
                 print()
                 print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
                 mssave_PD[valSE, valse] = pain
+
+pickle_save_tmp = RESULT_SAVE_PATH + 'resultsave_PD.pickle'  
+with open(pickle_save_tmp, 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
+    print(pickle_save_tmp, '저장되었습니다.')
 
 
 
