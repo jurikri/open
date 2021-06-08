@@ -153,6 +153,17 @@ for SE in range(N):
     for se in range(10):
         painc, nonpainc, test_only = [], [], []
         
+        # SNU
+
+        nonpainc.append(SE in highGroup + midleGroup + highGroup2 + CFAgroup  + capsaicinGroup and se in [0])
+        painc.append(SE in highGroup + midleGroup + highGroup2 + CFAgroup  + capsaicinGroup and se in [1,2])
+        
+        nonpainc.append(SE in salineGroup + shamGroup and se in [0,1,2])
+        
+        # snu psl pain
+        nonpainc.append(SE in pslGroup and se in [0])
+        painc.append(SE in pslGroup and se in [1,2])
+        
         # khu formalin
         painc.append(SE in list(range(230, 239)) and se in [1])
         painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
@@ -162,11 +173,6 @@ for SE in range(N):
         nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
         nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] + [268, 270, 271] and se in [2])
         nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
-        
-        # snu psl pain
-        # nonpainc.append(SE in pslGroup and se in [0])
-        # painc.append(SE in pslGroup and se in [1,2])
-        
         
         # khu psl
         nonpainc.append(SE in PSLgroup_khu and se in [0])
@@ -422,7 +428,7 @@ print(model.summary())
 
 #%%     project_list
 project_list = []
-project_list.append(['20210531_PDanalysis_snupsl', 100]) # project name, seed
+project_list.append(['20210608_SNUKHU_1', 100]) # project name, seed
 
 from keras.callbacks import EarlyStopping
 Callback = EarlyStopping
@@ -467,8 +473,8 @@ for nix, q in enumerate(project_list):
         os.mkdir(RESULT_SAVE_PATH)
         
 ### wantedlist
-    runlist = highGroup3 + PSLgroup_khu + pslGroup + PSLgroup_khu
-    validlist =  PSLgroup_khu[1:] + highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
+    runlist = list(range(N))
+    validlist =  PSLgroup_khu
 
 #%% learning 
     mslog = msFunction.msarray([N]); k=0
