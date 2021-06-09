@@ -35,7 +35,7 @@ except:
             savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 
-with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+with open('C:\\mass_save\\' + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
 
 FPS = msdata_load['FPS']
@@ -73,6 +73,8 @@ PSLscsaline =  msGroup['PSLscsaline']
 highGroup3 =  msGroup['highGroup3']
 highGroup3 = list(set(highGroup3) - set([231, 232, 233, 234]))
 PSLgroup_khu =  msGroup['PSLgroup_khu']
+morphineGroup =  msGroup['morphineGroup']
+# print('수정 후 삭제'); morphineGroup = [273]
 
 grouped_total_list = []
 keylist = list(msGroup.keys())
@@ -127,7 +129,7 @@ def downsampling(msssignal, wanted_size):
     return np.array(downsignal)
 
 # t4 = total activity, movement
-MAXSE = 10
+MAXSE = 20
 t4 = np.zeros((N,MAXSE)); movement = np.zeros((N,MAXSE))
 for SE in range(N):
     for se in range(len(signalss[SE])):
@@ -150,46 +152,53 @@ group_nonpain_test = []
 
 SE = 0; se = 0
 for SE in range(N):
-    for se in range(10):
+    for se in range(len(signalss[SE])):
         painc, nonpainc, test_only = [], [], []
         
         # SNU
+        if True:
+            set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
+            set2 = capsaicinGroup + CFAgroup + chloroquineGroup
+            
+            nonpainc.append(SE in set1 + set2 and se in [0])
+            nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
+            
+            painc.append(SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 and se in [1])
+            # painc.append(SE in CFAgroup  + capsaicinGroup and se in [1,2])
 
-        nonpainc.append(SE in highGroup + midleGroup + highGroup2 + CFAgroup  + capsaicinGroup and se in [0])
-        painc.append(SE in highGroup + midleGroup + highGroup2 + CFAgroup  + capsaicinGroup and se in [1,2])
-        
-        nonpainc.append(SE in salineGroup + shamGroup and se in [0,1,2])
-        
-        # snu psl pain
-        nonpainc.append(SE in pslGroup and se in [0])
-        painc.append(SE in pslGroup and se in [1,2])
+            # snu psl pain
+            # nonpainc.append(SE in pslGroup and se in [0]) # 원본은 PSL을 건드리지 않은듯 하다
+            # painc.append(SE in pslGroup and se in [1,2])
         
         # khu formalin
-        painc.append(SE in list(range(230, 239)) and se in [1])
-        painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
-        painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
-        
-        nonpainc.append(SE in list(range(230, 239)) and se in [0])
-        nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
-        nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] + [268, 270, 271] and se in [2])
-        nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
-        
-        # khu psl
-        nonpainc.append(SE in PSLgroup_khu and se in [0])
-        painc.append(SE in PSLgroup_khu and se in [1,2])
-        
-        # test only
-#        test_only.append(SE in PSLgroup_khu and se in [1,2])
-        
-        if np.sum(np.array(painc)) > 0:
-            group_pain_test.append([SE, se])
-            if np.sum(np.array(test_only)) == 0:
-                group_pain_training.append([SE, se])
+        if False:
+            painc.append(SE in list(range(230, 239)) and se in [1])
+            painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
+            painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
             
-        if np.sum(np.array(nonpainc)) > 0:
-            group_nonpain_test.append([SE, se])
-            if np.sum(np.array(test_only)) == 0:
-                group_nonpain_training.append([SE, se])
+            nonpainc.append(SE in list(range(230, 239)) and se in [0])
+            nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
+            nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] + [268, 270, 271] and se in [2])
+            nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
+            
+            # khu psl
+            nonpainc.append(SE in PSLgroup_khu and se in [0])
+            # painc.append(SE in PSLgroup_khu and se in [1,2])
+            
+            # khu morphine
+            nonpainc.append(SE in morphineGroup and se in [0, 1]) # base
+        # painc.append(SE in morphineGroup and se in [2,3,4,5,6,7,8,9]) # PSL
+  
+        # 제거조건
+        ex_nonpain = (SE in np.array(msset)[:,1:].flatten()) and se == 0
+        # if ex_nonpain: print(SE, se)
+        ex_pain = np.mean(movement_syn[SE][se]) < 0.15
+        
+        if np.sum(np.array(painc)) > 0 and not(ex_pain):
+            group_pain_training.append([SE, se])
+            
+        if np.sum(np.array(nonpainc)) > 0 and not(ex_nonpain):
+            group_nonpain_training.append([SE, se])
 
 #%% khu t4 check
 if False:
@@ -211,23 +220,23 @@ if False:
 
 #%% data prep
 
-def xarray_fn(X_tr=None, fn=None):
-    X_tr2 = msFunction.msarray([fn])
-    for h in range(fn):
-        tmp4 = []
-        for n in range(len(X_tr)):
-            tmp4.append(np.array(X_tr[n,h], dtype=float))
-        X_tr2[h] = np.array(tmp4)
-    return X_tr2
-# forlist = trlist; seset=None;
+# def xarray_fn(X_tr=None, fn=None):
+#     X_tr2 = msFunction.msarray([fn])
+#     for h in range(fn):
+#         tmp4 = []
+#         for n in range(len(X_tr)):
+#             tmp4.append(np.array(X_tr[n,h], dtype=float))
+#         X_tr2[h] = np.array(tmp4)
+#     return X_tr2
+# # forlist = trlist; seset=None;
     
 def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fixlabel=False):
 # label 지정
     X, Y, Z = [], [], [];
     ROI = 0 # dummy
-    testsw = False
-    if seset is None: sefor = range(10)
-    if not seset is None: sefor = seset; testsw = True
+    # testsw = False
+    if seset is None: sefor = range(MAXSE)
+    if not seset is None: sefor = seset; # testsw = True
     # SE = forlist[0]; se = sefor[0]
     for SE in forlist:
         for se in sefor:
@@ -236,14 +245,15 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fi
             if [SE, se] in group_pain_training: msclass = [0, 1] # for pain
             if [SE, se] in group_nonpain_training: msclass = [1, 0]  # for nonpain
             
-            if testsw:
-                 if [SE, se] in group_pain_test: msclass = [0, 1] # for pain
-                 if [SE, se] in group_nonpain_test: msclass = [1, 0]  # for nonpain
+            # if testsw:
+            #      if [SE, se] in group_pain_test: msclass = [0, 1] # for pain
+            #      if [SE, se] in group_nonpain_test: msclass = [1, 0]  # for nonpain
             
             if fixlabel: msclass = [0, 1] # test 전용
             
             if not(msclass is None):
                 if not(ROIsw):
+                    # print(SE, se)
                     msbins = np.arange(0, signalss[SE][se].shape[0]-FS+1, BINS) 
     #                for ROI in range(signalss[SE][se].shape[1]):
                     mssignal = np.mean(np.array(signalss[SE][se]), axis=1)
@@ -257,7 +267,8 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fi
                         Y.append(msclass); 
                         Z.append([SE, se, u, ROI])
                 elif ROIsw:
-                    X_tmp, Y_tmp, Z_tmp = [], [], []
+                    # X_tmp, Y_tmp, Z_tmp = [], [], []
+                    # print(SE, se)
                     msbins = np.arange(0, signalss[SE][se].shape[0]-FS+1, BINS) 
                     for ROI in range(signalss[SE][se].shape[1]):
                         mssignal = np.array(signalss[SE][se])[:,ROI]
@@ -267,22 +278,22 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fi
                             ft1 = np.array(mssignal[u:u+FS])
                             ft1 = np.reshape(ft1, (ft1.shape[0], 1))  
                            
-                            X_tmp.append(ft1);
-                            Y_tmp.append(msclass); 
-                            Z_tmp.append([SE, se, u, ROI])
+                            X.append(ft1);
+                            Y.append(msclass); 
+                            Z.append([SE, se, u, ROI])
                             
-                    t4matrix = np.zeros(len(X_tmp))
-                    for n in range(len(X_tmp)):
-                        t4matrix[n] = np.mean(X_tmp[n])
+                    # t4matrix = np.zeros(len(X_tmp))
+                    # for n in range(len(X_tmp)):
+                    #     t4matrix[n] = np.mean(X_tmp[n])
                         
-                    vix = np.argsort(t4matrix)[::-1][:int(len(t4matrix)*0.4)]
-                    X_tmp2 = np.array(X_tmp)[vix]
-                    Y_tmp2 = np.array(Y_tmp)[vix]
-                    Z_tmp2 = np.array(Z_tmp)[vix]
-                    for n2 in range(len(X_tmp2)):
-                        X.append(X_tmp2[n2,:,:])
-                        Y.append(list(Y_tmp2[n2]))
-                        Z.append(list(Z_tmp2[n2,:]))
+                    # vix = np.argsort(t4matrix)[::-1][:int(len(t4matrix)*1)]
+                    # X_tmp2 = np.array(X_tmp)[vix]
+                    # Y_tmp2 = np.array(Y_tmp)[vix]
+                    # Z_tmp2 = np.array(Z_tmp)[vix]
+                    # for n2 in range(len(X_tmp2)):
+                    #     X.append(X_tmp2[n2,:,:])
+                    #     Y.append(list(Y_tmp2[n2]))
+                    #     Z.append(list(Z_tmp2[n2,:]))
                      
     X, Y, Z = np.array(X), np.array(Y), np.array(Z)
     return X, Y, Z
@@ -290,7 +301,7 @@ def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fi
 #Xsave, Ysave, Zsave = ms_sampling(forlist=[70])
 # X_tmp = X_tr; Y_tmp = Y_tr; Z_tmp = Z_tr
 def upsampling(X_tmp, Y_tmp, Z_tmp, offsw=False):
-    dup = 10
+    dup = 100
     X = np.array(X_tmp)
     Y = np.array(Y_tmp)
     Z = np.array(Z_tmp)
@@ -362,13 +373,13 @@ BINS = 10 # 최소 time frame 간격 # hyper
 
 # learning intensity
 epochs = 1 # 
-lr = 5e-4 # learning rate
+lr = 1e-3 # learning rate
 
-n_hidden = int(2**7) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(2**7) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8*6) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8*6) # fully conneted laye node 갯수 # 8 # 원래 6 
 
-l2_rate = 1e-3
-dropout_rate1 = 0.1 # dropout rate
+l2_rate = 0.3
+dropout_rate1 = 0.2 # dropout rate
 dropout_rate2 = 0.1 # 
 
 
@@ -395,25 +406,25 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1):
     init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
 
     input1 = keras.layers.Input(shape=(FS, 1)) 
-    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
-    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=30, strides=2, activation='relu')(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=2, activation='relu')(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=2, activation='relu')(input1_1)
+    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=False))(input1)
+    # input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1_1)
+    # input1_1 = Conv1D(filters=2**4, kernel_size=30, strides=2, activation='relu')(input1_1)
+    # input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=2, activation='relu')(input1_1)
+    # input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=2, activation='relu')(input1_1)
 
-    input1_1 = Flatten()(input1_1)
+    # input1_1 = Flatten()(input1_1)
 
-    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1_1) # fully conneted layers, relu
+    input10 = Dense(layer_1, kernel_initializer = init, activation='relu')(input1_1) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
     input10 = Dropout(dropout_rate1)(input10) # dropout
     
-    input10 = Dense(int(layer_1/2), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
+    input10 = Dense(int(layer_1), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
-    input10 = Dropout(dropout_rate1)(input10) # dropout
+    input10 = Dropout(dropout_rate2)(input10) # dropout
     
-    input10 = Dense(int(layer_1/4), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(input10) # fully conneted layers, relu
+    input10 = Dense(2, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(input10) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
-    input10 = Dropout(dropout_rate1)(input10) # dropout
+    # input10 = Dropout(dropout_rate1)(input10) # dropout
 
     merge_4 = Dense(2, kernel_initializer = init, activation='softmax')(input10) # fully conneted layers, relu
 
@@ -474,7 +485,7 @@ for nix, q in enumerate(project_list):
         
 ### wantedlist
     runlist = list(range(N))
-    validlist =  PSLgroup_khu
+    validlist =  [pslGroup + shamGroup] #+ morphineGroup + PSLgroup_khu
 
 #%% learning 
     mslog = msFunction.msarray([N]); k=0
@@ -482,13 +493,13 @@ for nix, q in enumerate(project_list):
     initial_weightsave = RESULT_SAVE_PATH + 'initial_weight.h5'
     model.save_weights(initial_weightsave)
     
-    savepath_pickle = RESULT_SAVE_PATH + 'resultsave.pickle'
-    if os.path.isfile(savepath_pickle) and False:
-        with open(savepath_pickle, 'rb') as f:  # Python 3: open(...,l 'rb')
-            mssave = pickle.load(f)
+    # savepath_pickle = RESULT_SAVE_PATH + 'resultsave.pickle'
+    # if os.path.isfile(savepath_pickle) and False:
+    #     with open(savepath_pickle, 'rb') as f:  # Python 3: open(...,l 'rb')
+    #         mssave = pickle.load(f)
             
-    elif not(os.path.isfile(savepath_pickle)):
-        mssave = np.zeros((N, MAXSE)) * np.nan 
+    # elif not(os.path.isfile(savepath_pickle)):
+    mssave = np.zeros((N, MAXSE)) * np.nan 
 
     for k in range(len(validlist)):
         stopsw = False
@@ -502,7 +513,7 @@ for nix, q in enumerate(project_list):
                 if validlist[k] in msset_total[:,1:].flatten(): stopsw = True
                 
         if not(stopsw): 
-            final_weightsave = RESULT_SAVE_PATH + str(validlist[k]) + '_final.h5'
+            final_weightsave = RESULT_SAVE_PATH + str(vlist[0]) + '_final.h5'
             if not(os.path.isfile(final_weightsave)) or True:
                 vlist += addset
                 print('learning 시작합니다. validation mouse #', validlist[k])
@@ -510,28 +521,40 @@ for nix, q in enumerate(project_list):
                 trlist = list(set(runlist) - set(vlist))
 
                 # training set
-                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=True)
-                print('tr set num #', len(Y_tr), np.mean(np.array(Y_tr), axis=0))
+                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=False)
+                print('tr set num #', len(Y_tr), np.sum(np.array(Y_tr), axis=0), np.mean(np.array(Y_tr), axis=0))
+                
                 X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr, offsw=False) # ratio 10 초과시 random down -> 1:1로 upsample, -> shuffle
                 print('trainingset bias', np.mean(Y_tr, axis=0))
+                
+                print(np.sum(np.array(X_tr)), np.mean(np.array(X_tr)))
                 
                 # validation set
                 X_te, Y_te, Z_te = ms_sampling(forlist = vlist, seset=[0,1])
                 print('tr set num #', len(Y_te), np.mean(np.array(Y_te), axis=0))
+                
+                # print(np.sum(X_training[0]), np.mean(X_training[0]))
                 
                 # model reset
                 model = keras_setup(lr=lr, seed=seed)
                 model.load_weights(initial_weightsave)
                 
                 # for j in range(10):
-                hist = model.fit(X_tr, Y_tr, batch_size=2**11, \
-                                 epochs=99999, verbose=1, validation_data = (X_te, Y_te), callbacks=callbacks)
+                
+                # hist = model.fit(X_tr, Y_tr, batch_size=2**11, \
+                # epochs=999999, verbose=1, validation_data = (X_te, Y_te), callbacks=callbacks)
+                for eee in range(99999):       
+                    hist = model.fit(X_tr, Y_tr, batch_size = 2**11, epochs = 1)
+                    if np.array(hist.history['accuracy'])[-1] > 0.91: break
+
               
                 s_loss=[]; s_acc=[]; sval_loss=[]; sval_acc=[];
                 s_loss += list(np.array(hist.history['loss']))
                 s_acc += list(np.array(hist.history['accuracy']))
-                sval_loss += list(np.array(hist.history['val_loss']))
-                sval_acc += list(np.array(hist.history['val_accuracy']))
+                try:
+                    sval_loss += list(np.array(hist.history['val_loss']))
+                    sval_acc += list(np.array(hist.history['val_accuracy']))
+                except: pass
       
                 # save
                 mssave_tmp = {'s_loss': s_loss, 's_acc': s_acc, \
@@ -559,19 +582,114 @@ for nix, q in enumerate(project_list):
                 
                 # test
                 # valSE = vlist[0]
-                for valSE in vlist:
-                    model.load_weights(final_weightsave)
-                    for valse in range(len(signalss[valSE])):
-                        X_te, Y_te, Z_te = ms_sampling(forlist = [valSE], seset=[valse], ROIsw=True)
+            mscheck2 = []
+            model.load_weights(final_weightsave)
+            for valSE in vlist:
+                for valse in range(0, len(signalss[valSE])):
+                    if True:
+                        X_te, Y_te, Z_te = ms_sampling(forlist = [valSE], seset=[valse], ROIsw=True, fixlabel=True)
                         predict = model.predict(X_te)
-                        pain = np.mean(predict[:,1])
-                        print()
-                        print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
-                        mssave[valSE, valse] = pain
+                        mscheck2.append([valSE, valse])
+                    elif False:
+                        valid = valid_generation(valSE, valse)
+                        predict = model.predict(valid[0])
+                        
+                        
+                    pain = np.mean(predict[:,1])
+                    print()
+                    print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
+                    mssave[valSE, valse] = pain
 
-    with open(savepath_pickle, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
-        print(savepath_pickle, '저장되었습니다.')
+    # with open(savepath_pickle, 'wb') as f:  # Python 3: open(..., 'wb')
+    #     pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
+    #     print(savepath_pickle, '저장되었습니다.')
+
+#%% 평가 - 임시
+
+nonpain1 = mssave[pslGroup,0]
+nonpain2 = mssave[shamGroup,:3].flatten()
+
+nonpain = np.concatenate((nonpain1, nonpain2), axis=0)
+pain = mssave[pslGroup,1:3].flatten()
+
+accuracy, roc_auc = msROC(nonpain, pain)
+print(accuracy, roc_auc)
+
+import sys; sys.exit()
+
+#%%
+
+def array_recover(X_like):
+    X_like_toarray = []; X_like = np.array(X_like)
+    for input_dim in range(msunit *fn):
+        tmp = np.zeros((X_like.shape[0],X_like[0,input_dim].shape[0]))
+        for row in range(X_like.shape[0]):
+            tmp[row,:] = X_like[row,input_dim]
+    
+        X_like_toarray.append(tmp)
+        
+        X_like_toarray[input_dim] =  \
+        np.reshape(X_like_toarray[input_dim], (X_like_toarray[input_dim].shape[0],X_like_toarray[input_dim].shape[1],1))
+    
+    return X_like_toarray
+
+def valid_generation(SE, se, signalss=signalss):
+    X_valid = []; Y_valid = [];
+    
+    full_sequence = FS
+    bins = BINS
+    
+    binning = list(range(0,(signalss[SE][se].shape[0]-full_sequence), bins))
+    if signalss[SE][se].shape[0] == full_sequence:
+        binning = [0]
+    binNum = len(binning)
+    
+    for i in range(binNum):    
+        signalss_PSL_test = signalss[SE][se][binning[i]:binning[i]+full_sequence]
+        ROInum = signalss_PSL_test.shape[1]
+        
+        for ROI in range(ROInum):
+            mannual_signal = signalss_PSL_test[:,ROI]
+            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
+            
+            Xtest, Ytest = [], []
+            s = 0; e = signalss[SE][se].shape[1]
+            signal1 = np.mean(mannual_signal[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
+            
+            lastsave = np.zeros(msunit, dtype=int)    
+            binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
+            
+            if len(binlist) == 0:
+                binlist = [0]
+                
+            t4_save = []
+            for frame in binlist:   
+                X_tmp = []; [X_tmp.append([]) for k in range(msunit * fn)] 
+        
+                for unit in range(msunit):
+                    if frame <= full_sequence - sequenceSize[unit]:
+                        X_tmp[unit] = (signal1[frame : frame + sequenceSize[unit]])
+                        lastsave[unit] = frame
+                        
+                        if unit == 0:
+                            t4_save.append(np.mean(signal1[frame : frame + sequenceSize[unit]]))
+                        
+                    else:
+                        X_tmp[unit] = (signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
+                        if unit == 0:
+                            t4_save.append(np.mean(signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))
+        
+                Xtest.append(X_tmp)
+                Ytest.append(label)
+
+                X_valid += Xtest; Y_valid += Ytest
+                 
+    if np.array(Y_valid).shape[0] != 0:      
+        Xtest = array_recover(X_valid); 
+        valid = tuple([Xtest, 0])
+           
+    return valid
+    
 
 
 #%% prism 복붙용 변수생성
@@ -581,8 +699,9 @@ nonpain_time = msFunction.msarray([MAXSE])
 
 target = np.array(mssave)
 for row in range(len(target)):
-    target[row,:] = target[row,:] / target[row,0]
-    print(target[row,:4])
+    if row in PSLgroup_khu: # filter
+        target[row,:] = target[row,:] / target[row,0]
+        print(target[row,:4])
 
 nonpain1, nonpain2, pain = [], [], []
 for SE in range(N):
@@ -646,10 +765,14 @@ print(accuracy, roc_auc)
 # PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\raw\\'
 mssave_PD = np.zeros((len(signalss_PD), MAXSE)) * np.nan 
 
-for valSE in range(8, len(signalss_PD)):
+for valSE in range(0, len(signalss_PD)):
     for valse in range(len(signalss_PD[valSE])):
         if len(signalss_PD[valSE][valse]) > 0:
             if signalss_PD[valSE][valse].shape[0] > 200:
+                final_weightsave = RESULT_SAVE_PATH + '239' + '_final.h5'
+                model.load_weights(final_weightsave)
+                
+                
                 X_te, Y_te, Z_te =  ms_sampling(forlist=[valSE], seset=[valse], signalss=signalss_PD, ROIsw=True, fixlabel=True)
                 predict = model.predict(X_te)
                 pain = np.mean(predict[:,1])
@@ -663,8 +786,8 @@ with open(pickle_save_tmp, 'wb') as f:  # Python 3: open(..., 'wb')
     print(pickle_save_tmp, '저장되었습니다.')
 
 
-
-
+print(np.nanmean(mssave_PD[:8,:], axis=0))
+print(np.nanmean(mssave_PD[8:,:], axis=0))
 
 
 
