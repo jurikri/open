@@ -156,7 +156,7 @@ for SE in range(N):
         painc, nonpainc, test_only = [], [], []
         
         # SNU
-        if True:
+        if False:
             set1 = highGroup + midleGroup + lowGroup + yohimbineGroup + ketoGroup + lidocaineGroup + restrictionGroup + highGroup2 
             set2 = capsaicinGroup + CFAgroup + chloroquineGroup
             
@@ -171,7 +171,8 @@ for SE in range(N):
             # painc.append(SE in pslGroup and se in [1,2])
         
         # khu formalin
-        if False:
+        if True:
+            # khu formalin
             painc.append(SE in list(range(230, 239)) and se in [1])
             painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
             painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
@@ -182,11 +183,11 @@ for SE in range(N):
             nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
             
             # khu psl
-            nonpainc.append(SE in PSLgroup_khu and se in [0])
+            # nonpainc.append(SE in PSLgroup_khu and se in [0])
             # painc.append(SE in PSLgroup_khu and se in [1,2])
             
             # khu morphine
-            nonpainc.append(SE in morphineGroup and se in [0, 1]) # base
+            # nonpainc.append(SE in morphineGroup and se in [0, 1]) # base
         # painc.append(SE in morphineGroup and se in [2,3,4,5,6,7,8,9]) # PSL
   
         # 제거조건
@@ -439,7 +440,7 @@ print(model.summary())
 
 #%%     project_list
 project_list = []
-project_list.append(['20210608_SNUKHU_1', 100]) # project name, seed
+project_list.append(['20210610_KHU_1', 100]) # project name, seed
 
 from keras.callbacks import EarlyStopping
 Callback = EarlyStopping
@@ -485,7 +486,7 @@ for nix, q in enumerate(project_list):
         
 ### wantedlist
     runlist = list(range(N))
-    validlist =  [pslGroup + shamGroup] #+ morphineGroup + PSLgroup_khu
+    validlist =  [pslGroup + shamGroup + morphineGroup + PSLgroup_khu]
 
 #%% learning 
     mslog = msFunction.msarray([N]); k=0
@@ -582,29 +583,28 @@ for nix, q in enumerate(project_list):
                 
                 # test
                 # valSE = vlist[0]
-            mscheck2 = []
             model.load_weights(final_weightsave)
             for valSE in vlist:
                 for valse in range(0, len(signalss[valSE])):
                     if True:
                         X_te, Y_te, Z_te = ms_sampling(forlist = [valSE], seset=[valse], ROIsw=True, fixlabel=True)
                         predict = model.predict(X_te)
-                        mscheck2.append([valSE, valse])
                     elif False:
                         valid = valid_generation(valSE, valse)
                         predict = model.predict(valid[0])
-                        
                         
                     pain = np.mean(predict[:,1])
                     print()
                     print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
                     mssave[valSE, valse] = pain
 
-    # with open(savepath_pickle, 'wb') as f:  # Python 3: open(..., 'wb')
-    #     pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
-    #     print(savepath_pickle, '저장되었습니다.')
+    with open(savepath_pickle, 'wb') as f:  # Python 3: open(..., 'wb')
+        pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
+        print(savepath_pickle, '저장되었습니다.')
 
-#%% 평가 - 임시
+
+import sys; sys.exit()
+#%% SNU PSL 평가
 
 nonpain1 = mssave[pslGroup,0]
 nonpain2 = mssave[shamGroup,:3].flatten()
@@ -615,81 +615,6 @@ pain = mssave[pslGroup,1:3].flatten()
 accuracy, roc_auc = msROC(nonpain, pain)
 print(accuracy, roc_auc)
 
-import sys; sys.exit()
-
-#%%
-
-def array_recover(X_like):
-    X_like_toarray = []; X_like = np.array(X_like)
-    for input_dim in range(msunit *fn):
-        tmp = np.zeros((X_like.shape[0],X_like[0,input_dim].shape[0]))
-        for row in range(X_like.shape[0]):
-            tmp[row,:] = X_like[row,input_dim]
-    
-        X_like_toarray.append(tmp)
-        
-        X_like_toarray[input_dim] =  \
-        np.reshape(X_like_toarray[input_dim], (X_like_toarray[input_dim].shape[0],X_like_toarray[input_dim].shape[1],1))
-    
-    return X_like_toarray
-
-def valid_generation(SE, se, signalss=signalss):
-    X_valid = []; Y_valid = [];
-    
-    full_sequence = FS
-    bins = BINS
-    
-    binning = list(range(0,(signalss[SE][se].shape[0]-full_sequence), bins))
-    if signalss[SE][se].shape[0] == full_sequence:
-        binning = [0]
-    binNum = len(binning)
-    
-    for i in range(binNum):    
-        signalss_PSL_test = signalss[SE][se][binning[i]:binning[i]+full_sequence]
-        ROInum = signalss_PSL_test.shape[1]
-        
-        for ROI in range(ROInum):
-            mannual_signal = signalss_PSL_test[:,ROI]
-            mannual_signal = np.reshape(mannual_signal, (mannual_signal.shape[0], 1))
-            
-            Xtest, Ytest = [], []
-            s = 0; e = signalss[SE][se].shape[1]
-            signal1 = np.mean(mannual_signal[:,s:e], axis=1) # 단일 ROI만 선택하는 것임
-            
-            lastsave = np.zeros(msunit, dtype=int)    
-            binlist = list(range(0, full_sequence-np.min(sequenceSize), bins))
-            
-            if len(binlist) == 0:
-                binlist = [0]
-                
-            t4_save = []
-            for frame in binlist:   
-                X_tmp = []; [X_tmp.append([]) for k in range(msunit * fn)] 
-        
-                for unit in range(msunit):
-                    if frame <= full_sequence - sequenceSize[unit]:
-                        X_tmp[unit] = (signal1[frame : frame + sequenceSize[unit]])
-                        lastsave[unit] = frame
-                        
-                        if unit == 0:
-                            t4_save.append(np.mean(signal1[frame : frame + sequenceSize[unit]]))
-                        
-                    else:
-                        X_tmp[unit] = (signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]])
-                        if unit == 0:
-                            t4_save.append(np.mean(signal1[lastsave[unit] : lastsave[unit] + sequenceSize[unit]]))
-        
-                Xtest.append(X_tmp)
-                Ytest.append(label)
-
-                X_valid += Xtest; Y_valid += Ytest
-                 
-    if np.array(Y_valid).shape[0] != 0:      
-        Xtest = array_recover(X_valid); 
-        valid = tuple([Xtest, 0])
-           
-    return valid
-    
 
 
 #%% prism 복붙용 변수생성
@@ -735,11 +660,11 @@ print(np.mean(nonpain), np.mean(pain))
 accuracy, roc_auc = msROC(nonpain, pain)
 print(accuracy, roc_auc)
 
-#%%
+#%% KHU PSL 평가
 # SE = PSLgroup_khu[0]
 target = np.array(mssave)
 for row in range(len(target)):
-    target[row,:] = target[row,:] / target[row,0]
+    target[row,:] = target[row,:] # / target[row,0]
 
 nonpain, pain = [], []
 
@@ -760,18 +685,33 @@ for SE in range(N):
 accuracy, roc_auc = msROC(nonpain, pain)
 print(accuracy, roc_auc)
 
+#%% KHU PSL 평가
+# SE = PSLgroup_khu[0]
+target = np.array(mssave)
 
-#%% PD 분석 - 후처리
-# PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\raw\\'
+nonpain = target[morphineGroup,:2].flatten()
+pain = target[morphineGroup,2:10].flatten()
+morphine = target[morphineGroup,10:13].flatten()
+
+accuracy, roc_auc = msROC(nonpain, pain)
+print(accuracy, roc_auc)
+
+
+
+
+#%% PDpain 평가
+PATH = 'C:\\mass_save\\'
+
+with open(PATH + 'mspickle_PD.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+    msdata_load = pickle.load(f)
+    signalss_PD = msdata_load
+
 mssave_PD = np.zeros((len(signalss_PD), MAXSE)) * np.nan 
-
 for valSE in range(0, len(signalss_PD)):
     for valse in range(len(signalss_PD[valSE])):
         if len(signalss_PD[valSE][valse]) > 0:
             if signalss_PD[valSE][valse].shape[0] > 200:
-                final_weightsave = RESULT_SAVE_PATH + '239' + '_final.h5'
                 model.load_weights(final_weightsave)
-                
                 
                 X_te, Y_te, Z_te =  ms_sampling(forlist=[valSE], seset=[valse], signalss=signalss_PD, ROIsw=True, fixlabel=True)
                 predict = model.predict(X_te)
@@ -779,15 +719,22 @@ for valSE in range(0, len(signalss_PD)):
                 print()
                 print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
                 mssave_PD[valSE, valse] = pain
-
+                
+                # mssave_PD[valSE, valse] = np.mean(signalss_PD[valSE][valse])
+                
 pickle_save_tmp = RESULT_SAVE_PATH + 'resultsave_PD.pickle'  
 with open(pickle_save_tmp, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
     print(pickle_save_tmp, '저장되었습니다.')
 
+exp = np.nanmean(mssave_PD[:8,:11], axis=0)
+print(exp)
+con = np.nanmean(mssave_PD[8:,:11], axis=0)
+print(con)
+plt.figure()
+plt.plot(exp)
+plt.plot(con)
 
-print(np.nanmean(mssave_PD[:8,:], axis=0))
-print(np.nanmean(mssave_PD[8:,:], axis=0))
 
 
 
