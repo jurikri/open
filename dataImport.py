@@ -38,8 +38,9 @@ oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202
 glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
 PSLscsaline =       [216,217,218,219,224,225]
 
-highGroup3 =        list(range(230,239)) + list(range(247,253))
+highGroup3 =        list(range(230,239)) + list(range(247,273))
 PSLgroup_khu =      [239, 240, 241, 242, 243, 244, 245, 246]
+morphineGroup =     [273, 274]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
@@ -82,6 +83,7 @@ msGroup['glucoseGroup'] = glucoseGroup
 msGroup['PSLscsaline'] = PSLscsaline
 msGroup['highGroup3'] = highGroup3
 msGroup['PSLgroup_khu'] = PSLgroup_khu
+msGroup['morphineGroup'] = morphineGroup
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -171,9 +173,10 @@ def ms_syn(target_signal=None, FPS=None):
         
     return allo
 #%%
-gfiltersw=True; skipsw = False; dfsw=True; SE = 0
+gfiltersw=True; skipsw = True; dfsw=True; SE = 0
  
 def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffset=None):
+    
     signalss = msFunction.msarray([N])
     signalss_raw = msFunction.msarray([N])
     behavss = msFunction.msarray([N])
@@ -200,7 +203,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
 #        if gfiltersw:  savename = path + '\\signal_save.xlsx'
 #        elif not(gfiltersw): savename = path + '\\signal_save_nongaussian.xlsx'
             
-        if not(os.path.exists(savepath) and skipsw): 
+        if not(os.path.exists(savepath) and skipsw) or (SE in PSLgroup_khu): 
             if SE in snuformat1:
                 loadpath = path + '\\' + raw_filepath
                 
@@ -322,20 +325,13 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     if SE in [231, 232, 233, 234]: 
                         KHU_FPS = 1/0.2291
                         print(SE, 'Galvano scanner FPS', KHU_FPS)
-                    
-#                    import matplotlib.pyplot as plt
-#                    
-#                    array0[se].shape
-#                    plt.figure(); plt.plot(array0[se][:,1])
-
+                    if SE > 252: KHU_FPS = 1/0.195564
+                
                     savematrix = []
                     for ROI in range(0, array0[se].shape[1]):
                         savematrix.append(ms_syn(target_signal=array0[se][:,ROI], FPS=KHU_FPS))
                     array0[se] = np.transpose(np.array(savematrix))
                     
-#                    array0[se].shape
-#                    plt.figure(); plt.plot(array0[se][:,1])
-
                     print(str(SE) + ' max ' + str(np.max(np.max(array0[se]))) + \
                           ' min ' +  str(np.min(np.min(array0[se]))))
                     
@@ -347,13 +343,6 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     array0[se] = np.array(msraw)
                     array2.append(np.array(array0[se][:,1:]))
                 print(str(SE) + ' ' +raw_filepath + ' ROI ', array2[0].shape[1])
-                
-            #%%
-#            if True:
-#            if SE in nmr_list:
-#                for se in range(len(array2)):
-#                    nmr_value[SE, se] = np.nanmedian(np.array(array2[se])[:,-1])
-#                    array2[se] = np.array(array2[se])[:,:-1]
             
             if gfiltersw:          
                 array3 = list() # after gaussian filter
@@ -395,7 +384,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     f0_vector = np.array(f0_vector)   
                     f_signal = np.zeros(matrix.shape)
                     for frame in range(matrix.shape[0]):
-                        f_signal[frame,:] = (array2[se][frame, :] - f0_vector) / f0_vector
+                        f_signal[frame,:] = (array3[se][frame, :] - f0_vector) / f0_vector
                     array4.append(f_signal)
 
                     # Zscore 계산
@@ -422,7 +411,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     # 양극단 제거 끝
                     
                     array4.append(z_matrix)
-                 #%%
+                 #
             # session 분리
 #            loadpath2 = path + '\\signal_save.xlsx'
             signals = []; behavs = []; signals_raw = []
@@ -447,7 +436,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
                 print(savepath, '저장되었습니다.')
                     
-        elif os.path.exists(savepath) and skipsw: # 이미 있는 경우
+        elif os.path.exists(savepath) and skipsw or (SE in PSLgroup_khu): # 이미 있는 경우
             with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
                 msdict = pickle.load(f)
             signals = msdict['signals']
@@ -506,10 +495,27 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 
         else:
             with open(savepath2, 'rb') as f:  # Python 3: open(..., 'rb')
-                roi_del_ix = pickle.load(f)
-                
+                roi_del_ix = pickle.load(f)     
         roi_del_ix_save[SE] = np.array(roi_del_ix)
+        
+    for SE in list1:
+#        if SE == 170: import sys; sys.exit()
+        mssignal = np.array(signalss[SE][0])
+        roilist = list(range(mssignal.shape[1]))
+        vlist = list(set(roilist) - set(roi_del_ix_save[SE]))
+        se1roinum = signalss[SE][0].shape[1]
+        for se in range(len(signalss[SE])):
             
+            if se1roinum != signalss[SE][se].shape[1]:
+                print(SE, se, 'session간 roinum 불일치')
+            if se1roinum == signalss[SE][se].shape[1]:
+                mssignal = np.array(signalss[SE][se])
+                
+                if se == 0: print(SE, signalss[SE][se].shape, signalss_raw[SE][se].shape)
+                signalss[SE][se] = mssignal[:,vlist]
+                signalss_raw[SE][se] = np.array(signalss_raw[SE][se])[:,vlist]
+                if se == 0: print(SE, signalss[SE][se].shape, signalss_raw[SE][se].shape)
+
     return signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value
 
 def msMovementExtraction(list1, skipsw=False, skipfig=False):
@@ -525,7 +531,7 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
             loadpath = path + '\\' + behav_data_ms[i]
             savename = path + '\\' + 'MS_' + behav_data[i] 
             
-            if os.path.exists(savename) and skipsw:
+            if os.path.exists(savename) and skipsw or (SE in PSLgroup_khu):
                 print('이미 처리됨. skip', savename)
                 continue
         
@@ -859,17 +865,16 @@ runlist = range(0, N)
 msMovementExtraction(runlist, skipsw=False, skipfig=True) 
 
 signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value = mssignal_save(list1=runlist, \
-                                                   gfiltersw=True, skipsw=True, dfsw=True, khuoffset = 0)
+                                                   gfiltersw=True, skipsw=False, dfsw=True, khuoffset = 0)
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
 
-visualizaiton_save(runlist =  range(245, N))
+visualizaiton_save(runlist =  range(273, N))
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'; dict_save(savepath)
-
+savepath = 'C:\\mass_save\\PSLpain\\mspickle.pickle'; dict_save(savepath)
 #savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_raw.pickle'; dict_save(savepath)
 
 import sys; sys.exit()
-
 
 
 #%%
@@ -896,7 +901,7 @@ import sys; sys.exit()
 
 
 
-
+ 
 
 
 
