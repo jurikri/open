@@ -91,6 +91,12 @@ def msfilepath(N):
     if N == 8: filename = 's210308_1_Saline_5.13Hz_512x512.xlsx'
     if N == 9: filename = 's210308_3_Saline_5.13Hz_512x512.xlsx'
     if N == 10: filename = 's210325_1_Saline_5.13Hz_512x512.xlsx'
+    if N == 11: filename = 's210325_2_Saline_5.13Hz_512x512.xlsx'
+    if N == 12: filename = 's210329_Saline_5.13Hz_512x512.xlsx'
+    if N == 13: filename = 's210330_Saline_5.13Hz_512x512.xlsx'
+    if N == 14: filename = 's210331_Saline_5.13Hz_512x512.xlsx'
+    if N == 15: filename = 's210401_Saline_5.13Hz_512x512.xlsx'
+    
     return filename
 
 for n in range(999999):
@@ -99,11 +105,11 @@ for n in range(999999):
 
 def signals_roidel_extract(name, gfiltersw=True, dfsw=True):
     loadpath = PATH + name
-    array0, array2, k = [], [], 0
+    array0, array2, k = [], [], -1
     while True:
-        print('k', k, name)
         try:
             k += 1
+            print('k', k, name)
             df = pd.read_excel(loadpath, sheet_name=k, header=None)
             array0.append(np.array(df))
         except:
@@ -216,17 +222,17 @@ def signals_roidel_extract(name, gfiltersw=True, dfsw=True):
                 tmp = list(roi_del_ix) + [ROI]
                 roi_del_ix = tmp
                 
-    return array4, roi_del_ix
+    return array2, array4, roi_del_ix
 
 #%% 개별 file 에서 signal extract 후 pickle 저장
 file_list = os.listdir(PATH)
 for SE in range(N):
     name = msfilepath(SE)
     pickle_save_tmp = PATH + name + '.pickle'
-    if not(os.path.isfile(pickle_save_tmp)) or False:
-        array4, roi_del_ix = signals_roidel_extract(name, gfiltersw=True, dfsw=True)
+    if not(os.path.isfile(pickle_save_tmp)) or True:
+        array2, array4, roi_del_ix = signals_roidel_extract(name, gfiltersw=True, dfsw=True)
         
-        msdict = {'signals': array4, 'roi_del_ix': roi_del_ix}
+        msdict = {'signals_raw': array2, 'signals': array4, 'roi_del_ix': roi_del_ix}
         with open(pickle_save_tmp, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
             print(pickle_save_tmp, '저장되었습니다.')
@@ -234,6 +240,7 @@ for SE in range(N):
 #%% 개별 file의 pickle을 불러와서 통합 + roi_del 적용
 file_list = os.listdir(PATH) 
 signalss = msFunction.msarray([N, MAXSE])
+signalss_raw = msFunction.msarray([N, MAXSE])
 SE = -1
 for SE in range(N):
     name = msfilepath(SE)
@@ -241,25 +248,29 @@ for SE in range(N):
     with open(pickle_save_tmp, 'rb') as f:  # Python 3: open(..., 'rb')
         msdict = pickle.load(f)
         signals = msdict['signals']
+        signals_raw = msdict['signals_raw']
         roi_del_ix = msdict['roi_del_ix']
     
     ROInum = signals[0].shape[1]
     for se in range(len(signals)):
         signalss[SE][se] = np.array(signals[se])
+        signalss_raw[SE][se] = np.array(signals_raw[se])
         if signalss[SE][se].shape[1] != ROInum:
             print(SE, se, name, 'session간 ROI num 불일치')
     
-    pre_roinum = signalss[SE][se].shape[1]
-    rois = list(range(pre_roinum))
-    for j in range(len(roi_del_ix)):
-        rois.remove(roi_del_ix[j])
-    signalss[SE][se] = signalss[SE][se][:,rois]
-    roinum = signalss[SE][se].shape[1]
+        pre_roinum = signalss[SE][se].shape[1]
+        rois = list(range(pre_roinum))
+        for j in range(len(roi_del_ix)):
+            rois.remove(roi_del_ix[j])
+        signalss[SE][se] = signalss[SE][se][:,rois]
+        signalss_raw[SE][se] = signalss_raw[SE][se][:,rois]
+        roinum = signalss[SE][se].shape[1]
     print(name, 'roinum', pre_roinum, '>>', roinum)
 
-pickle_save_tmp = PATH + 'mspickle_PD.pickle'    
+msdict = {'signalss_PD': signalss, 'signalss_raw_PD': signalss_raw}
+pickle_save_tmp = 'C:\\mass_save\\PDpain\\' + 'mspickle_PD.pickle'    
 with open(pickle_save_tmp, 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(signalss, f, pickle.HIGHEST_PROTOCOL)
+    pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
     print(pickle_save_tmp, '저장되었습니다.') 
 
 
