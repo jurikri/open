@@ -5,40 +5,7 @@ Created on Sat Apr 20 20:58:38 2019
 @author: msbak
 """
 
-#%%
 
-fn_extraction = msFunction.msarray([N])
-for SE in range(N):
-    print(SE)
-    if len(signalss_raw[SE][0]) > 0:
-        msout = feature_extraction(signalss_raw[SE])
-        fn_extraction[SE] = msout
-
-savename = 'C:\\mass_save\\fn_extraction.pickle'
-with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(fn_extraction, f, pickle.HIGHEST_PROTOCOL)
-    print(savename, '저장되었습니다.')
-
-
-#%% -raw 부터
-
-PATH = 'D:\\mscore\\syncbackup\\google_syn\\'
-pickle_save_tmp = PATH + 'mspickle_PD.pickle'    
-with open(pickle_save_tmp, 'rb') as f:  # Python 3: open(..., 'rb')
-    signalss_PD = pickle.load(f)    
-
-
-fn_extraction = msFunction.msarray([N])
-for SE in tlist:
-    print(SE)
-    msout = feature_extraction(signalss_raw[SE])
-    fn_extraction[SE] = msout
-
-savename = 'C:\\mass_save\\fn_extraction.pickle'
-with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(fn_extraction, f, pickle.HIGHEST_PROTOCOL)
-    print(savename, '저장되었습니다.')
-    
 
 
 #%%
@@ -82,7 +49,8 @@ bahavss = msdata_load['bahavss']   # 움직임 정보
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
 signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
-
+signalss_raw = msdata_load['signalss_raw'] 
+ 
 highGroup = msGroup['highGroup']    # 5% formalin
 midleGroup = msGroup['midleGroup']  # 1% formalin
 lowGroup = msGroup['lowGroup']      # 0.25% formalin
@@ -249,79 +217,34 @@ if False:
 
 #%% data prep
 
-def xarray_fn(X_tr=None, fn=None):
-    X_tr2 = msFunction.msarray([fn])
-    for h in range(fn):
-        tmp4 = []
-        for n in range(len(X_tr)):
-            tmp4.append(np.array(X_tr[n,h], dtype=float))
-        X_tr2[h] = np.array(tmp4)
-    return X_tr2
-# forlist = trlist; seset=None;
+
+savename = 'C:\\mass_save\\fn_extraction.pickle'    
+if os.path.isfile(savename) and False:
+    with open(savename, 'rb') as f:  # Python 3: open(...,l 'rb')
+        fninput = pickle.load(f)
+ 
+FNINPUT = fninput
     
 def ms_sampling(forlist=range(N), seset=None, signalss=signalss, ROIsw=False, fixlabel=False):
 # label 지정
     X, Y, Z = [], [], [];
-    ROI = 0 # dummy
-    testsw = False
-    if seset is None: sefor = range(10)
-    if not seset is None: sefor = seset; testsw = True
+
     # SE = forlist[0]; se = sefor[0]
     for SE in forlist:
+        if seset is None: sefor = range(len(signalss[SE]))
+        if not seset is None: sefor = seset;
+        
         for se in sefor:
             msclass = None
-            
             if [SE, se] in group_pain_training: msclass = [0, 1] # for pain
             if [SE, se] in group_nonpain_training: msclass = [1, 0]  # for nonpain
-            
-            if testsw:
-                 if [SE, se] in group_pain_test: msclass = [0, 1] # for pain
-                 if [SE, se] in group_nonpain_test: msclass = [1, 0]  # for nonpain
-            
             if fixlabel: msclass = [0, 1] # test 전용
             
-            if not(msclass is None):
-                if not(ROIsw):
-                    msbins = np.arange(0, signalss[SE][se].shape[0]-FS+1, BINS) 
-    #                for ROI in range(signalss[SE][se].shape[1]):
-                    mssignal = np.mean(np.array(signalss[SE][se]), axis=1)
-                    for u in msbins:
-                        u = int(u)
-                            # feature 1
-                        ft1 = np.array(mssignal[u:u+FS])
-                        ft1 = np.reshape(ft1, (ft1.shape[0], 1))  
-                       
-                        X.append(ft1);
-                        Y.append(msclass); 
-                        Z.append([SE, se, u, ROI])
-                elif ROIsw:
-                    X_tmp, Y_tmp, Z_tmp = [], [], []
-                    msbins = np.arange(0, signalss[SE][se].shape[0]-FS+1, BINS) 
-                    for ROI in range(signalss[SE][se].shape[1]):
-                        mssignal = np.array(signalss[SE][se])[:,ROI]
-                        for u in msbins:
-                            u = int(u)
-                                # feature 1
-                            ft1 = np.array(mssignal[u:u+FS])
-                            ft1 = np.reshape(ft1, (ft1.shape[0], 1))  
-                           
-                            X_tmp.append(ft1);
-                            Y_tmp.append(msclass); 
-                            Z_tmp.append([SE, se, u, ROI])
-                            
-                    t4matrix = np.zeros(len(X_tmp))
-                    for n in range(len(X_tmp)):
-                        t4matrix[n] = np.mean(X_tmp[n])
-                        
-                    vix = np.argsort(t4matrix)[::-1][:int(len(t4matrix)*0.4)]
-                    X_tmp2 = np.array(X_tmp)[vix]
-                    Y_tmp2 = np.array(Y_tmp)[vix]
-                    Z_tmp2 = np.array(Z_tmp)[vix]
-                    for n2 in range(len(X_tmp2)):
-                        X.append(X_tmp2[n2,:,:])
-                        Y.append(list(Y_tmp2[n2]))
-                        Z.append(list(Z_tmp2[n2,:]))
-                     
+            if not(msclass is None):      
+                X.append(FNINPUT[SE][se]);
+                Y.append(msclass); 
+                Z.append([SE, se])
+               
     X, Y, Z = np.array(X), np.array(Y), np.array(Z)
     return X, Y, Z
 
@@ -432,29 +355,19 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1):
 
     init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
 
-    input1 = keras.layers.Input(shape=(FS, 1)) 
-    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
-    input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=30, strides=2, activation='relu')(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=2, activation='relu')(input1_1)
-    input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=2, activation='relu')(input1_1)
-
-    input1_1 = Flatten()(input1_1)
-
-    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1_1) # fully conneted layers, relu
+    input1 = keras.layers.Input(shape=(4)) 
+    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
     input10 = Dropout(dropout_rate1)(input10) # dropout
     
-    input10 = Dense(int(layer_1/2), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
-    if batchnmr: input10 = BatchNormalization()(input10)
-    input10 = Dropout(dropout_rate1)(input10) # dropout
+    for ln in range(2):
+        if int(layer_1/(2**ln)) < 2: break
+        input10 = Dense(int(layer_1/(2**ln)), kernel_initializer = init, \
+                        kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
+        if batchnmr: input10 = BatchNormalization()(input10)
+        input10 = Dropout(dropout_rate1)(input10) # dropout
     
-    input10 = Dense(int(layer_1/4), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(input10) # fully conneted layers, relu
-    if batchnmr: input10 = BatchNormalization()(input10)
-    input10 = Dropout(dropout_rate1)(input10) # dropout
-
     merge_4 = Dense(2, kernel_initializer = init, activation='softmax')(input10) # fully conneted layers, relu
-
     model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
     model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, decay=1e-8, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
     
@@ -466,7 +379,7 @@ print(model.summary())
 
 #%%     project_list
 project_list = []
-project_list.append(['20210608_SNUKHU_1', 100]) # project name, seed
+project_list.append(['20210614_fnx_1', 100]) # project name, seed
 
 from keras.callbacks import EarlyStopping
 Callback = EarlyStopping
@@ -548,7 +461,7 @@ for nix, q in enumerate(project_list):
                 trlist = list(set(runlist) - set(vlist))
 
                 # training set
-                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=True)
+                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist)
                 print('tr set num #', len(Y_tr), np.mean(np.array(Y_tr), axis=0))
                 X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr, offsw=False) # ratio 10 초과시 random down -> 1:1로 upsample, -> shuffle
                 print('trainingset bias', np.mean(Y_tr, axis=0))
@@ -600,7 +513,7 @@ for nix, q in enumerate(project_list):
                 for valSE in vlist:
                     model.load_weights(final_weightsave)
                     for valse in range(len(signalss[valSE])):
-                        X_te, Y_te, Z_te = ms_sampling(forlist = [valSE], seset=[valse], ROIsw=True)
+                        X_te, Y_te, Z_te = ms_sampling(forlist = [valSE], seset=[valse])
                         predict = model.predict(X_te)
                         pain = np.mean(predict[:,1])
                         print()
@@ -612,93 +525,11 @@ for nix, q in enumerate(project_list):
         print(savepath_pickle, '저장되었습니다.')
 
 
-#%% prism 복붙용 변수생성
-
-pain_time = msFunction.msarray([MAXSE])
-nonpain_time = msFunction.msarray([MAXSE])
-
-target = np.array(mssave)
-for row in range(len(target)):
-    target[row,:] = target[row,:] / target[row,0]
-    print(target[row,:4])
-
-nonpain1, nonpain2, pain = [], [], []
-for SE in range(N):
-    if SE in PSLgroup_khu: # filter
-        for se in range(MAXSE):
-            if [SE, se] in group_nonpain_test:
-                nonpain_time[se].append(target[SE,se])
-            if [SE, se] in group_pain_test:
-                pain_time[se].append(target[SE,se])
-
-def to_prism(target):
-    Aprism = pd.DataFrame([])
-    for row in range(len(target)):
-        Aprism = pd.concat((Aprism, pd.DataFrame(target[row])), ignore_index=True, axis=1)
-    return Aprism
-
-Aprism_nonpain = to_prism(nonpain_time)
-Aprism_pain = to_prism(pain_time)
-
-# ROC 판정용 - 직렬화
-def to_linear(target):
-    linear = []
-    for row in range(len(target)):
-        linear += target[row]
-    return linear
-
-nonpain = to_linear(nonpain_time)
-pain = to_linear(pain_time)
-
-print(np.mean(nonpain), np.mean(pain))
-accuracy, roc_auc = msROC(nonpain, pain)
-print(accuracy, roc_auc)
-
-#%%
-# SE = PSLgroup_khu[0]
-target = np.array(mssave)
-for row in range(len(target)):
-    target[row,:] = target[row,:] / target[row,0]
-
-nonpain, pain = [], []
-
-for SE in range(N):
-    if SE in PSLgroup_khu: # filter
-        stopsw = False
-        addset = []
-        if SE in msset_total[:,0]: 
-            addset += list(msset_total[np.where(msset_total[:,0]==SE)[0],:][0][1:])
-        if SE in msset_total[:,1:].flatten(): stopsw = True
-        if not(stopsw):
-            testset = [SE] + addset
-            print(np.mean(target[testset,:3], axis=0))
-
-            nonpain += list(np.mean(target[testset,:3], axis=0)[0:1])
-            pain += list(np.mean(target[testset,:3], axis=0)[1:])
-
-accuracy, roc_auc = msROC(nonpain, pain)
-print(accuracy, roc_auc)
+#%% 평가
 
 
-#%% PD 분석 - 후처리
-# PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\raw\\'
-mssave_PD = np.zeros((len(signalss_PD), MAXSE)) * np.nan 
 
-for valSE in range(8, len(signalss_PD)):
-    for valse in range(len(signalss_PD[valSE])):
-        if len(signalss_PD[valSE][valse]) > 0:
-            if signalss_PD[valSE][valse].shape[0] > 200:
-                X_te, Y_te, Z_te =  ms_sampling(forlist=[valSE], seset=[valse], signalss=signalss_PD, ROIsw=True, fixlabel=True)
-                predict = model.predict(X_te)
-                pain = np.mean(predict[:,1])
-                print()
-                print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
-                mssave_PD[valSE, valse] = pain
 
-pickle_save_tmp = RESULT_SAVE_PATH + 'resultsave_PD.pickle'  
-with open(pickle_save_tmp, 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
-    print(pickle_save_tmp, '저장되었습니다.')
 
 
 
