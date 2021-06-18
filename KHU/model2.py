@@ -163,19 +163,20 @@ for SE in range(N):
             nonpainc.append(SE in set1 + set2 and se in [0])
             nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
             
-            painc.append(SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 and se in [1])
-            painc.append(SE in CFAgroup  + capsaicinGroup and se in [1,2])
+            # painc.append(SE in highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 and se in [1])
+            # painc.append(SE in CFAgroup  + capsaicinGroup and se in [1,2])
 
             # snu psl pain
             nonpainc.append(SE in pslGroup and se in [0]) # 원본은 PSL을 건드리지 않은듯 하다
-            # painc.append(SE in pslGroup and se in [1,2])
+            nonpainc.append(SE in shamGroup and se in [0,1,2]) # 원본은 PSL을 건드리지 않은듯 하다
+            painc.append(SE in pslGroup and se in [1,2])
         
         # khu formalin
         if True:
             # khu formalin
-            painc.append(SE in list(range(230, 239)) and se in [1])
-            painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
-            painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
+            # painc.append(SE in list(range(230, 239)) and se in [1])
+            # painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
+            # painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
             
             nonpainc.append(SE in list(range(230, 239)) and se in [0])
             nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
@@ -184,11 +185,12 @@ for SE in range(N):
             
             # khu psl
             nonpainc.append(SE in PSLgroup_khu and se in [0])
+            painc.append(SE in PSLgroup_khu and se in [1,2])
             # painc.append(SE in PSLgroup_khu and se in [1,2])
             
             # khu morphine
             nonpainc.append(SE in morphineGroup and se in [0, 1]) # base
-        # painc.append(SE in morphineGroup and se in [2,3,4,5,6,7,8,9]) # PSL
+            painc.append(SE in morphineGroup and se in [2,3,4,5,6,7,8,9]) # PSL
   
         # 제거조건
         ex_nonpain = (SE in np.array(msset)[:,1:].flatten()) and se == 0
@@ -333,16 +335,16 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, offsw=False):
                 continue
 
             addix = np.where(Y[:,np.argmin([nnum, pnum])]==1)[0]
-            if not(maxnum == minnum):
-                if maxnum // minnum > 1:
-                    X = np.append(X, X[addix], axis=0)
-                    Y = np.append(Y, Y[addix], axis=0)
-                    Z = np.append(Z, Z[addix], axis=0)
-                elif maxnum // minnum == 1:
-                    rix = random.sample(list(addix), maxnum-minnum)
-                    X = np.append(X, X[rix], axis=0)
-                    Y = np.append(Y, Y[rix], axis=0)
-                    Z = np.append(Z, Z[rix], axis=0)
+            # if not(maxnum // minnum < 2):
+            if maxnum // minnum > 1:
+                X = np.append(X, X[addix], axis=0)
+                Y = np.append(Y, Y[addix], axis=0)
+                Z = np.append(Z, Z[addix], axis=0)
+                # elif maxnum // minnum == 1:
+                #     rix = random.sample(list(addix), maxnum-minnum)
+                #     X = np.append(X, X[rix], axis=0)
+                #     Y = np.append(Y, Y[rix], axis=0)
+                #     Z = np.append(Z, Z[rix], axis=0)
             else: break
             print('data set num #', len(Y), np.mean(np.array(Y), axis=0))
     
@@ -362,7 +364,7 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, offsw=False):
 #%% hyperparameter
 
 mslog2 = []
-for b1 in range(3):
+for b1 in range(1):
     
     mslength = np.zeros((N,MAXSE)) * np.nan
     for SE in range(N):
@@ -379,10 +381,10 @@ for b1 in range(3):
     epochs = 1 # 
     lr = 1e-3 # learning rate
     
-    n_hidden = int(8*4) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-    layer_1 = int(8*4) # fully conneted laye node 갯수 # 8 # 원래 6 
+    n_hidden = int(8*5) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+    layer_1 = int(8*5) # fully conneted laye node 갯수 # 8 # 원래 6 
     
-    l2_rate = 0.30
+    l2_rate = 0.1
     dropout_rate1 = 0.2 # dropout rate
     dropout_rate2 = 0.1 # 
     
@@ -410,13 +412,13 @@ for b1 in range(3):
         init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
     
         input1 = keras.layers.Input(shape=(FS, 1)) 
-        input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=False))(input1)
+        input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
         # input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=False))(input1_1)
-        # input1_1 = Conv1D(filters=n_hidden, kernel_size=200, strides=2, activation='relu')(input1)
+        input1_1 = Conv1D(filters=n_hidden, kernel_size=30, strides=2, activation='relu')(input1)
         # input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=2, activation='relu')(input1_1)
         # input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=2, activation='relu')(input1_1)
     
-        # input1_1 = Flatten()(input1_1)
+        input1_1 = Flatten()(input1_1)
     
         input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1_1) # fully conneted layers, relu
         if batchnmr: input10 = BatchNormalization()(input10)
@@ -425,18 +427,44 @@ for b1 in range(3):
         # input10 = Dense(int(layer_1), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
         # if batchnmr: input10 = BatchNormalization()(input10)
         # input10 = Dropout(dropout_rate2)(input10) # dropout
+    
+        merge_4 = Dense(2, kernel_initializer = init, activation='softmax')(input10) # fully conneted layers, relu
+    
+        model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
+        model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=lr, decay=1e-8, beta_1=0.9, beta_2=0.999), metrics=['accuracy']) # optimizer
+        
+        #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+        return model
+    
+    n_hidden = int(2**5) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+    layer_1 = int(2**5) # fully conneted laye node 갯수 # 8 # 원래 6 
+    
+    l2_rate = 0.3
+    dropout_rate1 = 0.2 # dropout rate
+    dropout_rate2 = 0.1 # 
+    ### keras setup
+    def keras_setup(lr=0.01, batchnmr=False, seed=1):
+        #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+    
+        init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
+    
+        input1 = keras.layers.Input(shape=(FS, 1)) 
+        input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1)
+        # input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=True))(input1_1)
+        input1_1 = Conv1D(filters=n_hidden, kernel_size=40, strides=2, activation='relu')(input1_1)
+        # input1_1 = Conv1D(filters=n_hidden, kernel_size=40, strides=2, activation='relu')(input1_1)
+        # input1_1 = Conv1D(filters=2**4, kernel_size=20, strides=2, activation='relu')(input1_1)
+        # input1_1 = Conv1D(filters=2**4, kernel_size=10, strides=2, activation='relu')(input1_1)
+    
+        input1_1 = Flatten()(input1_1)
+    
+        input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1_1) # fully conneted layers, relu
+        if batchnmr: input10 = BatchNormalization()(input10)
+        input10 = Dropout(dropout_rate1)(input10) # dropout
         
         # input10 = Dense(int(layer_1), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input10) # fully conneted layers, relu
         # if batchnmr: input10 = BatchNormalization()(input10)
         # input10 = Dropout(dropout_rate2)(input10) # dropout
-        
-        # input10 = Dense(2, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.0), activation='sigmoid')(input10) # fully conneted layers, relu
-        # if batchnmr: input10 = BatchNormalization()(input10)
-        # input10 = Dropout(dropout_rate1)(input10) # dropout
-        
-        input10 = Dense(2, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.0), activation='sigmoid')(input10) # fully conneted layers, relu
-        # if batchnmr: input10 = BatchNormalization()(input10)
-        # input10 = Dropout(dropout_rate1)(input10) # dropout
     
         merge_4 = Dense(2, kernel_initializer = init, activation='softmax')(input10) # fully conneted layers, relu
     
@@ -453,6 +481,8 @@ for b1 in range(3):
     project_list = []
     project_list.append(['20210610_KHU_1', 100]) # project name, seed
     
+    acc_thr = 0.91
+    #%%
     from keras.callbacks import EarlyStopping
     Callback = EarlyStopping
     class EarlyStopping_ms(Callback):
@@ -474,7 +504,7 @@ for b1 in range(3):
                 if self.verbose > 0:
                     print("Epoch %05d: early stopping THR" % epoch)
                 self.model.stop_training = True
-    callbacks = [EarlyStopping_ms(monitor='accuracy', value=0.91, verbose=1)]   
+    callbacks = [EarlyStopping_ms(monitor='accuracy', value=acc_thr, verbose=1)]   
     
     ### wantedlist
     
@@ -497,8 +527,8 @@ for b1 in range(3):
             
     ### wantedlist
         runlist = list(range(N))
-        # validlist =  [pslGroup + shamGroup]
-        validlist =  PSLgroup_khu + morphineGroup
+        validlist =  morphineGroup
+        # validlist =  
     
     ### learning 
         mslog = msFunction.msarray([N]); k=0
@@ -512,7 +542,8 @@ for b1 in range(3):
         #         mssave = pickle.load(f)
                 
         # elif not(os.path.isfile(savepath_pickle)):
-        mssave = np.zeros((N, MAXSE)) * np.nan 
+        mssave = np.zeros((N, MAXSE)) * np.nan
+        mssave2 = np.zeros((N, MAXSE)) * np.nan
     
         for k in range(len(validlist)):
             stopsw = False
@@ -526,7 +557,7 @@ for b1 in range(3):
                     if validlist[k] in msset_total[:,1:].flatten(): stopsw = True
                     
             if not(stopsw): 
-                final_weightsave = RESULT_SAVE_PATH + str(vlist[0]) + '_final.h5'
+                final_weightsave = RESULT_SAVE_PATH + str(vlist[0]) +'_' + str(b1) + '_final.h5'
                 if not(os.path.isfile(final_weightsave)) or True:
                     vlist += addset
                     print('learning 시작합니다. validation mouse #', validlist[k])
@@ -534,7 +565,7 @@ for b1 in range(3):
                     trlist = list(set(runlist) - set(vlist))
     
                     # training set
-                    X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=False)
+                    X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=True)
                     print('tr set num #', len(Y_tr), np.sum(np.array(Y_tr), axis=0), np.mean(np.array(Y_tr), axis=0))
                     
                     X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr, offsw=False) # ratio 10 초과시 random down -> 1:1로 upsample, -> shuffle
@@ -547,21 +578,20 @@ for b1 in range(3):
                     # print('tr set num #', len(Y_te), np.mean(np.array(Y_te), axis=0))
                     
                     # print(np.sum(X_training[0]), np.mean(X_training[0]))
-                    
+                
                     # model reset
-                    acc_thr = 0.89
                     while True:
                     
                         model = keras_setup(lr=lr, seed=seed)
                         
-                    # for j in range(10):
-                    
-                    # hist = model.fit(X_tr, Y_tr, batch_size=2**11, \
-                    # epochs=999999, verbose=1, callbacks=callbacks)
-                    
-                        for eee in range(6000):       
-                            hist = model.fit(X_tr, Y_tr, batch_size = 2**11, epochs = 1)
-                            if np.array(hist.history['accuracy'])[-1] > acc_thr: break
+                        # for j in range(10):
+                        
+                        hist = model.fit(X_tr, Y_tr, batch_size=2**11, \
+                        epochs=6000, verbose=1, callbacks=callbacks)
+                        
+                        # for eee in range(6000):       
+                        #     hist = model.fit(X_tr, Y_tr, batch_size = 2**11, epochs = 1)
+                        #     if np.array(hist.history['accuracy'])[-1] > acc_thr: break
                         if np.array(hist.history['accuracy'])[-1] > acc_thr: break
                         seed += 1
     
@@ -600,6 +630,7 @@ for b1 in range(3):
                     
                     # test
                     # valSE = vlist[0]
+                    ### test
                 model.load_weights(final_weightsave)
                 for valSE in vlist:
                     for valse in range(0, len(signalss[valSE])):
@@ -611,53 +642,70 @@ for b1 in range(3):
                             predict = model.predict(valid[0])
                             
                         pain = np.mean(predict[:,1])
-                        print()
+                        
+                        # pain2
+                        roinum = np.max(Z_te[:,3])
+                        roipain = np.zeros(roinum) * np.nan
+                        for ROI in range(roinum):
+                            vix = np.where(Z_te[:,3] == ROI)[0]
+                            roipain[ROI] = np.mean(predict[:,1][vix])
+                        vix = np.argsort(roipain)[::-1][:int(len(roipain)*0.2)]
+                        pain2 = np.mean(roipain[vix])
+                        # pain2 = np.std(predict[:,1]) / np.mean(predict[:,1])
+                        
+                        # print()
                         print('te set num #', len(Y_te), 'test result SE', valSE, 'se', valse, 'pain >>', pain)
                         mssave[valSE, valse] = pain
+                        mssave2[valSE, valse] = pain2
     
         with open(savepath_pickle, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
             print(savepath_pickle, '저장되었습니다.')
             
-    mslog2.append(mssave[validlist,:])
-import sys; sys.exit()
-    #%%
+#     mslog2.append(mssave[validlist,:])
+# import sys; sys.exit()
+    #
     # import sys; sys.exit()
     ### SNU PSL 평가
     # mssave[shamGroup]
     
-    mssave2, mssave3 = np.zeros(mssave.shape)*np.nan, np.zeros(mssave.shape)*np.nan
-    for i in range(len(mssave)):
-        mssave2[i,:] = mssave[i,:] / mssave[i,0]
+    if False:
+        origin = mssave
     
-    for i in range(len(mssave)):
-        mssave3[i,:] = mssave[i,:] - mssave[i,0]
+        mssave4, mssave3 = np.zeros(mssave.shape)*np.nan, np.zeros(mssave.shape)*np.nan
+        for i in range(len(mssave)):
+            mssave4[i,:] = mssave[i,:] / origin[i,0]
         
-    target = mssave
-    nonpain1 = target[pslGroup,0]
-    nonpain2 = target[shamGroup,:3].flatten()
-    nonpain = np.concatenate((nonpain1, nonpain2), axis=0)
-    pain = target[pslGroup,1:3].flatten()
-    accuracy, roc_auc1 = msROC(nonpain, pain)
-    print(accuracy, roc_auc1)
+        for i in range(len(mssave)):
+            mssave3[i,:] = mssave[i,:] - origin[i,0]
+            
+        target = origin
+        nonpain1 = target[pslGroup,0]
+        nonpain2 = target[shamGroup,:3].flatten()
+        nonpain = np.concatenate((nonpain1, nonpain2), axis=0)
+        pain = target[pslGroup,1:3].flatten()
+        accuracy, roc_auc1 = msROC(nonpain, pain)
+        print(accuracy, roc_auc1)
+            
+        target = mssave4
+        nonpain1 = target[pslGroup,0]
+        nonpain2 = target[shamGroup,:3].flatten()
+        nonpain = np.concatenate((nonpain1, nonpain2), axis=0)
+        pain = target[pslGroup,1:3].flatten()
+        accuracy, roc_auc2 = msROC(nonpain, pain)
+        print(accuracy, roc_auc2)
         
-    target = mssave2
-    nonpain1 = target[pslGroup,0]
-    nonpain2 = target[shamGroup,:3].flatten()
-    nonpain = np.concatenate((nonpain1, nonpain2), axis=0)
-    pain = target[pslGroup,1:3].flatten()
-    accuracy, roc_auc2 = msROC(nonpain, pain)
-    print(accuracy, roc_auc2)
+        target = mssave3
+        nonpain1 = target[pslGroup,0]
+        nonpain2 = target[shamGroup,:3].flatten()
+        nonpain = np.concatenate((nonpain1, nonpain2), axis=0)
+        pain = target[pslGroup,1:3].flatten()
+        accuracy, roc_auc3 = msROC(nonpain, pain)
+        print(accuracy, roc_auc3)
     
-    target = mssave3
-    nonpain1 = target[pslGroup,0]
-    nonpain2 = target[shamGroup,:3].flatten()
-    nonpain = np.concatenate((nonpain1, nonpain2), axis=0)
-    pain = target[pslGroup,1:3].flatten()
-    accuracy, roc_auc3 = msROC(nonpain, pain)
-    print(accuracy, roc_auc3)
+    print(origin[PSLgroup_khu + morphineGroup, :])
     
-    mslog2.append([b1, np.max([roc_auc1, roc_auc2, roc_auc3])])
+    mslog2.append([b1, np.max([roc_auc1, roc_auc2, roc_auc3]), origin])
 
 import sys; sys.exit()
 
