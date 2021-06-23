@@ -79,28 +79,61 @@ MAXSE = 10
 # in -> 여러 sheet를 포함한 exel 1개 (SE)
 
 def msfilepath(N):
-    filename = None
-    if N == 0: filename = 's201229 MPTP_5.13Hz_512x512.xlsx'
-    if N == 1: filename = 's210202 MPTP_5.13Hz_512x512.xlsx'
-    if N == 2: filename = 's210203 MPTP_5.13Hz_512x512.xlsx'
-    if N == 3: filename = 's210216 MPTP_5.13Hz_512x512.xlsx'
-    if N == 4: filename = 's210225_MPTP_5.13Hz_512x512.xlsx'
-    if N == 5: filename = 's210226_MPTP_5.13Hz_512x512.xlsx'
-    if N == 6: filename = 's210302_MPTP_5.13Hz_512x512.xlsx'
-    if N == 7: filename = 's210405_MPTP_5.13Hz_512x512.xlsx'
-    if N == 8: filename = 's210308_1_Saline_5.13Hz_512x512.xlsx'
-    if N == 9: filename = 's210308_3_Saline_5.13Hz_512x512.xlsx'
-    if N == 10: filename = 's210325_1_Saline_5.13Hz_512x512.xlsx'
-    if N == 11: filename = 's210325_2_Saline_5.13Hz_512x512.xlsx'
-    if N == 12: filename = 's210329_Saline_5.13Hz_512x512.xlsx'
-    if N == 13: filename = 's210330_Saline_5.13Hz_512x512.xlsx'
-    if N == 14: filename = 's210331_Saline_5.13Hz_512x512.xlsx'
-    if N == 15: filename = 's210401_Saline_5.13Hz_512x512.xlsx'
+    filename, behavname = None, None
+    if N == 0: 
+        filename = 's201229 MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210202\\[SHANA]s210202_behav_'  # dummy
+    if N == 1:
+        filename = 's210202 MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210202\\[SHANA]s210202_behav_'
+    if N == 2:
+        filename = 's210203 MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210203\\[SHANA]s210203_behav_'
+    if N == 3:
+        filename = 's210216 MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210216\\[SHANA]s210216_behav_'
+    if N == 4:
+        filename = 's210225_MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210225\\[SHANA]s210225_behav_'
+    if N == 5:
+        filename = 's210226_MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210226\\[SHANA]s210226_behav_'
+    if N == 6:
+        filename = 's210302_MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210302\\[SHANA]s210302_behav_'
+    if N == 7:
+        filename = 's210405_MPTP_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210405\\[SHANA]s210405_behav_'
+        
+    if N == 8:
+        filename = 's210308_1_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210308_1\\[SHANA]s210308_1_behav_'
+    if N == 9:
+        filename = 's210308_3_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210308_3\\[SHANA]s210308_3_behav_'
+    if N == 10:
+        filename = 's210325_1_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210325_1\\[SHANA]s210325_1_behav_'
+    if N == 11:
+        filename = 's210325_2_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210325_2\\[SHANA]s210325_2_behav_'
+    if N == 12:
+        filename = 's210329_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210329\\[SHANA]s210329_behav_'
+    if N == 13:
+        filename = 's210330_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210330\\[SHANA]s210330_behav_'
+    if N == 14:
+        filename = 's210331_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210331\\[SHANA]s210331_behav_'
+    if N == 15:
+        filename = 's210401_Saline_5.13Hz_512x512.xlsx'
+        behavname = 'G:\\PDpain_behavior\\210401\\[SHANA]s210401_behav_'
     
-    return filename
+    return filename, behavname
 
 for n in range(999999):
-    filename = msfilepath(n)
+    filename, behavname = msfilepath(n)
     if filename is None: N = n; print('total N', N); break
 
 def signals_roidel_extract(name, gfiltersw=True, dfsw=True):
@@ -224,23 +257,90 @@ def signals_roidel_extract(name, gfiltersw=True, dfsw=True):
                 
     return array2, array4, roi_del_ix
 
+def behave_extract(behavname, SE=None, skipfig=False):
+    import hdf5storage
+    for i in range(MAXSE):
+        print(i)
+        loadpath = behavname + str(i) + '.avi.mat'
+        try: df = hdf5storage.loadmat(loadpath); passsw=True
+        except: passsw=False; print('없음', loadpath); break
+        
+        if passsw:
+            diffplot = df['msdiff_gauss']
+            diffplot = np.reshape(diffplot, (diffplot.shape[1]))
+            msmatrix = np.array(diffplot)
+            
+            # thr 결정
+            if False:
+                msmax = np.max(msmatrix); msmin = np.min(msmatrix); diff = (msmax - msmin)/10
+                tmpmax = -np.inf; savemax = np.nan
+                for j in range(10):
+                    c1 = (msmatrix >= (msmin + diff * j))
+                    c2 = (msmatrix < (msmin + diff * (j+1)))
+        #            print(np.sum(c1 * c2), j)
+                    if tmpmax < np.sum(c1 * c2):
+                        tmpmax = np.sum(c1 * c2); savemax = j
+           
+                c1 = (msmatrix >= (msmin + diff * savemax))
+                c2 = (msmatrix < (msmin + diff * (savemax+1)))
+                mscut = np.mean(msmatrix[(c1 * c2)])
+                thr = mscut + 0.15
+                
+                # 예외
+                if SE == 1 and se == 7: thr = 0.15
+                if SE == 6 and se in [0, 6]: thr = 0.15
+            thr = 0.15
+            
+            aline = np.zeros(diffplot.shape[0]); aline[:] = thr
+    #            movement_thr_save[SE,se] = thr
+            ftitle = str(SE) + '_' + str(i) + '_' + behavname[-14:] + '.png'
+            if not(skipfig):
+                plt.figure(i, figsize=(18, 9))
+                plt.title(ftitle)
+                plt.plot(msmatrix)
+                
+                print(ftitle, diffplot.shape[0])
+                
+                plt.plot(aline)
+                plt.axis([0, diffplot.shape[0], np.min(diffplot)-0.05, 2.5])
+                
+                savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\PDbehaveplot\\'
+                if not os.path.exists(savepath): os.mkdir(savepath)
+                os.chdir(savepath)
+                plt.savefig(ftitle)
+                plt.close(i)
+
+    return msmatrix, thr
+    
 #%% 개별 file 에서 signal extract 후 pickle 저장
+def downsampling(msssignal, wanted_size):
+    downratio = msssignal.shape[0]/wanted_size
+    downsignal = np.zeros(wanted_size)
+    downsignal[:] = np.nan
+    for frame in range(wanted_size):
+        s = int(round(frame*downratio))
+        e = int(round(frame*downratio+downratio))
+        downsignal[frame] = np.mean(msssignal[s:e])
+        
+    return np.array(downsignal)
+
 file_list = os.listdir(PATH)
-for SE in range(N):
-    name = msfilepath(SE)
+for SE in range(8, N):
+    name, behavname = msfilepath(SE)
     pickle_save_tmp = PATH + name + '.pickle'
     if not(os.path.isfile(pickle_save_tmp)) or True:
         array2, array4, roi_del_ix = signals_roidel_extract(name, gfiltersw=True, dfsw=True)
-        
-        msdict = {'signals_raw': array2, 'signals': array4, 'roi_del_ix': roi_del_ix}
+        msmatrix, thr = behave_extract(behavname, SE=SE, skipfig=False)
+
+        msdict = {'signals_raw': array2, 'signals': array4, 'roi_del_ix': roi_del_ix, 'behav': [msmatrix, thr]}
         with open(pickle_save_tmp, 'wb') as f:  # Python 3: open(..., 'wb')
             pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
             print(pickle_save_tmp, '저장되었습니다.')
             
 #%% 개별 file의 pickle을 불러와서 통합 + roi_del 적용
 file_list = os.listdir(PATH) 
-signalss = msFunction.msarray([N, MAXSE])
-signalss_raw = msFunction.msarray([N, MAXSE])
+signalss = msFunction.msarray([N])
+signalss_raw = msFunction.msarray([N])
 SE = -1
 for SE in range(N):
     name = msfilepath(SE)
@@ -253,8 +353,8 @@ for SE in range(N):
     
     ROInum = signals[0].shape[1]
     for se in range(len(signals)):
-        signalss[SE][se] = np.array(signals[se])
-        signalss_raw[SE][se] = np.array(signals_raw[se])
+        signalss[SE].append(np.array(signals[se]))
+        signalss_raw[SE].append(np.array(signals_raw[se]))
         if signalss[SE][se].shape[1] != ROInum:
             print(SE, se, name, 'session간 ROI num 불일치')
     
