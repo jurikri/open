@@ -831,12 +831,14 @@ print(np.mean(mssave[shamGroup,:3], axis=0))
 print(np.mean(mssave[PSLgroup_khu,:3], axis=0))
 
 
-#%%
+#%% featrue_extraction
 
 
 inputsignal = signalss_raw[70]
 
-def feature_extraction(inputsignal = None):   
+# inputsignal = signalss_raw_PD[SE]
+# inputsignal2 = signalss_PD[SE]
+def feature_extraction(inputsignal = None, inputsignal2 = None):   
     WS = 40
     BINS = 10
     msout = []
@@ -908,7 +910,15 @@ def feature_extraction(inputsignal = None):
         
         minx, miny = np.min(x), np.min(y)
         
-        msout.append([m, b, r, p, minx, miny])
+        # featrue2
+        sig = inputsignal2[0]
+        stand = np.mean(sig, axis=0) / np.mean(sig)
+        for se in range(len(inputsignal2)):
+            sig = inputsignal2[se]
+            exp = np.mean(sig, axis=0) / np.mean(sig)
+            fn2 = np.mean(np.abs(exp - stand) > 0.22)
+
+        msout.append([m, b, r, p, minx, miny, fn2])
         
         if False:
             plt.figure()
@@ -956,13 +966,13 @@ if False:
     # linear-regression = m, b
 
 
-#%%
+#%% signalss featrue extraction  -> save
 
 fn_extraction = msFunction.msarray([N])
 for SE in range(N):
     print(SE)
     if len(signalss_raw[SE][0]) > 0:
-        msout = feature_extraction(signalss_raw[SE])
+        msout = feature_extraction(signalss_raw[SE], signalss[SE])
         fn_extraction[SE] = msout
 
 savename = 'C:\\mass_save\\fn_extraction.pickle'
@@ -971,25 +981,323 @@ with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
     print(savename, '저장되었습니다.')
 
 
-#%% -raw 부터
+#%% PD : signalss featrue extraction  -> save
 
-PATH = 'D:\\mscore\\syncbackup\\google_syn\\'
-pickle_save_tmp = PATH + 'mspickle_PD.pickle'    
-with open(pickle_save_tmp, 'rb') as f:  # Python 3: open(..., 'rb')
-    signalss_PD = pickle.load(f)    
+loadpath = 'C:\\mass_save\\PDpain\\mspickle_PD.pickle'  
+with open(loadpath, 'rb') as f:  # Python 3: open(..., 'rb')
+    msdict = pickle.load(f)
+   
+signalss_raw_PD = msdict['signalss_raw_PD']
+signalss_PD = msdict['signalss_PD']
 
-
-fn_extraction = msFunction.msarray([N])
-for SE in tlist:
+fn_extraction = msFunction.msarray([len(signalss_PD)])
+for SE in range(len(signalss_PD)):
     print(SE)
-    msout = feature_extraction(signalss_raw[SE])
-    fn_extraction[SE] = msout
+    if len(signalss_raw_PD[SE][0]) > 0:
+        msout = feature_extraction(signalss_raw_PD[SE], signalss_PD[SE])
+        fn_extraction[SE] = msout
 
-savename = 'C:\\mass_save\\fn_extraction.pickle'
+savename = 'C:\\mass_save\\fn_extraction_PD.pickle'
 with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(fn_extraction, f, pickle.HIGHEST_PROTOCOL)
     print(savename, '저장되었습니다.')
+
+#%%
+# pslGroup
+# shamGroup
+
+
+# signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
+# signalss_raw
+
+mssave = []
+
+for stanse in [0, 1]:
+    for THR in [0.22]: 
+        target_sig = list(signalss_PD)
+        forlist = list(range(len(target_sig)))
+        
+        # target_sig = list(signalss)
+        # forlist = pslGroup + shamGroup
+        
+        matrix = np.zeros((len(target_sig),MAXSE)) * np.nan
+        for SE in forlist:
+            sig = target_sig[SE][stanse]
+            stand = np.mean(sig, axis=0) / np.mean(sig)
+            
+            for se in range(len(target_sig[SE])):
+                sig = target_sig[SE][se]
+                exp = np.mean(sig, axis=0) / np.mean(sig)
+                
+                result = np.mean(np.abs(exp - stand) > THR)
+                if not(result==0): matrix[SE,se] = result
+                
+        # accuracy, roc_auc = msROC(matrix[shamGroup,1:3].flatten(), matrix[pslGroup,1:3].flatten())
+        # print(roc_auc)
     
+        for r in range(len(matrix)):
+            matrix[r,:] = matrix[r,:] #  - np.nanmean(matrix[r,0:2])
+    
+        nonpain = list(matrix[8:,:].flatten()) + list(matrix[0:8,:2].flatten())
+        nonpain = list(matrix[8:,2:].flatten())
+        pain = matrix[0:8,4:].flatten()
+        accuracy, roc_auc = msROC(nonpain, pain)
+        
+        print(THR, roc_auc)
+        mssave.append(matrix)
+        
+print('final', np.max(mssave))
+
+
+matrix = np.nanmean(mssave, axis=0)
+plt.plot(np.nanmean(matrix[:8,:], axis=0))
+plt.plot(np.nanmean(matrix[8:,:], axis=0))
+
+matrix2 = []
+for c in list(range(0, 16, 2)):
+    matrix2.append(np.max(matrix[:,c:c+2], axis=1))
+
+matrix2 = np.transpose(np.array(matrix2))
+nonpain = matrix[8:,2:].flatten()
+pain = matrix[0:8,2:].flatten()
+accuracy, roc_auc = msROC(nonpain, pain)
+print(THR, roc_auc)
+#%%
+
+mssave = []
+
+for stanse in [0]:
+    for THR in [0.22]: 
+        # target_sig = list(signalss_PD)
+        # forlist = list(range(len(target_sig)))
+        
+        target_sig = list(signalss)
+        forlist = PSLgroup_khu + morphineGroup
+        
+        matrix = np.zeros((len(target_sig),MAXSE)) * np.nan
+        for SE in forlist:
+            sig = target_sig[SE][stanse]
+            stand = np.mean(sig, axis=0) / np.mean(sig)
+            
+            for se in range(len(target_sig[SE])):
+                sig = target_sig[SE][se]
+                exp = np.mean(sig, axis=0) / np.mean(sig)
+                
+                result = np.mean(np.abs(exp - stand) > THR)
+                if not(result==0): matrix[SE,se] = result
+                
+        # accuracy, roc_auc = msROC(matrix[shamGroup,1:3].flatten(), matrix[pslGroup,1:3].flatten())
+        # print(roc_auc)
+    
+        nonpain = list(matrix[morphineGroup,:2].flatten())
+        pain = list(matrix[morphineGroup,2:10].flatten())
+        accuracy, roc_auc = msROC(nonpain, pain)
+        
+        # print(THR, roc_auc)
+        mssave.append(matrix)
+        
+matrix = mssave
+
+pain1 = matrix[PSLgroup_khu,:3].flatten()
+pain2 = matrix[morphineGroup,2:10].flatten()
+
+np.nanmean(list(pain1) + list(pain2))
+
+
+nonpain2 = matrix[morphineGroup,10:].flatten()
+print(np.nanmean(matrix[PSLgroup_khu,1].flatten()))
+print(np.nanmean(matrix[PSLgroup_khu,2].flatten()))
+
+
+#%%
+
+mssave = []
+
+for stanse in [0]:
+    for THR in [0.22]: 
+        # target_sig = list(signalss_PD)
+        # forlist = list(range(len(target_sig)))
+        
+        target_sig = list(signalss)
+        forlist = [247, 248, 250, 251, 257, 258, 259, 262]
+        
+        matrix = np.zeros((len(target_sig),MAXSE)) * np.nan
+        for SE in forlist:
+            sig = target_sig[SE][stanse]
+            stand = np.mean(sig, axis=0) / np.mean(sig)
+            
+            for se in range(len(target_sig[SE])):
+                sig = target_sig[SE][se]
+                exp = np.mean(sig, axis=0) / np.mean(sig)
+                
+                result = np.mean(np.abs(exp - stand) > THR)
+                if not(result==0): matrix[SE,se] = result
+                
+        # accuracy, roc_auc = msROC(matrix[shamGroup,1:3].flatten(), matrix[pslGroup,1:3].flatten())
+        # print(roc_auc)
+    
+        nonpain = list(matrix[morphineGroup,:2].flatten())
+        pain = list(matrix[morphineGroup,2:10].flatten())
+        accuracy, roc_auc = msROC(nonpain, pain)
+        
+        # print(THR, roc_auc)
+        mssave.append(matrix)
+        
+matrix = mssave
+
+pain1 = matrix[PSLgroup_khu,:3].flatten()
+pain2 = matrix[morphineGroup,2:10].flatten()
+
+np.nanmean(list(pain1) + list(pain2))
+
+
+nonpain2 = matrix[morphineGroup,10:].flatten()
+print(np.nanmean(matrix[PSLgroup_khu,1].flatten()))
+print(np.nanmean(matrix[PSLgroup_khu,2].flatten()))
+
+
+np.mean(matrix[forlist,:6], axis=0)
+
+
+#%% keras setup
+
+lr = 1e-3 # learning rate
+    
+n_hidden = int(8*1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8*1) # fully conneted laye node 갯수 # 8 # 원래 6 
+    
+l2_rate = 0
+dropout_rate1 = 0.2 # dropout rate
+dropout_rate2 = 0.1 # 
+    
+   
+from keras import regularizers
+from keras.layers.core import Dropout
+from keras import initializers
+import keras
+from keras.layers.core import Dense
+from keras.layers.recurrent import LSTM
+from keras.layers.wrappers import Bidirectional
+from keras.optimizers import Adam
+from keras.layers import BatchNormalization
+
+from numpy.random import seed as nseed #
+import tensorflow as tf
+from keras.layers import Conv1D
+from keras.layers import Flatten
+
+
+def keras_setup(lr=0.01, batchnmr=False, seed=1, ROInum=None):
+    #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+
+    init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
+
+    input1 = keras.layers.Input(shape=(ROInum-1)) 
+    input10 = Dense(ROInum-1, kernel_initializer = 'normal', kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input1)
+    # if batchnmr: input10 = BatchNormalization()(input10)
+    # input10 = Dropout(dropout_rate1)(input10) # dropout
+
+    merge_4 = Dense(1, kernel_initializer = init)(input10) # fully conneted layers, relu
+
+    model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
+    model.compile(loss='mean_squared_error', optimizer='adam') # optimizer
+    
+    #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
+    return model
+
+model = keras_setup(lr=lr, seed=0, ROInum=100)
+print(model.summary())
+
+
+
+#%% estimation model
+
+
+target_sig = list(signalss_PD)
+forlist = list(range(len(target_sig)))
+
+
+
+WS = 1000
+BINS = 100
+
+
+#%%
+
+mssave = msFunction.msarray([16,10])
+for SE in range(0, 16):
+
+    mssignal = target_sig[SE][0]
+    msbins = np.arange(0, mssignal.shape[0]-WS, BINS)
+    roinum = mssignal.shape[1]
+    
+    for ROI in range(roinum):
+        final_weightsave = RESULT_SAVE_PATH + str(SE) + '_' + str(ROI) + '_final.h5'
+        if not(os.path.isfile(final_weightsave)):
+            # print(ROI)
+            xtmp, ytmp, ztmp = [], [] ,[]
+            for t in msbins:
+                x = np.mean(mssignal[t:t+WS,:], axis=0)
+                y = x[ROI]
+                x = np.delete(x, ROI, axis=0)
+                
+                xtmp.append(x)
+                ytmp.append(y)
+                ztmp.append([SE,se,t,ROI])
+                
+            xtmp, ytmp, ztmp = np.array(xtmp), np.array(ytmp), np.array(ztmp)
+            model = keras_setup(lr=lr, seed=0, ROInum=roinum)
+            # print(model.summary())
+            
+            hist = model.fit(xtmp, ytmp, batch_size=2**11, epochs=2000, verbose=0)
+            model.save_weights(final_weightsave)
+    
+    model = keras_setup(lr=lr, seed=0, ROInum=roinum)
+    for tese in range(len(target_sig[SE])):
+        test = target_sig[SE][tese]
+        ROIsave = []
+        nmr = np.mean(test, axis=0)
+        for ROI in range(roinum):
+            xtmp_test, ytmp_test, ztmp_test = [], [] ,[]
+            for t in msbins:
+                x_test = np.mean(test[t:t+WS,:], axis=0)
+                y_test = x_test[ROI]
+                x_test = np.delete(x_test, ROI, axis=0)
+                
+                xtmp_test.append(x_test)
+                ytmp_test.append(y_test)
+                ztmp_test.append([SE,se,t,ROI])
+            xtmp_test, ytmp_test, ztmp_test = np.array(xtmp_test), np.array(ytmp_test), np.array(ztmp_test)
+            
+            final_weightsave = RESULT_SAVE_PATH + str(SE) + '_' + str(ROI) + '_final.h5'
+            model.load_weights(final_weightsave)
+            predict = model.predict(xtmp_test)
+            
+            # plt.plot(ytmp_test)
+            # plt.plot(predict)
+            
+            loss = np.mean(((ytmp_test - predict)**2)**0.5)
+            
+            diff = (ytmp_test - predict[:,0]) / nmr[ROI]
+    
+            ROIsave.append([np.max(diff), np.mean(diff>0.2)])
+        ROIsave = np.array(ROIsave)
+    
+        print(SE, tese, np.mean(ROIsave[:,0]>0.3))
+        
+        mssave[SE][tese] = ROIsave[:,0]
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
