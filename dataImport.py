@@ -40,7 +40,7 @@ PSLscsaline =       [216,217,218,219,224,225]
 
 highGroup3 =        list(range(230,239)) + list(range(247,273))
 PSLgroup_khu =      [239, 240, 241, 242, 243, 244, 245, 246]
-morphineGroup =     [273, 274]
+morphineGroup =     [273, 274, 275, 276, 277]
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
@@ -654,7 +654,7 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
                 plt.close(i)
 
             # raw
-            msmatrix[msmatrix<thr] = 0
+            # msmatrix[msmatrix<thr] = 0
             
             # exception
             if N == 223 and i in [3]: msmatrix[:5000] = 0
@@ -662,7 +662,7 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
             savems = msmatrix
 
             msout = pd.DataFrame(savems ,index=None, columns=None)
-            msout.to_csv(savename, index=False, header=False)
+            # msout.to_csv(savename, index=False, header=False)
     return None
     # In
 from scipy.stats.stats import pearsonr 
