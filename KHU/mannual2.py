@@ -19,11 +19,10 @@ from datetime import datetime
 import csv
 import random
 import time
-
-gsync = 'D:\\mscore\\syncbackup\\google_syn\\'
+MAXSE = 20
+gsync = 'C:\\mass_save\\PSLpain\\'
 with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
-
 
 FPS = msdata_load['FPS']
 N = msdata_load['N']
@@ -79,7 +78,7 @@ group_nonpain_test = []
 
 SE = 0; se = 0
 for SE in range(N):
-    for se in range(10):
+    for se in range(MAXSE):
         painc, nonpainc, test_only = [], [], []
         
         # khu formalin
@@ -99,6 +98,10 @@ for SE in range(N):
         nonpainc.append(SE in PSLgroup_khu and se in [0])
         painc.append(SE in PSLgroup_khu and se in [1,2])
         
+        nonpainc.append(SE in morphineGroup and se in [0,1])
+        nonpainc.append(SE in morphineGroup and se in [10,11,12])
+        painc.append(SE in morphineGroup and se in [2,3,4,5,6,7,8,9])
+       
         # test only
 #        test_only.append(SE in PSLgroup_khu and se in [1,2])
         
@@ -111,6 +114,8 @@ for SE in range(N):
             group_nonpain_test.append([SE, se])
             if np.sum(np.array(test_only)) == 0:
                 group_nonpain_training.append([SE, se])
+                
+                #%%
 
 def msROC(class0, class1):
     import numpy as np
@@ -163,12 +168,31 @@ def ms_smooth(mssignal=None, ws=None):
     return msout
 
 from tqdm import tqdm
-MAXSE = 20
+
+#%% 임시
+signalss = msFunction.msarray([N])
+for SE in PSLgroup_khu + morphineGroup + [247, 248, 249, 250, 251, 255, 257, 258, 259, 262, 263, 264]:
+    for se in range(len(signalss_raw[SE])):
+        allo = np.zeros(signalss_raw[SE][se].shape) * np.nan
+        for ROI in range(signalss_raw[SE][se].shape[1]):
+            matrix = signalss_raw[SE][se][:,ROI]
+            if len(bahavss[SE][se][0]) > 0:
+                bratio = (1-np.mean(bahavss[SE][se][0] > 0.15)) * 0.3
+            else: bratio = 0.3
+            base = np.sort(matrix)[0:int(round(matrix.shape[0]*bratio))]
+            base_mean = np.mean(base)
+            matrix2 = matrix/base_mean
+            allo[:,ROI] = matrix2
+            # plt.plot(matrix2)
+        signalss[SE].append(allo)
+
 movement_syn = msFunction.msarray([N,MAXSE])
-for SE in range(N):
+for SE in PSLgroup_khu + morphineGroup + [247, 248, 249, 250, 251, 255, 257, 258, 259, 262, 263, 264]:
     tmp = []
     for se in range(len(signalss[SE])):
-        movement_syn[SE][se] = downsampling(bahavss[SE][se], signalss[SE][se].shape[0])
+        behav_tmp = bahavss[SE][se][0]
+        if len(behav_tmp) > 0:
+            movement_syn[SE][se] = downsampling(behav_tmp, signalss[SE][se].shape[0])
 
 # plt.plot(np.mean(signalss[257][5], axis=1))
 #%%
@@ -1064,8 +1088,7 @@ nonpain = matrix[8:,2:].flatten()
 pain = matrix[0:8,2:].flatten()
 accuracy, roc_auc = msROC(nonpain, pain)
 print(THR, roc_auc)
-#%%
-
+#%% 이거파보자
 mssave = []
 
 for stanse in [0]:
@@ -1074,7 +1097,7 @@ for stanse in [0]:
         # forlist = list(range(len(target_sig)))
         
         target_sig = list(signalss)
-        forlist = PSLgroup_khu + morphineGroup
+        forlist = PSLgroup_khu + morphineGroup + [247, 248, 249, 250, 251, 255, 257, 258, 259, 262, 263, 264]
         
         matrix = np.zeros((len(target_sig),MAXSE)) * np.nan
         for SE in forlist:
@@ -1092,8 +1115,17 @@ for stanse in [0]:
         # print(roc_auc)
     
         nonpain = list(matrix[morphineGroup,:2].flatten())
+        nonpain2 = list(matrix[[247, 248, 249, 250, 251, 255, 257, 258, 259, 262, 263, 264],:5].flatten())
+        # nonpain2 = list(matrix[morphineGroup,10:13].flatten())
+        
         pain = list(matrix[morphineGroup,2:10].flatten())
-        accuracy, roc_auc = msROC(nonpain, pain)
+        pain2 = list(matrix[PSLgroup_khu,1:3].flatten())
+        
+        accuracy, roc_auc = msROC(nonpain+nonpain2, pain+pain2)
+        print(THR, roc_auc)
+        
+        plt.figure()
+        plt.scatter()
         
         # print(THR, roc_auc)
         mssave.append(matrix)
@@ -1187,23 +1219,34 @@ behavss2 = msFunction.msarray([len(signalss_raw_PD)])
 
 for SE in range(len(signalss_raw_PD)):
     for se in range(len(signalss_raw_PD[SE])):
-        matrix = []
-        for ROI in range(signalss_raw_PD[SE][se].shape[1]):
-            s = signalss_raw_PD[SE][se][:,ROI]
-            s2 = s/np.mean(s) - 1
-            matrix.append(s2)
-        matrix = np.transpose(np.array(matrix))  
-        m =  ms_syn(target_signal=behav_raw_PD[SE][se], target_size=signalss_raw_PD[SE][se].shape[0])
+        # matrix = []
+        # for ROI in range(signalss_raw_PD[SE][se].shape[1]):
+        #     s = signalss_raw_PD[SE][se][:,ROI]
+        #     s2 = s/np.mean(s) - 1
+        #     matrix.append(s2)
+        # matrix = np.transpose(np.array(matrix))  
+        m =  ms_syn(target_signal=behav_raw_PD[SE][se], target_size=signalss_PD[SE][se].shape[0])
    
-        signalss2[SE].append(matrix)
+        signalss2[SE].append(signalss_PD[SE][se])
         behavss2[SE].append(m)
-            
+
+#%% estimation model
+
+
+target_sig = list(signalss2)
+target_sig2 = list(behavss2)
+forlist = list(range(len(target_sig)))
+
+WS = 100
+BINS = 20
+
+
 #%% keras setup
 
 lr = 1e-3 # learning rate
     
-n_hidden = int(8*1) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
-layer_1 = int(8*1) # fully conneted laye node 갯수 # 8 # 원래 6 
+n_hidden = int(8*4) # LSTM node 갯수, bidirection 이기 때문에 2배수로 들어감.
+layer_1 = int(8*4) # fully conneted laye node 갯수 # 8 # 원래 6 
     
 l2_rate = 0.0
 dropout_rate1 = 0.2 # dropout rate
@@ -1226,118 +1269,108 @@ from keras.layers import Conv1D
 from keras.layers import Flatten
 
 
-def keras_setup(lr=0.01, batchnmr=False, seed=1, ROInum=None):
+def keras_setup(lr=0.01, batchnmr=False, seed=1, WS=None):
     #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
 
     init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
 
-    input1 = keras.layers.Input(shape=(ROInum-1))
-    input2 = keras.layers.Input(shape=1)
+    input1 = keras.layers.Input(shape=(1))
+    # input1_1 = Bidirectional(LSTM(n_hidden, return_sequences=False))(input1)
     
-    input_cocat = keras.layers.Concatenate(axis=1)([input1, input2])
+    # input2 = keras.layers.Input(shape=(WS,1))
+    # input2_1 = Bidirectional(LSTM(n_hidden, return_sequences=False))(input2)
 
-    input10 = Dense(ROInum-1+1, kernel_initializer = 'normal', kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(input_cocat)
-    input10 = Dense(ROInum-1+1, kernel_initializer = 'normal', kernel_regularizer=regularizers.l2(l2_rate))(input10)
-    input10 = Dense(ROInum-1+1, kernel_initializer = 'normal', kernel_regularizer=regularizers.l2(l2_rate))(input10)
+    # input_cocat = keras.layers.Concatenate(axis=1)([input1_1, input2_1])
     
+    tf2 = Dense(n_hidden, kernel_initializer = 'normal')(input1)
+    tf2 = Dropout(dropout_rate1)(tf2) # dropout
+    tf2 = Dense(n_hidden, kernel_initializer = 'normal')(tf2)
+    tf2 = Dropout(dropout_rate1)(tf2) # dropout
+
+
     # if batchnmr: input10 = BatchNormalization()(input10)
     # input10 = Dropout(dropout_rate1)(input10) # dropout
-    
-     
 
-    merge_4 = Dense(1, kernel_initializer = init)(input10) # fully conneted layers, relu
+    merge_4 = Dense(1, kernel_initializer = 'normal')(tf2) # fully conneted layers, relu
 
-    model = keras.models.Model(inputs=[input1, input2], outputs=merge_4) # input output 선언
+    model = keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
     model.compile(loss='mean_squared_error', optimizer='adam') # optimizer
-    
+
     #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
     return model
 
-model = keras_setup(lr=lr, seed=0, ROInum=100)
+model = keras_setup(lr=lr, seed=0, WS=WS)
 print(model.summary())
-
-
-
-#%% estimation model
-
-
-target_sig = list(signalss2)
-target_sig2 = list(behavss2)
-forlist = list(range(len(target_sig)))
-
-WS = 200
-BINS = 20
-
 
 #%%
 
 RESULT_SAVE_PATH = 'D:\\mscore\\syncbackup\\Project\\박하늬선생님_PD_painimaging\\models\\'
-SE, ROI = 0, 0
+SE, ROI = 8, 0
 mssave = msFunction.msarray([16,10])
 for SE in range(0, 16):
     mssignal = target_sig[SE][0]
     roinum = mssignal.shape[1]
-    for ROI in range(roinum):
-        final_weightsave = RESULT_SAVE_PATH + str(SE) + '_' + str(ROI) + '_final.h5'
-        xtmp, xtmp2, ytmp, ztmp = [], [] ,[], []
-        if not(os.path.isfile(final_weightsave)) or True:
-            for trse in [0, 1]:
-                mssignal = target_sig[SE][trse]
-                msbins = np.arange(0, mssignal.shape[0]-WS, BINS)
-
-                for t in msbins:
-                    x = np.mean(mssignal[t:t+WS,:])
-                    y = np.mean(mssignal[t:t+WS,ROI], axis=0)
-                    # x = np.delete(x, ROI, axis=0)
-                    x2 = np.mean(target_sig2[SE][trse][t:t+WS])
-                    
+    # for ROI in range(roinum):
+    final_weightsave = RESULT_SAVE_PATH + str(SE) + '_' + str(ROI) + '_final.h5'
+    xtmp, xtmp2, ytmp, ztmp = [], [] ,[], []
+    if not(os.path.isfile(final_weightsave)) or True:
+        for trse in [0,1]:
+            msbins = np.arange(0, mssignal.shape[0]-WS, BINS)
+            for t in msbins:
+                # for t in msbins:
+                y = np.mean(mssignal[t:t+WS,:])
+                x = np.mean(np.reshape(target_sig2[SE][trse][t:t+WS], (WS,1)))
+                if len(mssignal[t:t+WS,:]) == WS:
                     xtmp.append(x)
-                    xtmp2.append(x2)
+                    # xtmp2.append(x2)
                     ytmp.append(y)
-                    ztmp.append([SE,se,t,ROI])
+                    ztmp.append([SE,se,t])
                     
-            xtmp, xtmp2, ytmp, ztmp = np.array(xtmp), np.array(xtmp2), np.array(ytmp), np.array(ztmp)
-            model = keras_setup(lr=lr, seed=0, ROInum=2)
-            # print(model.summary())
-            
-            hist = model.fit([xtmp, xtmp2], ytmp, batch_size=2**11, epochs=2000, verbose=0)
-            model.save_weights(final_weightsave)
+        xtmp, xtmp2, ytmp, ztmp = np.array(xtmp), np.array(xtmp2), np.array(ytmp), np.array(ztmp)
+        model = keras_setup(lr=lr, seed=0, WS=WS)
+        # print(model.summary())
         
-    model = keras_setup(lr=lr, seed=0, ROInum=2)
+        hist = model.fit(xtmp, ytmp, batch_size=2**11, epochs=500, verbose=1)
+        model.save_weights(final_weightsave)
+        
+    # model = keras_setup(lr=lr, seed=0, ROInum=2)
     for tese in range(len(target_sig[SE])):
         test = target_sig[SE][tese]
+        msbins = np.arange(0, test.shape[0]-WS, BINS)
         if len(test) > 0:
             ROIsave = []
-            nmr = np.mean(test, axis=0)
-            for ROI in range(roinum):
-                xtmp_test, xtmp_test2, ytmp_test, ztmp_test = [], [], [] ,[]
-                for t in msbins:
-                    # x_test = np.mean(test[t:t+WS,:], axis=0)
-                    # y_test = x_test[ROI]
-                    
-                    x_test = np.mean(test[t:t+WS,:])
-                    y_test = np.mean(test[t:t+WS,ROI], axis=0)
-                    
-                    # x_test = np.delete(x_test, ROI, axis=0)
-                    x_test2 = np.mean(target_sig2[SE][tese][t:t+WS])
-                    
-                    xtmp_test.append(x_test)
-                    xtmp_test2.append(x_test2)
-                    ytmp_test.append(y_test)
-                    ztmp_test.append([SE,se,t,ROI])
-                xtmp_test, xtmp_test2, ytmp_test, ztmp_test = np.array(xtmp_test), np.array(xtmp_test2), np.array(ytmp_test), np.array(ztmp_test)
+
+            xtmp_test, xtmp_test2, ytmp_test, ztmp_test = [], [], [] ,[]
+            for t in msbins:
+                # x_test = np.mean(test[t:t+WS,:], axis=0)
+                # y_test = x_test[ROI]
                 
-                final_weightsave = RESULT_SAVE_PATH + str(SE) + '_' + str(ROI) + '_final.h5'
-                model.load_weights(final_weightsave)
-                predict = model.predict([xtmp_test, xtmp_test2])
+                # x_test = np.mean(test[t:t+WS,:])
+                y_test = np.mean(test[t:t+WS,:])
                 
-                if False:
-                    plt.plot(ytmp_test)
-                    plt.plot(predict)
+                # x_test = np.delete(x_test, ROI, axis=0)
+                x_test = np.mean(np.reshape(target_sig2[SE][tese][t:t+WS], (WS,1)))
                 
-                loss = np.mean(((ytmp_test - predict)**2)**0.5)
-                diff = (ytmp_test - predict[:,0]) > 0.1
-                ROIsave.append(diff)
+                # xtmp_test.append(x_test)
+                xtmp_test.append(x_test)
+                ytmp_test.append(y_test)
+                ztmp_test.append([SE,se,t])
+            
+            xtmp_test, xtmp_test2, ytmp_test, ztmp_test = np.array(xtmp_test), np.array(xtmp_test2), np.array(ytmp_test), np.array(ztmp_test)
+            
+            final_weightsave = RESULT_SAVE_PATH + str(SE) + '_' + str(ROI) + '_final.h5'
+            model.load_weights(final_weightsave)
+            predict = model.predict(xtmp_test)
+            
+            if True:
+                plt.figure()
+                plt.title(str(tese))
+                plt.plot(ytmp_test)
+                plt.plot(predict)
+            
+            loss = np.mean(((ytmp_test - predict)**2)**0.5)
+            diff = np.mean(ytmp_test - predict[:,0])
+            ROIsave.append(diff)
             ROIsave = np.array(ROIsave)
             
             f = np.mean(ROIsave)
@@ -1350,6 +1383,8 @@ for SE in range(0, 16):
 
 
 #%%
+
+
 
 t4 = np.zeros((16, 10))
 for SE in range(16):
@@ -1370,14 +1405,149 @@ plt.plot(np.mean(movement[0:8,:], axis=0))
 plt.plot(np.mean(movement[8:,:], axis=0))
 
 
+corr = []
+for SE in range(0,8):
+    for se in range(2,6):
+        corr.append([movement[SE,se], t4[SE,se]])
+corr = np.array(corr)
+plt.scatter(corr[:,0], corr[:,1])
+
+np.mean(corr[:,1] / corr[:,0])
+
+
+corr = []
+for SE in range(8,16):
+    for se in range(0,10):
+        corr.append([movement[SE,se], t4[SE,se]])
+corr = np.array(corr)
+plt.scatter(corr[:,0], corr[:,1])
+
+np.mean(corr[:,1] / corr[:,0])
+
+
 t1 = np.zeros((16, 10))
 for SE in range(16):
     for se in range(len(target_sig[SE])): 
         t1[SE,se] = np.mean(signalss_raw_PD[SE][se])/ np.mean(target_sig2[SE][se]> 0.15)
 
 plt.figure()
+plt.plot(np.mean(t1[0:8,:], axis=0))
+plt.plot(np.meanan(t1[8:,:], axis=0))
+
+
+t1 = np.zeros((16, 10))
+for SE in range(16):
+    for se in range(len(target_sig[SE])): 
+        t1[SE,se] = np.mean(target_sig[SE][se])/ np.mean(target_sig2[SE][se])
+
+plt.figure()
 plt.plot(np.median(t1[0:8,:], axis=0))
 plt.plot(np.median(t1[8:,:], axis=0))
+
+
+#%% SNU PSL activity/mov
+
+
+target = np.zeros((N, MAXSE))
+
+tlist = oxaliGroup
+
+for SE in tlist:
+    for se in range(len(signalss[SE])):
+        activity = np.mean(signalss[SE][se])
+        movement = np.mean(movement_syn[SE][se]>0)
+        
+        target[SE,se] = activity / movement
+
+np.median(target[oxaliGroup,:5], axis=0)
+
+
+np.mean(target[shamGroup,:3], axis=0)
+
+plt.plot(movement_syn[70][1])
+
+
+
+#%%
+
+
+target_sig = list(signalss)
+target_sig2 = list(movement_syn)
+plstmp = list(range(241, 246))
+tlist = morphineGroup + plstmp
+mthr = 0.15
+t4 = np.zeros((N, MAXSE)) * np.nan
+t5 = np.zeros((N, MAXSE)) * np.nan
+for SE in tlist:
+    for se in range(len(target_sig[SE])):
+        if len(target_sig2[SE][se]) > 0 and len(target_sig[SE][se]) > 0:
+            vix = np.where(target_sig2[SE][se] > mthr)[0]
+            if len(vix) > 0: t4[SE,se] = np.mean(target_sig[SE][se][vix,:])
+            vix2 = np.where(target_sig2[SE][se] < mthr)[0]
+            if len(vix2) > 0: t5[SE,se] = np.mean(target_sig[SE][se][vix2,:])
+
+movement = np.zeros((N, MAXSE)) * np.nan
+for SE in tlist:
+    for se in range(len(target_sig2[SE])): 
+        if len(target_sig2[SE][se]) > 0 and len(target_sig[SE][se]) > 0:
+            vix = np.where(target_sig2[SE][se] < mthr)[0]
+            if len(vix) > 0:
+                movement[SE,se] = np.mean(target_sig2[SE][se])
+            
+plt.figure()
+plt.plot(np.nanmean(movement[morphineGroup,:13], axis=0))
+# plt.plot(np.nanmean(movement[plstmp,:3], axis=0))
+
+# plt.figure()
+plt.plot(np.nanmean(t4[morphineGroup,:13], axis=0))
+# plt.plot(np.nanmean(t4[plstmp,:3], axis=0))
+
+
+t1 = np.zeros((N, MAXSE)) * np.nan
+msplot = [[],[]]
+for SE in tlist:
+    for se in range(len(target_sig[SE])):
+        i1 = t4[SE,se]**1
+        # i2 = movement[SE,se]
+        i2 = t5[SE,se]**1
+        
+        t1[SE,se] = i1 / i2
+        
+        if [SE, se] in group_pain_training:
+            msplot[1].append([i1, i2])
+            
+        if [SE, se] in group_nonpain_training:
+            # print(SE, se)
+            msplot[0].append([i1, i2])
+
+plt.figure()
+plt.plot(np.nanmean(t1[morphineGroup,:13], axis=0))
+# plt.plot(np.nanmean(t1[plstmp,:3], axis=0))
+msplot[0] = np.array(msplot[0]); msplot[1] = np.array(msplot[1])
+
+plt.figure()
+plt.scatter(msplot[0][:,1], msplot[0][:,0])
+plt.scatter(msplot[1][:,1], msplot[1][:,0])
+
+#%%
+
+
+A = t4[morphineGroup,:13]
+
+
+
+
+for SE in tlist[0:1]:
+    for se in range(len(target_sig2[SE])): 
+        if len(target_sig2[SE][se]) > 0 and len(target_sig[SE][se]) > 0:
+            plt.figure()
+            plt.title(str(SE)+'_'+str(se))
+            plt.plot(np.mean(target_sig[SE][se], axis=1))
+            plt.plot(target_sig2[SE][se])
+
+
+
+
 
 
 
