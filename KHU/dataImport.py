@@ -31,7 +31,7 @@ itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
 ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159]
 ipclonidineGroup =  [151,153,154,157,160,161,162,163]
-gabapentinGroup =   [164,165,166,167,168,169,170,171,172,173,174,175,176,177, \
+gabapentinGroup =   [164,165,166,167,168,170,171,172,173,174,175,176,177, \
                      178,179,180,181,182,183,184,185,186, 226, 227, 228, 229]
 beevenomGroup =     [187]
 oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,220,221]
@@ -40,7 +40,10 @@ PSLscsaline =       [216,217,218,219,224,225]
 
 highGroup3 =        list(range(230,239)) + list(range(247,273))
 PSLgroup_khu =      [239, 240, 241, 242, 243, 244, 245, 246]
-morphineGroup =     [273, 274]
+morphineGroup =     [273, 274, 275, 276, 277]
+
+PDpain =            list(range(278, 286))
+PDnonpain =         list(range(286, 294))
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
@@ -84,6 +87,9 @@ msGroup['PSLscsaline'] = PSLscsaline
 msGroup['highGroup3'] = highGroup3
 msGroup['PSLgroup_khu'] = PSLgroup_khu
 msGroup['morphineGroup'] = morphineGroup
+
+msGroup['PDpain'] = PDpain
+msGroup['PDnonpain'] = PDnonpain
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -203,7 +209,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
 #        if gfiltersw:  savename = path + '\\signal_save.xlsx'
 #        elif not(gfiltersw): savename = path + '\\signal_save_nongaussian.xlsx'
             
-        if not(os.path.exists(savepath) and skipsw) or (SE in PSLgroup_khu): 
+        if not(os.path.exists(savepath) and skipsw): 
             if SE in snuformat1:
                 loadpath = path + '\\' + raw_filepath
                 
@@ -417,15 +423,26 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
             signals = []; behavs = []; signals_raw = []
             for se in range(len(array4)):
                 try:
-                    df2 = array4[se]
-                    df3 = np.array(pd.read_csv(path + '\\MS_' + behav_data[se]))
-                    df4 = array2[se]
-            
+                    df2 = array4[se] # signalss
+                    df4 = array2[se] # signalss_raw
+                    
+                    # behavior
+                    if behav_data[se] == 'empty':
+                        df3 = [[], []]
+                    else:
+                        loadpath = path + '\\' + 'MS_' + behav_data[se]  + '.pickle'
+                        with open(loadpath, 'rb') as f:  # Python 3: open(..., 'wb')
+                            msdict = pickle.load(f)
+                        msmatrix = msdict['msmatrix']
+                        thr = msdict['thr']
+                        df3 = [msmatrix, thr]
+                    
                     signals.append(np.array(df2))
-                    behavs.append(np.array(df3))
+                    behavs.append(df3)
                     signals_raw.append(np.array(df4))
                     
-                except:  
+                except:
+                    print('없애는중')
                     print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
                     signals.append(np.array(df2))
                     behavs.append(np.array(df3))
@@ -517,154 +534,155 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 if se == 0: print(SE, signalss[SE][se].shape, signalss_raw[SE][se].shape)
 
     return signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value
-
+#%%
 def msMovementExtraction(list1, skipsw=False, skipfig=False):
 #    movement_thr_save = np.zeros((N2,5))
     for SE in list1:
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-        behav_data_ms = list()
+
         for i in range(len(behav_data)):
-            tmp = behav_data[i][0:3]
-            behav_data_ms.append(tmp + '.avi.mat')
-        
-        for i in range(len(behav_data_ms)):
-            loadpath = path + '\\' + behav_data_ms[i]
-            savename = path + '\\' + 'MS_' + behav_data[i] 
-            
-            if os.path.exists(savename) and skipsw or (SE in PSLgroup_khu):
+            savename = path + '\\' + 'MS_' + behav_data[i]  + '.pickle'
+            if behav_data[i] == 'empty':
+                print('empty', behav_data[i], i)
+                continue
+
+            loadpath = path + '\\' + behav_data[i]
+            if behav_data[i][-4:] == '.csv': loadpath = path + '\\' + behav_data[i][0:3] + '.avi.mat'
+
+            if os.path.exists(savename) and skipsw:
                 print('이미 처리됨. skip', savename)
                 continue
-        
-            df = hdf5storage.loadmat(loadpath)
-            diffplot = df['msdiff_gauss']
-            diffplot = np.reshape(diffplot, (diffplot.shape[1]))
-        
-            msmatrix = np.array(diffplot)
-            msmax = np.max(msmatrix); msmin = np.min(msmatrix); diff = (msmax - msmin)/10
             
-            tmpmax = -np.inf; savemax = np.nan
-            for j in range(10):
-                c1 = (msmatrix >= (msmin + diff * j))
-                c2 = (msmatrix < (msmin + diff * (j+1)))
-    #            print(np.sum(c1 * c2), j)
-                if tmpmax < np.sum(c1 * c2):
-                    tmpmax = np.sum(c1 * c2); savemax = j
+            if not(os.path.exists(loadpath)): print('파일없음', loadpath)
+            else:
+                df = hdf5storage.loadmat(loadpath)
+                diffplot = df['msdiff_gauss']
+                diffplot = np.reshape(diffplot, (diffplot.shape[1]))
+                msmatrix = np.array(diffplot)
+                
+                msmax = np.max(msmatrix); msmin = np.min(msmatrix); diff = (msmax - msmin)/10
+                tmpmax = -np.inf; savemax = np.nan
+                for j in range(10):
+                    c1 = (msmatrix >= (msmin + diff * j))
+                    c2 = (msmatrix < (msmin + diff * (j+1)))
+        #            print(np.sum(c1 * c2), j)
+                    if tmpmax < np.sum(c1 * c2):
+                        tmpmax = np.sum(c1 * c2); savemax = j
+                        
+                c1 = (msmatrix >= (msmin + diff * savemax))
+                c2 = (msmatrix < (msmin + diff * (savemax+1)))
+                mscut = np.mean(msmatrix[(c1 * c2)])
+                thr = mscut + 0.15
+                # 예외 규정 
+                if N == 10 and i == 0:
+                    thr = 1.5
+                if N == 10 and i == 2:
+                    thr = 1.5
+                if N == 10 and i == 4:
+                    thr = 1.5
+                if N == 14 and i == 2:
+                    thr = mscut + 0.05
+                if N == 14 and i == 3:
+                    thr = mscut + 0.05
+                if N == 25 and i == 3:
+                    thr = 0.9 
+                if N == 26 and i == 2:
+                    thr = mscut + 0.20
+                if N == 25 and i == 3:
+                    thr = 0.5
+                if N == 42 and i == 2:
+                    thr = 1.8
+                if N == 42 and i == 3:
+                    thr = 1.8
+                if N == 43:
+                    thr = 0.76
+                if N == 45:
+                    thr = 1
+                if N == 57 and i == 1:
+                    thr = 1.25
+                if N == 44 and i == 0:
+                    thr = 0.8
+                if N == 73 and i == 0:
+                    thr = 1
+                if N == 76 and i == 0:
+                    thr = 1
+                if N == 83 and i == 1:
+                    thr = 1.1
+                if N == 86 and i == 0:
+                    thr = 1
+                if N == 87 and i == 2:
+                    thr = 0.93
+                if N == 90 and i == 1:
+                    thr = 0.65
+                if N == 91 and i == 0:
+                    thr = 0.55
+                if N == 91 and i == 1:
+                    thr = 0.65
+                if N == 97 and i == 0:
+                    thr = 0.53
+                if N == 97 and i == 1:
+                    thr = 0.63
+                if N == 97 and i == 2:
+                    thr = 0.8
+                if N == 99 and i in [0,1]:
+                    thr = 1
+                if N == 99 and i in [2]:
+                    thr = 1.2
+                if N == 100 and i in [1]:
+                    thr = 0.9
+                if N == 101 and i in [2]:
+                    thr = 1
+                if N == 116 and i in [0]:
+                    thr = 0.9
+                if N == 127 and i in [1]:
+                    thr = 1
+                if N == 128 and i in [2]:
+                    thr = 1
+                if N == 154 and i in [3]:
+                    thr = 1
+                if N == 223 and i in [0]:
+                    thr = 1.4
+                if N == 224 and i in [1]:
+                    thr = 1.6
+                if N == 224 and i in [2]:
+                    thr = 1.3
+                       
+                aline = np.zeros(diffplot.shape[0]); aline[:] = thr
+    #            movement_thr_save[SE,se] = thr
+                ftitle = str(N) + '_' + str(i) + '_' + behav_data[i] + '.png'
+                if os.path.isfile(ftitle) and not(skipfig):
+                    plt.figure(i, figsize=(18, 9))
                     
-            c1 = (msmatrix >= (msmin + diff * savemax))
-            c2 = (msmatrix < (msmin + diff * (savemax+1)))
-            mscut = np.mean(msmatrix[(c1 * c2)])
-            
-            thr = mscut + 0.15
-            
-            # 예외 규정 
-            if N == 10 and i == 0:
-                thr = 1.5
-            if N == 10 and i == 2:
-                thr = 1.5
-            if N == 10 and i == 4:
-                thr = 1.5
-            if N == 14 and i == 2:
-                thr = mscut + 0.05
-            if N == 14 and i == 3:
-                thr = mscut + 0.05
-            if N == 25 and i == 3:
-                thr = 0.9 
-            if N == 26 and i == 2:
-                thr = mscut + 0.20
-            if N == 25 and i == 3:
-                thr = 0.5
-            if N == 42 and i == 2:
-                thr = 1.8
-            if N == 42 and i == 3:
-                thr = 1.8
-            if N == 43:
-                thr = 0.76
-            if N == 45:
-                thr = 1
-            if N == 57 and i == 1:
-                thr = 1.25
-            if N == 44 and i == 0:
-                thr = 0.8
-            if N == 73 and i == 0:
-                thr = 1
-            if N == 76 and i == 0:
-                thr = 1
-            if N == 83 and i == 1:
-                thr = 1.1
-            if N == 86 and i == 0:
-                thr = 1
-            if N == 87 and i == 2:
-                thr = 0.93
-            if N == 90 and i == 1:
-                thr = 0.65
-            if N == 91 and i == 0:
-                thr = 0.55
-            if N == 91 and i == 1:
-                thr = 0.65
-            if N == 97 and i == 0:
-                thr = 0.53
-            if N == 97 and i == 1:
-                thr = 0.63
-            if N == 97 and i == 2:
-                thr = 0.8
-            if N == 99 and i in [0,1]:
-                thr = 1
-            if N == 99 and i in [2]:
-                thr = 1.2
-            if N == 100 and i in [1]:
-                thr = 0.9
-            if N == 101 and i in [2]:
-                thr = 1
-            if N == 116 and i in [0]:
-                thr = 0.9
-            if N == 127 and i in [1]:
-                thr = 1
-            if N == 128 and i in [2]:
-                thr = 1
-            if N == 154 and i in [3]:
-                thr = 1
-                #
-            if N == 223 and i in [0]:
-                thr = 1.4
-            if N == 224 and i in [1]:
-                thr = 1.6
-            if N == 224 and i in [2]:
-                thr = 1.3
-                   
-            aline = np.zeros(diffplot.shape[0]); aline[:] = thr
-#            movement_thr_save[SE,se] = thr
-            ftitle = str(N) + '_' + str(i) + '_' + behav_data_ms[i] + '.png'
-            if os.path.isfile(ftitle) and not(skipfig):
-                plt.figure(i, figsize=(18, 9))
+                    plt.title(i)
+                    plt.plot(msmatrix)
+                    
+                    print(ftitle, diffplot.shape[0])
+                    
+                    plt.plot(aline)
+                    plt.axis([0, diffplot.shape[0], np.min(diffplot)-0.05, 2.5])
+                    
+                    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0728_behavior'
+                    if not os.path.exists(savepath):
+                        os.mkdir(savepath)
+                    os.chdir(savepath)
+                    
+                    plt.savefig(ftitle)
+                    plt.close(i)
+    
+                # raw
+                # msmatrix[msmatrix<thr] = 0
+                # exception
+                if N == 223 and i in [3]: msmatrix[:5000] = 0
                 
-                plt.title(i)
-                plt.plot(msmatrix)
+                msdict = {'msmatrix': msmatrix, 'thr': thr}
+                with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
+                    pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
+                    print(savename, '저장되었습니다.')
                 
-                print(ftitle, diffplot.shape[0])
-                
-                plt.plot(aline)
-                plt.axis([0, diffplot.shape[0], np.min(diffplot)-0.05, 2.5])
-                
-                savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0728_behavior'
-                if not os.path.exists(savepath):
-                    os.mkdir(savepath)
-                os.chdir(savepath)
-                
-                plt.savefig(ftitle)
-                plt.close(i)
-
-            # raw
-            msmatrix[msmatrix<thr] = 0
-            
-            # exception
-            if N == 223 and i in [3]: msmatrix[:5000] = 0
-            
-            savems = msmatrix
-
-            msout = pd.DataFrame(savems ,index=None, columns=None)
-            msout.to_csv(savename, index=False, header=False)
+                # msout = pd.DataFrame(savems ,index=None, columns=None)
+                # msout.to_csv(savename, index=False, header=False)
     return None
-    # In
+#%%
 from scipy.stats.stats import pearsonr 
 def msbehav_syn(behav, signal): # behav syn 맞추기 
     behav = np.array(behav)
@@ -691,7 +709,7 @@ def downsampling(msssignal, wanted_size):
         
     return np.array(downsignal)
 
-# syn를 위한 상수 계산
+#%% syn를 위한 상수 계산
 def behavss2_calc(signalss, behavss):
     synsave = msFunction.msarray([N])
     SE = 6; se = 1    
@@ -702,57 +720,57 @@ def behavss2_calc(signalss, behavss):
             signal = np.array(signals[se])
             meansignal = np.mean(signal,1) 
             
-            behav = np.array(behavs[se])
-            behav_syn = msbehav_syn(behav, signal)
-                    
-            xaxis = list(); yaxis = list()
-            if np.mean(behav) > 0.01 or (SE == 36 and se == 3):
-                synlist = np.arange(-300,300,1)
-                
-                if (SE == 36 and se == 3) or (SE == 1 and se == 2) or (SE == 38 and se == 2) or (SE == 42 and se == 1): # 예외처리
-                     synlist = np.arange(-50,50,1)
-                    
-                for syn in synlist:
-                    syn = int(round(syn))
-                       
-                    if syn >= 0:
-                        singal_syn = meansignal[syn:]
-                        sz = singal_syn.shape[0]
-                        behav_syn2 = behav_syn[:sz]
+            behav = np.array(behavs[se][0])
+            if len(behav) > 0:
+                behav_syn = msbehav_syn(behav, signal)
                         
-                    elif syn <0:
-                        singal_syn = meansignal[:syn]
-                        behav_syn2 = behav_syn[-syn:]
-                        
-                    msexcept = not((SE == 40 and se == 1) or (SE == 6 and se == 1) or (SE == 8 and se == 3) \
-                                   or (SE == 10 and se == 1) or (SE == 10 and se == 3) or (SE == 11 and se == 1) \
-                                   or (SE == 15 and se == 2) or (SE == 19 and se == 4) or (SE == 21 and se == 1) \
-                                   or (SE == 22 and se == 0) or (SE == 32 and se == 4) or (SE == 34 and se == 0) \
-                                   or (SE == 35 and se == 1) or (SE == 36 and se == 0) or (SE == 37 and se == 0) \
-                                   or (SE == 37 and se == 1) or (SE == 37 and se == 4) or (SE == 38 and se == 2) \
-                                   or (SE == 39 and se == 4) or (SE == 40 and se == 4) or (SE == 41 and se == 1) \
-                                   or (SE == 42 and se == 0) or (SE == 41 and se == 1) or (SE == 42 and se == 0) \
-                                   or (SE == 42 and se == 1) or (SE == 220 and se == 2))
+                xaxis = list(); yaxis = list()
+                if np.mean(behav) > 0.01 or (SE == 36 and se == 3):
+                    synlist = np.arange(-300,300,1)
                     
-                    if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept: continue
-     
-                    if not np.sum(behav_syn2) == 0:
-                        r = pearsonr(singal_syn, behav_syn2)[0]
-                    elif np.sum(behav_syn2) == 0:
-                        r = 0
+                    if (SE == 36 and se == 3) or (SE == 1 and se == 2) or (SE == 38 and se == 2) or (SE == 42 and se == 1): # 예외처리
+                         synlist = np.arange(-50,50,1)
                         
-#                    print(syn, r)
-                    xaxis.append(syn)
-                    yaxis.append(r)
+                    for syn in synlist:
+                        syn = int(round(syn))
+                           
+                        if syn >= 0:
+                            singal_syn = meansignal[syn:]
+                            sz = singal_syn.shape[0]
+                            behav_syn2 = behav_syn[:sz]
+                            
+                        elif syn <0:
+                            singal_syn = meansignal[:syn]
+                            behav_syn2 = behav_syn[-syn:]
+                            
+                        msexcept = not((SE == 40 and se == 1) or (SE == 6 and se == 1) or (SE == 8 and se == 3) \
+                                       or (SE == 10 and se == 1) or (SE == 10 and se == 3) or (SE == 11 and se == 1) \
+                                       or (SE == 15 and se == 2) or (SE == 19 and se == 4) or (SE == 21 and se == 1) \
+                                       or (SE == 22 and se == 0) or (SE == 32 and se == 4) or (SE == 34 and se == 0) \
+                                       or (SE == 35 and se == 1) or (SE == 36 and se == 0) or (SE == 37 and se == 0) \
+                                       or (SE == 37 and se == 1) or (SE == 37 and se == 4) or (SE == 38 and se == 2) \
+                                       or (SE == 39 and se == 4) or (SE == 40 and se == 4) or (SE == 41 and se == 1) \
+                                       or (SE == 42 and se == 0) or (SE == 41 and se == 1) or (SE == 42 and se == 0) \
+                                       or (SE == 42 and se == 1) or (SE == 220 and se == 2))
+                        
+                        if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept: continue
+         
+                        if not np.sum(behav_syn2) == 0:
+                            r = pearsonr(singal_syn, behav_syn2)[0]
+                        elif np.sum(behav_syn2) == 0:
+                            r = 0
+                            
+    #                    print(syn, r)
+                        xaxis.append(syn)
+                        yaxis.append(r)
+                        
+                        if np.sum(np.isnan(yaxis)) < 0:
+                            print(SE,se, 'nan 있어요')
                     
-                    if np.sum(np.isnan(yaxis)) < 0:
-                        print(SE,se, 'nan 있어요')
-                
-    #            plt.plot(xaxis,yaxis)
-                maxsyn = xaxis[np.argmax(yaxis)]
-            else:
-                maxsyn = 0
-            
+        #            plt.plot(xaxis,yaxis)
+                    maxsyn = xaxis[np.argmax(yaxis)]
+                else: maxsyn = 0
+            else: maxsyn = 0
             synsave[SE].append(maxsyn)
             
     # 예외처리
@@ -773,7 +791,7 @@ def behavss2_calc(signalss, behavss):
     for SE in range(N):
         behavss2.append([])
         for se in range(len(signalss[SE])):
-            msbehav = np.array(behavss[SE][se])
+            msbehav = np.array(behavss[SE][se][0])
             behav_syn = downsampling(msbehav, signalss[SE][se].shape[0])
             
             if [SE, se] in fixlist:
@@ -790,12 +808,10 @@ def behavss2_calc(signalss, behavss):
                 plt.plot(np.mean(signalss[SE][se], axis=1))
                 plt.plot(fix)
                 
-            else:
-                fix = behav_syn
-                   
-            behavss2[SE].append(fix)
+            else: fix = behav_syn
+            behavss2[SE].append([fix, behavss[SE][se][1]])
     return behavss2
-    
+    #%%
 def visualizaiton_save(runlist):
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0709'
     print('signal, movement 시각화는', savepath, '에 저장됩니다.')
@@ -807,7 +823,7 @@ def visualizaiton_save(runlist):
         signals = signalss[SE]
         behavs = behavss2[SE]
         for se in range(len(signals)):
-            behav = np.array(behavs[se])
+            behav = np.array(behavs[se][0])
             signal = np.array(signals[se])
     
             plt.figure(SE, figsize=(18, 9))
@@ -861,43 +877,23 @@ def dict_save(savepath):
 
 runlist = range(0, N)
 #runlist = highGroup + highGroup3 + midleGroup + salineGroup
-
-msMovementExtraction(runlist, skipsw=False, skipfig=True) 
+# runlist = [277]
+msMovementExtraction(runlist, skipsw=True, skipfig=True)
 
 signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value = mssignal_save(list1=runlist, \
-                                                   gfiltersw=True, skipsw=False, dfsw=True, khuoffset = 0)
+                                                   gfiltersw=True, skipsw=True, dfsw=True, khuoffset = 0)
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
 
-visualizaiton_save(runlist =  range(273, N))
+visualizaiton_save(runlist = [164])
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'; dict_save(savepath)
 savepath = 'C:\\mass_save\\PSLpain\\mspickle.pickle'; dict_save(savepath)
 #savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_raw.pickle'; dict_save(savepath)
 
 import sys; sys.exit()
-
+plt.plot(behavss[273][0][0])
 
 #%%
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
