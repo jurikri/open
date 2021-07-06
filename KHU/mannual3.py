@@ -329,9 +329,7 @@ print(model.summary())
 mssave_final = []
 #%%
 for repeat in range(50):
-    feature_n = 2
-    X = msFunction.msarray([feature_n])
-    Y, Z = [], []
+    X, Y, Z = [], [], []
     
     THR = 0.22
     
@@ -412,24 +410,31 @@ for repeat in range(50):
                             bthr = bahavss[SE][se][1]
                             if SE >= 230: bthr = 0.15
                             f0 = np.mean(movement_syn[SE][se] > bthr)
-                            X[1].append([f0, f1, f2, f3, f4])
-                            
+                            X.append([f0, f1, f2, f3, f4])
                             Y.append(label)
                             Z.append([SE, se])
     
     ###
-    fn = len(X[1][0])
-    for f in range(2):
-        X[f] = np.array(X[f])
+    fn = len(X[0])
+    X = np.array(X)
     Y = np.array(Y)
     Z = np.array(Z)
     
-    print('repeat', repeat, 'data num', len(Y), 'Y dis', np.mean(Y, axis=0))
+    ### outsample test
+    outsample = []
+    for t in PDpain:
+        outsample += list(np.where(Z[:,0]==t)[0])
+    tlist2 = list(range(len(Z)))
+    trlist = list(set(tlist2)-set(outsample))
+    X2 = X[trlist]; X_te_outsample = X[outsample]  
+    Y2 = Y[trlist]; Y_te_outsample = Y[outsample]
+    Z2 = Z[trlist]; Z_te_outsample = Z[outsample]
+    
+    print('repeat', repeat, 'data num', len(Y2), 'Y2 dis', np.mean(Y2, axis=0))
     
     # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
     # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + PDpain + PDnonpain + morphineGroup + gabapentinGroup  + salineGroup
-    wantedlist = [PDpain] + PDnonpain
-    
+    wantedlist = PDnonpain
     mssave = np.zeros((N,MAXSE)) * np.nan
     
     for cv in range(0, len(wantedlist)):
@@ -439,19 +444,15 @@ for repeat in range(50):
         if type(wantedlist[cv]) != list: cvlist = [wantedlist[cv]]
         else: cvlist = wantedlist[cv]
         
-        tlist2 = list(range(len(Z)))
+        tlist2 = list(range(len(Z2)))
         telist = []
         for t in cvlist:
-            telist += list(np.where(Z[:,0]==t)[0])
-        
+            telist += list(np.where(Z2[:,0]==t)[0])
         trlist = list(set(tlist2)-set(telist))
         
-        X_tr = msFunction.msarray([fn])
-        X_te = msFunction.msarray([fn])
-        for f in [1]: #range(fn):
-            X_tr[f] = X[f][trlist]; X_te[f] = X[f][telist]  
-        Y_tr = Y[trlist]; Y_te = Y[telist]
-        Z_tr = Z[trlist]; Z_te = Z[telist]
+        X_tr = X2[trlist]; X_te = X2[telist]
+        Y_tr = Y2[trlist]; Y_te = Y2[telist]
+        Z_tr = Z2[trlist]; Z_te = Z2[telist]
         
         if len(Y_te) > 0:
             print('learning', cvlist)
@@ -460,15 +461,27 @@ for repeat in range(50):
             
             model = keras_setup(lr=lr, seed=0, add_fn=fn)
             for epoch in range(4000):
-                hist = model.fit(X_tr[1], Y_tr, batch_size=2**11, epochs=1, verbose=0, validation_data= (X_te[1], Y_te))
+                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te, Y_te))
                 acc = list(np.array(hist.history['accuracy']))[-1]
-                if acc > 0.8 and epoch > 500: break
+                if acc > 0.75 and epoch > 500: break
             
             # test
             for n in range(len(Z_te)):
                 teSE = Z_te[n][0]; tese = Z_te[n][1]
-                mssave[teSE, tese] = model.predict(np.array([X_te[1][n]]))[0][1]
+                mssave[teSE, tese] = model.predict(np.array([X_te[n]]))[0][1]
                 print(teSE, tese, mssave[teSE, tese])
+                
+    # outsample, learning, test
+    model = keras_setup(lr=lr, seed=0, add_fn=fn)
+    for epoch in range(4000):
+        hist = model.fit(X2, Y2, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te_outsample, Y_te_outsample))
+        acc = list(np.array(hist.history['accuracy']))[-1]
+        if acc > 0.75 and epoch > 500: break
+    
+    for n in range(len(Z_te_outsample)):
+        teSE = Z_te_outsample[n][0]; tese = Z_te_outsample[n][1]
+        mssave[teSE, tese] = model.predict(np.array([X_te_outsample[n]]))[0][1]
+        print(teSE, tese, mssave[teSE, tese])
                 
     mssave_final.append(mssave)
 
