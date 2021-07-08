@@ -38,9 +38,11 @@ oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202
 glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
 PSLscsaline =       [216,217,218,219,224,225]
 
-highGroup3 =        list(range(230,239)) + list(range(247,273))
+# highGroup3 =        list(range(230,239)) + list(range(247,273))
+highGroup3 =        list(range(247,268)); highGroup3.remove(259)
+
 PSLgroup_khu =      [239, 240, 241, 242, 243, 244, 245, 246]
-morphineGroup =     [273, 274, 275, 276, 277]
+morphineGroup =     [273, 274, 275, 276, 277, 294, 295, 296, 297, 298, 299, 300, 301]
 
 PDpain =            list(range(278, 286))
 PDnonpain =         list(range(286, 294))
@@ -875,7 +877,8 @@ def dict_save(savepath):
 
 #%%
 
-runlist = range(0, N)
+runlist = range(294, N)
+runlist = range(N)
 #runlist = highGroup + highGroup3 + midleGroup + salineGroup
 # runlist = [277]
 msMovementExtraction(runlist, skipsw=True, skipfig=True)
@@ -885,7 +888,7 @@ signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value = mssignal_save(list
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
 
-visualizaiton_save(runlist = [164])
+visualizaiton_save(runlist = range(294, N))
 savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'; dict_save(savepath)
 savepath = 'C:\\mass_save\\PSLpain\\mspickle.pickle'; dict_save(savepath)
 #savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_raw.pickle'; dict_save(savepath)
@@ -895,11 +898,16 @@ plt.plot(behavss[273][0][0])
 
 #%%
 
+for se in range(len(signalss[259])):
+    print(signalss[259][se].shape)
 
 
- 
 
 
+A = [ 1,2,3]
+B = [4,5]
+
+C  = A+B
 
 
 
