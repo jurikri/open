@@ -86,7 +86,7 @@ with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
 
 FPS = msdata_load['FPS']
 N = msdata_load['N']
-bahavss = msdata_load['bahavss']   # 움직임 정보
+bahavss = msdata_load['behavss2']   # 움직임 정보
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
 signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
@@ -341,7 +341,7 @@ for repeat in range(50):
         shamGroup + oxaliGroup + glucoseGroup + ipsaline_pslGroup + ipclonidineGroup + \
             CFAgroup + capsaicinGroup + gabapentinGroup
     
-    forlist = forlist + forlist2
+    forlist = forlist + forlist2 # tr set
     
     matrix = np.zeros((len(target_sig),MAXSE)) * np.nan
     
@@ -358,7 +358,7 @@ for repeat in range(50):
                 passw = True; break
         
         if passw:
-            if len(target_sig2[SE][stanse]) > 0:
+            if not(np.isnan(target_sig2[SE][stanse][0])):
                 bthr = bahavss[SE][stanse][1] * (0.1/0.15)
                 if SE >= 230: bthr = 0.15 * (0.1/0.15)
                 vix2 = np.where(target_sig2[SE][stanse] <= bthr)[0]
@@ -379,7 +379,7 @@ for repeat in range(50):
                     if SE == 290 and se == 5: continue # 시간짧음 + movement 불일치
                     
                     behavthr = bahavss[SE][se][0]
-                    if len(target_sig2[SE][se]) > 0:
+                    if not(np.isnan(target_sig2[SE][se][0])):
                         bthr = bahavss[SE][se][1] * (0.1/0.15)
                         if SE >= 230: bthr = 0.15 * (0.1/0.15)
                         vix = np.where(target_sig2[SE][se] > bthr)[0]
@@ -424,6 +424,7 @@ for repeat in range(50):
     outsample = []
     for t in PDpain:
         outsample += list(np.where(Z[:,0]==t)[0])
+        
     tlist2 = list(range(len(Z)))
     trlist = list(set(tlist2)-set(outsample))
     X2 = X[trlist]; X_te_outsample = X[outsample]  
@@ -526,8 +527,6 @@ for SE in gabapentinGroup:
 print(np.mean(nop))           
 
 plt.plot(np.nanmean(mssave[gabapentinGroup,:], axis=0))
-
-
 
 plt.figure()
 plt.title('PSL SNU')
