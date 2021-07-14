@@ -187,21 +187,22 @@ for SE in range(N):
             nonpainc.append(SE in shamGroup and se in [0,1,2])
             
             # snu psl+
-            painc.append(SE in ipsaline_pslGroup and se in [1,2])
+            # painc.append(SE in ipsaline_pslGroup and se in [1,2])
+            painc.append(SE in ipsaline_pslGroup and se in [1,3])
             nonpainc.append(SE in ipsaline_pslGroup and se in [0])
             painc.append(SE in ipclonidineGroup and se in [1,3])
             nonpainc.append(SE in ipclonidineGroup and se in [0])
             
             # GBVX 30 mins
-            GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
-            nonpainc.append(SE in GBVX and se in [0,1])
-            nonpainc.append(SE in [164, 166] and se in [2,3,4,5])
-            nonpainc.append(SE in [167] and se in [4,5,6,7])
-            nonpainc.append(SE in [172] and se in [4,5,7,8])
-            nonpainc.append(SE in [174] and se in [4,5])
-            nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11])
-            painc.append(SE in [179] and se in [8,9])
-            painc.append(SE in [181] and se in [4,5])
+            # GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
+            # nonpainc.append(SE in GBVX and se in [0,1])
+            # nonpainc.append(SE in [164, 166] and se in [2,3,4,5])
+            # nonpainc.append(SE in [167] and se in [4,5,6,7])
+            # nonpainc.append(SE in [172] and se in [4,5,7,8])
+            # nonpainc.append(SE in [174] and se in [4,5])
+            # nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11])
+            # painc.append(SE in [179] and se in [8,9])
+            # painc.append(SE in [181] and se in [4,5])
             
             # snu oxali
             painc.append(SE in oxaliGroup and se in [1])
@@ -250,9 +251,8 @@ class EarlyStopping_ms(Callback):
     def on_epoch_end(self, epoch, logs={}):
         current = logs.get(self.monitor)
         # print('current', current, self.value)
-        if current is None:
-            warnings.warn("Early stopping requires %s available!" % self.monitor, RuntimeWarning)
-
+        # if current is None:
+        #     warnings.warn("Early stopping requires %s available!" % self.monitor, RuntimeWarning)
         if current > self.value:
             # print('current', current, 'over thr')
             if self.verbose > 0:
@@ -327,12 +327,21 @@ print(model.summary())
 #%% XYZgen
 
 mssave_final = []
+settingID = 'model3_PDout_20210713'
+# wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
+# wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup  + salineGroup + highGroup3 + morphineGroup
+wantedlist = PDnonpain + pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
+outsamplelist = PDpain # 여기에 outsample 넣어
+
+
+RESULT_SAVE_PATH = 'C:\\mass_save\\model3\\' + settingID + '\\'
+if not os.path.exists(RESULT_SAVE_PATH): os.mkdir(RESULT_SAVE_PATH)
+
 #%%
-for repeat in range(50):
+for repeat in range(0, 100):
     X, Y, Z = [], [], []
     
     THR = 0.22
-    
     target_sig = list(signalss)
     target_sig2 = list(movement_syn)
     
@@ -419,10 +428,9 @@ for repeat in range(50):
     X = np.array(X)
     Y = np.array(Y)
     Z = np.array(Z)
-    
     ### outsample test
     outsample = []
-    for t in PDpain:
+    for t in outsamplelist:
         outsample += list(np.where(Z[:,0]==t)[0])
         
     tlist2 = list(range(len(Z)))
@@ -432,16 +440,9 @@ for repeat in range(50):
     Z2 = Z[trlist]; Z_te_outsample = Z[outsample]
     
     print('repeat', repeat, 'data num', len(Y2), 'Y2 dis', np.mean(Y2, axis=0))
-    
-    # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
-    # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + PDpain + PDnonpain + morphineGroup + gabapentinGroup  + salineGroup
-    wantedlist = PDnonpain
     mssave = np.zeros((N,MAXSE)) * np.nan
     
     for cv in range(0, len(wantedlist)):
-        # cvlist = shuffle_list[cvn*cv:cvn*(cv+1)]
-        # if cv == 9: cvlist = shuffle_list[cvn*cv:]
-        
         if type(wantedlist[cv]) != list: cvlist = [wantedlist[cv]]
         else: cvlist = wantedlist[cv]
         
@@ -456,34 +457,42 @@ for repeat in range(50):
         Z_tr = Z2[trlist]; Z_te = Z2[telist]
         
         if len(Y_te) > 0:
-            print('learning', cvlist)
-            print('tr distribution', np.mean(Y_tr, axis=0))
-            print('te distribution', np.mean(Y_te, axis=0))
-            
-            model = keras_setup(lr=lr, seed=0, add_fn=fn)
-            for epoch in range(4000):
-                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te, Y_te))
-                acc = list(np.array(hist.history['accuracy']))[-1]
-                if acc > 0.75 and epoch > 500: break
-            
-            # test
+            final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cv) + '_final.h5'
+            if not(os.path.isfile(final_weightsave)) or False:
+                print('learning', cvlist)
+                print('tr distribution', np.mean(Y_tr, axis=0))
+                print('te distribution', np.mean(Y_te, axis=0))
+                
+                model = keras_setup(lr=lr, seed=0, add_fn=fn)
+                for epoch in range(4000):
+                    hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te, Y_te))
+                    acc = list(np.array(hist.history['accuracy']))[-1]
+                    if acc > 0.75 and epoch > 500: break
+                model.save_weights(final_weightsave)
+        # test
+            model.load_weights(final_weightsave)
             for n in range(len(Z_te)):
                 teSE = Z_te[n][0]; tese = Z_te[n][1]
                 mssave[teSE, tese] = model.predict(np.array([X_te[n]]))[0][1]
                 print(teSE, tese, mssave[teSE, tese])
-                
+            
     # outsample, learning, test
-    model = keras_setup(lr=lr, seed=0, add_fn=fn)
-    for epoch in range(4000):
-        hist = model.fit(X2, Y2, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te_outsample, Y_te_outsample))
-        acc = list(np.array(hist.history['accuracy']))[-1]
-        if acc > 0.75 and epoch > 500: break
-    
-    for n in range(len(Z_te_outsample)):
-        teSE = Z_te_outsample[n][0]; tese = Z_te_outsample[n][1]
-        mssave[teSE, tese] = model.predict(np.array([X_te_outsample[n]]))[0][1]
-        print(teSE, tese, mssave[teSE, tese])
-                
+    if len(Z_te_outsample) > 0: # 있을때만 해
+        final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_outsample_final.h5'
+        if not(os.path.isfile(final_weightsave)) or False:
+            model = keras_setup(lr=lr, seed=0, add_fn=fn)
+            for epoch in range(4000):
+                hist = model.fit(X2, Y2, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te_outsample, Y_te_outsample))
+                acc = list(np.array(hist.history['accuracy']))[-1]
+                if acc > 0.75 and epoch > 500: break
+            model.save_weights(final_weightsave)
+            
+        model.load_weights(final_weightsave)
+        for n in range(len(Z_te_outsample)):
+            teSE = Z_te_outsample[n][0]; tese = Z_te_outsample[n][1]
+            mssave[teSE, tese] = model.predict(np.array([X_te_outsample[n]]))[0][1]
+            print(teSE, tese, mssave[teSE, tese])
+            
     mssave_final.append(mssave)
 
 #%%
@@ -559,8 +568,6 @@ AA_PDnonpain = meanmatrix[PDnonpain,:]
 plt.plot(np.nanmean(AA_PDpain, axis=0))
 plt.plot(np.nanmean(AA_PDnonpain, axis=0))
 
-
-
 # SNU PSL evaluation
 AA_SNU_psl = mssave[pslGroup + ipsaline_pslGroup + ipclonidineGroup,:4]
 AA_SNU_sham = mssave[shamGroup,:4]
@@ -604,9 +611,29 @@ print('GBVX10', np.nanmean(GBVX10))
 print('GBVX15', np.nanmean(GBVX15))
 print('PSL15', np.nanmean(PSL15))
 
+AA_SNU_GBVX = pd.concat([pd.DataFrame(base), pd.DataFrame(GBVX3), pd.DataFrame(GBVX10) \
+                                       ,pd.DataFrame(PSL15) ,pd.DataFrame(GBVX15)], ignore_index=True, axis=1)
 
 
 
+#%%
+
+mssave[highGroup3]
+
+mssave2 = mssave > 0.5
+mssave2 = np.array(mssave2, dtype=float)
+mssave2[np.isnan(mssave)] = np.nan
+
+meanlist = [[0,1], [2,3], [4,5], [6,7], [8,9], [10,11,12]]
+meanmatrix = []
+for i in meanlist:
+    meanmatrix.append(np.nanmean(np.array(mssave2[morphineGroup])[:,i], axis=1))
+meanmatrix = np.transpose(np.array(meanmatrix))
+
+AA_KHU_morphine = meanmatrix
+
+
+plt.plot(np.nanmean(AA_KHU_morphine, axis=0))
 
 
 
