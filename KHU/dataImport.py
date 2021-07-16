@@ -184,13 +184,6 @@ def ms_syn(target_signal=None, FPS=None):
 gfiltersw=True; skipsw = True; dfsw=True; SE = 0
  
 def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffset=None):
-    
-    signalss = msFunction.msarray([N])
-    signalss_raw = msFunction.msarray([N])
-    behavss = msFunction.msarray([N])
-    roi_del_ix_save = msFunction.msarray([N]); thr = 10 # df limit
-    nmr_value = np.zeros((N)) * np.nan
-    
     snuformat1 = list(range(0,70)) + [74]
     snuformat2 = list(range(70,230)); snuformat2.remove(74)
     khuformat = list(range(230,N2)) 
@@ -198,19 +191,8 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
     for SE in list1:
         print('signal preprosessing...', SE)
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
-        if dfsw: 
-            savepath = path + '\\singalss_behavss_withrow.pickle'
-#            savepath = path + '\\singalss_behavss_offset.pickle'
-#            savepath = path + '\\singalss_behavss_noneoffset.pickle'
-        else: 
-            savepath = path + '\\singalss_behavss_zscore.pickle'
-            savepath = path + '\\singalss_behavss_zscore_biex.pickle'
-#            savepath = path + '\\singalss_behavss_zscore_biex_offset.pickle'
-#        savepath = path + '\\singalss_behavss_zscore_meannmr.pickle'
-        
-#        if gfiltersw:  savename = path + '\\signal_save.xlsx'
-#        elif not(gfiltersw): savename = path + '\\signal_save_nongaussian.xlsx'
-            
+        savepath = path + '\\singalss_behavss_withrow.pickle'
+  
         if not(os.path.exists(savepath) and skipsw): 
             if SE in snuformat1:
                 loadpath = path + '\\' + raw_filepath
@@ -358,13 +340,10 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     matrix = np.array(array2[se])
                     tmp_matrix = list()
                     for neuronNum in range(matrix.shape[1]):
-                        tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))
-                        
+                        tmp_matrix.append(smoothListGaussian(matrix[:,neuronNum], 10))  
                     tmp_matrix = np.transpose(np.array(tmp_matrix))
-                    
                     array3.append(tmp_matrix)
-            elif not(gfiltersw):
-                array3 = array2
+            elif not(gfiltersw): array3 = array2
                 
             # In F zero 계산
             if dfsw:
@@ -395,7 +374,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                         f_signal[frame,:] = (array3[se][frame, :] - f0_vector) / f0_vector
                     array4.append(f_signal)
 
-                    # Zscore 계산
+            # Zscore 계산
             if not(dfsw):
                 array4 = list()
                 for se in range(len(array3)):
@@ -450,55 +429,29 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     behavs.append(np.array(df3))
                     signals_raw.append(np.array(df4))
                     
-            msdict = {'signals': signals, 'behavs': behavs, 'signals_raw': signals_raw}
-            with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
-                print(savepath, '저장되었습니다.')
-                    
-        elif os.path.exists(savepath) and skipsw or (SE in PSLgroup_khu): # 이미 있는 경우
-            with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
-                msdict = pickle.load(f)
-            signals = msdict['signals']
-            signals_raw = msdict['signals_raw']
-            behavs = msdict['behavs']
-                
-        signalss[SE] = signals
-        signalss_raw[SE] = signals_raw
-        behavss[SE] = behavs
-    
-        # QC (in SE for)
-        savepath2 = path + '\\roi_del.pickle'
-        if not(os.path.isfile(savepath2)):
-            rois = np.zeros(signalss[SE][0].shape[1]) 
-            for se in range(len(signalss[SE])):
+            # QC (in SE for)
+            dfthr = 10 # df limit
+            rois = np.zeros(signals[0].shape[1]) 
+            for se in range(len(signals)):
                 wsw = True
                 while wsw:
                     wsw = False
-                    signal = np.array(signalss[SE][se])
+                    signal = np.array(signals[se])
                     for n in range(signal.shape[1]):
                         msplot = np.zeros(signal.shape[0]-1)
                         for frame in range(signal.shape[0]-1):
                             msplot[frame] = np.abs(signal[frame+1,n] - signal[frame,n])
-            
-                            if msplot[frame] > thr and rois[n] < 20:
+                            if msplot[frame] > dfthr and rois[n] < 20:
                                 wsw = True
                                 rois[n] += 1
-    #                            print(SE, se, n, msplot[frame], frame+1)
-                                signalss[SE][se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
-                
-                # 이상신호가 20개 이상일때 ROI 제거되도록 설계되었으나,
-                # 20200818, traial간 ROI tracking을 위해서 바로 제거하지 않고, 제거 정보만 넘기는 것으로 수정하겠음.
-#            for se in range(signalss[SE][0].shape[1]):
-#                signal = np.array(signalss[SE][se])
-#        #        signalss[SE][se] = np.delete(signal, np.where(rois==20)[0], 1)
-#                if se == 0: print('ROI delete', SE, se, np.where(rois==20)[0])
+                                signals[se][frame+1,n] = float(signal[frame,n]) # 변화가 급격한 경우 noise로 간주, 이전 intensity 값으로 대체함.
             roi_del_ix = np.where(rois==20)[0]
-            ROInum = np.array(signalss[SE][0]).shape[1]
+            ROInum = np.array(signals[0]).shape[1]
             for ROI in range(ROInum):
                 if not ROI in roi_del_ix:
                     passsw = False
-                    for se in range(len(signalss[SE])):
-                        if np.max(signalss[SE][se][:,ROI]) > 0.3:
+                    for se in range(len(signals)):
+                        if np.max(signals[se][:,ROI]) > 0.3:
                             passsw = True
                             break
                     if not(passsw):
@@ -506,38 +459,56 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                         print('ROI 에서 제거후 진행')
                         tmp = list(roi_del_ix) + [ROI]
                         roi_del_ix = tmp
-            
-            print(str(SE), 'roi_del_ix', roi_del_ix)
-            with open(savepath2, 'wb') as f:  # Python 3: open(..., 'wb')
-                pickle.dump(roi_del_ix, f, pickle.HIGHEST_PROTOCOL)
-                print(savepath2, '저장되었습니다.')    
-                
-        else:
-            with open(savepath2, 'rb') as f:  # Python 3: open(..., 'rb')
-                roi_del_ix = pickle.load(f)     
-        roi_del_ix_save[SE] = np.array(roi_del_ix)
+                 
+            msdict = {'signals': signals, 'behavs': behavs, 'signals_raw': signals_raw, 'roi_del_ix': roi_del_ix}
+            with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+                pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
+                print(savepath, '저장되었습니다.')
+    return None
+#%%
+
+def mssignal_save_merge():
+    signalss = msFunction.msarray([N])
+    signalss_raw = msFunction.msarray([N])
+    behavss = msFunction.msarray([N])
+    roi_del_ix_save = msFunction.msarray([N]);
+    
+    for SE in range(N):
+        print(SE)
+        path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+        savepath = path + '\\singalss_behavss_withrow.pickle'
         
-    for SE in list1:
-#        if SE == 170: import sys; sys.exit()
+        with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
+            msdict = pickle.load(f)
+        signals = msdict['signals']
+        signals_raw = msdict['signals_raw']
+        behavs = msdict['behavs']
+        roi_del_ix = msdict['roi_del_ix']
+            
+        signalss[SE] = signals
+        signalss_raw[SE] = signals_raw
+        behavss[SE] = behavs
+        roi_del_ix_save[SE] = roi_del_ix
+
+    # roidel 적용
+    for SE in range(N):
         mssignal = np.array(signalss[SE][0])
         roilist = list(range(mssignal.shape[1]))
         vlist = list(set(roilist) - set(roi_del_ix_save[SE]))
         se1roinum = signalss[SE][0].shape[1]
         for se in range(len(signalss[SE])):
-            
             if se1roinum != signalss[SE][se].shape[1]:
                 print(SE, se, 'session간 roinum 불일치')
             if se1roinum == signalss[SE][se].shape[1]:
                 mssignal = np.array(signalss[SE][se])
-                
                 if se == 0: print(SE, signalss[SE][se].shape, signalss_raw[SE][se].shape)
                 signalss[SE][se] = mssignal[:,vlist]
                 signalss_raw[SE][se] = np.array(signalss_raw[SE][se])[:,vlist]
                 if se == 0: print(SE, signalss[SE][se].shape, signalss_raw[SE][se].shape)
 
-    return signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value
+    return signalss, behavss, signalss_raw, roi_del_ix_save
 #%%
-def msMovementExtraction(list1, skipsw=False, skipfig=False):
+def msMovementExtraction(list1, skipsw=False):
 #    movement_thr_save = np.zeros((N2,5))
     for SE in list1:
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
@@ -545,7 +516,7 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
         for i in range(len(behav_data)):
             savename = path + '\\' + 'MS_' + behav_data[i]  + '.pickle'
             if behav_data[i] == 'empty':
-                print('empty', behav_data[i], i)
+                # print('empty', behav_data[i], i)
                 continue
 
             loadpath = path + '\\' + behav_data[i]
@@ -576,6 +547,7 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
                 mscut = np.mean(msmatrix[(c1 * c2)])
                 thr = mscut + 0.15
                 # 예외 규정 
+                N = SE
                 if N == 10 and i == 0:
                     thr = 1.5
                 if N == 10 and i == 2:
@@ -649,37 +621,14 @@ def msMovementExtraction(list1, skipsw=False, skipfig=False):
                 if N == 224 and i in [2]:
                     thr = 1.3
                        
-                aline = np.zeros(diffplot.shape[0]); aline[:] = thr
-    #            movement_thr_save[SE,se] = thr
-                ftitle = str(N) + '_' + str(i) + '_' + behav_data[i] + '.png'
-                if os.path.isfile(ftitle) and not(skipfig):
-                    plt.figure(i, figsize=(18, 9))
-                    
-                    plt.title(i)
-                    plt.plot(msmatrix)
-                    
-                    print(ftitle, diffplot.shape[0])
-                    
-                    plt.plot(aline)
-                    plt.axis([0, diffplot.shape[0], np.min(diffplot)-0.05, 2.5])
-                    
-                    savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0728_behavior'
-                    if not os.path.exists(savepath):
-                        os.mkdir(savepath)
-                    os.chdir(savepath)
-                    
-                    plt.savefig(ftitle)
-                    plt.close(i)
-    
-                # raw
-                # msmatrix[msmatrix<thr] = 0
-                # exception
                 if N == 223 and i in [3]: msmatrix[:5000] = 0
+                if SE >= 239: thr = 0.15
+                if SE >= 298 and i >= 6: thr = 0.8 
                 
                 msdict = {'msmatrix': msmatrix, 'thr': thr}
                 with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
                     pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
-                    print(savename, '저장되었습니다.')
+                    # print(savename, '저장되었습니다.')
                 
                 # msout = pd.DataFrame(savems ,index=None, columns=None)
                 # msout.to_csv(savename, index=False, header=False)
@@ -814,10 +763,9 @@ def behavss2_calc(signalss, behavss):
             behavss2[SE].append([fix, behavss[SE][se][1]])
     return behavss2
     #%%
-def visualizaiton_save(runlist):
+def visualizaiton_save(runlist, signalss=None, behavss2=None, dpi=100):
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0709'
     print('signal, movement 시각화는', savepath, '에 저장됩니다.')
-    
     os.chdir(savepath)
     
     for SE in runlist:
@@ -844,70 +792,62 @@ def visualizaiton_save(runlist):
             plt.xticks(np.arange(0, scalebar.shape[0]+1, 5.0))
                 
             plt.subplot(413)
-            msplot = np.median(signal,1)
+            msplot = np.mean(signal,1)
             plt.plot(msplot)
-            plt.plot(np.zeros(msplot.shape[0]))
+            # plt.plot(np.zeros(msplot.shape[0]))
             plt.xticks(np.arange(0, msplot.shape[0]+1, 50.0))
             
-            plt.subplot(414)
-            msplot = np.mean(signal,1)
-            plt.plot(behav)
-            plt.xticks(np.arange(0, behav.shape[0]+1, 500.0))
+            if not(len(behav) == 0 or np.isnan(np.mean(behav))):
+                plt.subplot(414)
+                msplot = np.mean(signal,1)
+                plt.plot(behav)
+                plt.plot(np.ones(len(behav))*behavss2[SE][se][1])
+                plt.xticks(np.arange(0, behav.shape[0]+1, 500.0))        
 
             #       
-            plt.savefig(mstitle)
+            plt.savefig(mstitle, dpi=dpi)
             plt.close(SE)
+
+#%%
+import sys; sys.exit()
+runlist = range(268, 273)
+skipsw = True
+msMovementExtraction(runlist, skipsw=skipsw)
+mssignal_save(list1=runlist, gfiltersw=True, skipsw=skipsw, khuoffset=0)
+
+runlist = range(N)
+signalss, behavss, signalss_raw, roi_del_ix_save = mssignal_save_merge()
+
+behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
+
+# import sys; sys.exit()
+
+visualizaiton_save(runlist = list(range(268, 273)), signalss=signalss, behavss2=behavss2)
+savepath = 'C:\\mass_save\\PSLpain\\mspickle.pickle';
 def dict_save(savepath):
     msdata = {
             'FPS' : FPS,
             'N' : N,
-            'bahavss' : behavss, # behavior 원본 b'a'havss 오탈자인데 그대로 유지하겠음
+            # 'bahavss' : behavss, # behavior 원본 b'a'havss 오탈자인데 그대로 유지하겠음
             'behavss2' : behavss2, # behavior frame fix
             'msGroup' : msGroup,
             'msdir' : msdir,
             'signalss' : signalss,
             'signalss_raw' : signalss_raw,
             'roi_del_ix_save' : roi_del_ix_save,
-            'nmr_value' : nmr_value
+            # 'nmr_value' : nmr_value
             }
     
     with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
         pickle.dump(msdata, f, pickle.HIGHEST_PROTOCOL)
         print(savepath, '저장되었습니다.')
-
-#%%
-
-runlist = range(294, N)
-runlist = range(N)
-#runlist = highGroup + highGroup3 + midleGroup + salineGroup
-# runlist = [277]
-msMovementExtraction(runlist, skipsw=True, skipfig=True)
-
-signalss, behavss, signalss_raw, roi_del_ix_save, nmr_value = mssignal_save(list1=runlist, \
-                                                   gfiltersw=True, skipsw=True, dfsw=True, khuoffset = 0)
-
-behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
-
-visualizaiton_save(runlist = range(294, N))
-savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle'; dict_save(savepath)
-savepath = 'C:\\mass_save\\PSLpain\\mspickle.pickle'; dict_save(savepath)
-#savepath = 'D:\\mscore\\syncbackup\\google_syn\\mspickle_raw.pickle'; dict_save(savepath)
+dict_save(savepath)
 
 import sys; sys.exit()
-plt.plot(behavss[273][0][0])
+plt.plot(behavss[299][0][0])
+behavss2[299][0][1]
 
 #%%
-
-for se in range(len(signalss[259])):
-    print(signalss[259][se].shape)
-
-
-
-
-A = [ 1,2,3]
-B = [4,5]
-
-C  = A+B
 
 
 
