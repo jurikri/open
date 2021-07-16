@@ -26,7 +26,7 @@ from scipy import stats
 #     print(signalss[181][se].shape)
 
 MAXSE = 20
-#%% mFunction
+#% mFunction
 
 def msROC(class0, class1):
     import numpy as np
@@ -78,7 +78,7 @@ def ms_smooth(mssignal=None, ws=None):
         msout[t] = np.mean(mssignal[s:e])
     return msout
 
-#%% data import
+#% data import
 
 gsync = 'C:\\mass_save\\PSLpain\\'
 with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
@@ -123,23 +123,6 @@ morphineGroup = msGroup['morphineGroup']
 PDpain = msGroup['PDpain']
 PDnonpain = msGroup['PDnonpain']
 
-# signals_raw에서 직접 수정할경우
-# signalss = msFunction.msarray([N])
-# for SE in PSLgroup_khu + morphineGroup:
-#     for se in range(len(signalss_raw[SE])):
-#         allo = np.zeros(signalss_raw[SE][se].shape) * np.nan
-#         for ROI in range(signalss_raw[SE][se].shape[1]):
-#             matrix = signalss_raw[SE][se][:,ROI]
-#             if len(bahavss[SE][se][0]) > 0:
-#                 bratio = (1-np.mean(bahavss[SE][se][0] > 0.15)) * 0.3
-#             else: bratio = 0.3
-#             base = np.sort(matrix)[0:int(round(matrix.shape[0]*bratio))]
-#             base_mean = np.mean(base)
-#             matrix2 = matrix/base_mean
-#             allo[:,ROI] = matrix2
-#             # plt.plot(matrix2)
-#         signalss[SE].append(allo)
-
 movement_syn = msFunction.msarray([N,MAXSE])
 for SE in range(N):
     tmp = []
@@ -148,6 +131,31 @@ for SE in range(N):
         if len(behav_tmp) > 0:
             movement_syn[SE][se] = downsampling(behav_tmp, signalss[SE][se].shape[0])
 
+# signals_raw에서 직접 수정할경우
+signalss = msFunction.msarray([N])
+for SE in range(N):
+    for se in range(len(signalss_raw[SE])):
+        allo = np.zeros(signalss_raw[SE][se].shape) * np.nan
+        if len(bahavss[SE][se][0]) > 0 and not(np.isnan(np.mean(bahavss[SE][se][0]))):
+            behav_thr = bahavss[SE][se][1]
+            if SE >= 230 and behav_thr < 1: behav_thr = 0.15
+            movratio = np.mean(movement_syn[SE][se] > behav_thr)
+            if movratio == 1: movratio = 0.99; print('mov 100%', SE, se); 
+            bratio = (1-movratio) * 0.3
+        else: bratio = 0.3
+        
+        for ROI in range(signalss_raw[SE][se].shape[1]):
+            matrix = signalss_raw[SE][se][:,ROI]
+            base = np.sort(matrix)[0:np.max([int(round(matrix.shape[0]*bratio)), 20])]
+            base_mean = np.median(base)
+            matrix2 = (matrix-base_mean)/base_mean
+            if np.isnan(np.mean(matrix2)): print('nan warning', SE, se, ROI)
+            allo[:,ROI] = matrix2
+            # plt.plot(matrix2)
+        signalss[SE].append(allo)
+        if np.isnan(np.mean(signalss[SE][se])): print('nan warning', SE, se)
+
+plt.plot(np.mean(signalss[289][7], axis=1))
 
 #%% grouping
 group_pain_training = []
@@ -177,6 +185,11 @@ for SE in range(N):
             painc.append(SE in midleGroup and se in [1])
             painc.append(SE in ketoGroup and se in [1])
             painc.append(SE in highGroup2 and se in [1])
+            
+            nonpainc.append(SE in highGroup and se in [0])
+            nonpainc.append(SE in midleGroup and se in [0])
+            nonpainc.append(SE in ketoGroup and se in [0])
+            nonpainc.append(SE in highGroup2 and se in [0])
             
             painc.append(SE in CFAgroup and se in [1,2])
             painc.append(SE in capsaicinGroup and se in [1])
@@ -216,7 +229,7 @@ for SE in range(N):
             painc.append(SE in PSLgroup_khu and se in [1,2])
             
             nonpainc.append(SE in morphineGroup and se in [0,1])
-            nonpainc.append(SE in morphineGroup and se in [10,11,12])
+            # nonpainc.append(SE in morphineGroup and se in [10,11,12])
             painc.append(SE in morphineGroup and se in [2,3,4,5,6,7,8,9])
             
             # PD
@@ -327,12 +340,11 @@ print(model.summary())
 #%% XYZgen
 
 mssave_final = []
-settingID = 'model3_PDout_20210713'
+settingID = 'model3_morphine_seout_0716'
 # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
 # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup  + salineGroup + highGroup3 + morphineGroup
-wantedlist = PDnonpain + pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
-outsamplelist = PDpain # 여기에 outsample 넣어
-
+wantedlist = morphineGroup
+outsamplelist = [] # 여기에 outsample 넣어
 
 RESULT_SAVE_PATH = 'C:\\mass_save\\model3\\' + settingID + '\\'
 if not os.path.exists(RESULT_SAVE_PATH): os.mkdir(RESULT_SAVE_PATH)
@@ -340,17 +352,18 @@ if not os.path.exists(RESULT_SAVE_PATH): os.mkdir(RESULT_SAVE_PATH)
 #%%
 for repeat in range(0, 100):
     X, Y, Z = [], [], []
+    X_nonlabel, Z_nonlabel = [], []
     
     THR = 0.22
     target_sig = list(signalss)
     target_sig2 = list(movement_syn)
     
-    forlist = PSLgroup_khu + morphineGroup + PDnonpain + PDpain + highGroup3
-    forlist2 = highGroup + highGroup2 + midleGroup + ketoGroup + salineGroup + pslGroup + \
-        shamGroup + oxaliGroup + glucoseGroup + ipsaline_pslGroup + ipclonidineGroup + \
-            CFAgroup + capsaicinGroup + gabapentinGroup
+    # forlist = PSLgroup_khu + morphineGroup + PDnonpain + PDpain + highGroup3
+    # forlist2 = highGroup + highGroup2 + midleGroup + ketoGroup + salineGroup + pslGroup + \
+    #     shamGroup + oxaliGroup + glucoseGroup + ipsaline_pslGroup + ipclonidineGroup + \
+    #         CFAgroup + capsaicinGroup + gabapentinGroup
     
-    forlist = forlist + forlist2 # tr set
+    # forlist = forlist + forlist2 # tr set
     
     matrix = np.zeros((len(target_sig),MAXSE)) * np.nan
     
@@ -358,7 +371,7 @@ for repeat in range(0, 100):
     if dice==0: dice_label = list(group_nonpain_training)
     if dice==1: dice_label = list(group_pain_training)
     
-    for SE in forlist:
+    for SE in range(N):
         selist = list(range(len(target_sig[SE])))
         passw = False
         random.shuffle(selist)
@@ -369,7 +382,7 @@ for repeat in range(0, 100):
         if passw:
             if not(np.isnan(target_sig2[SE][stanse][0])):
                 bthr = bahavss[SE][stanse][1] * (0.1/0.15)
-                if SE >= 230: bthr = 0.15 * (0.1/0.15)
+                if SE >= 230 and behav_thr < 1: bthr = 0.15 * (0.1/0.15)
                 vix2 = np.where(target_sig2[SE][stanse] <= bthr)[0]
                 sig = target_sig[SE][stanse][vix2,:]
                 stand2 = np.mean(sig, axis=0) / np.mean(sig)
@@ -390,7 +403,7 @@ for repeat in range(0, 100):
                     behavthr = bahavss[SE][se][0]
                     if not(np.isnan(target_sig2[SE][se][0])):
                         bthr = bahavss[SE][se][1] * (0.1/0.15)
-                        if SE >= 230: bthr = 0.15 * (0.1/0.15)
+                        if SE >= 230 and behav_thr < 1: bthr = 0.15 * (0.1/0.15)
                         vix = np.where(target_sig2[SE][se] > bthr)[0]
                         vix2 = np.where(target_sig2[SE][se] <= bthr)[0]
                     
@@ -415,19 +428,25 @@ for repeat in range(0, 100):
                         if [SE, se] in group_nonpain_training: label = [1, 0]
                         if [SE, se] in group_pain_training: label = [0, 1]
                         
+                        bthr = bahavss[SE][se][1]
+                        if SE >= 230 and behav_thr < 1: bthr = 0.15
+                        f0 = np.mean(movement_syn[SE][se] > bthr)
+                        
+                        
                         if not(label is None) and se != stanse:
-                            bthr = bahavss[SE][se][1]
-                            if SE >= 230: bthr = 0.15
-                            f0 = np.mean(movement_syn[SE][se] > bthr)
                             X.append([f0, f1, f2, f3, f4])
                             Y.append(label)
                             Z.append([SE, se])
-    
+                            
+                        elif label is None and se != stanse and SE in morphineGroup:
+                            X_nonlabel.append([f0, f1, f2, f3, f4])
+                            Z_nonlabel.append([SE, se])
     ###
     fn = len(X[0])
-    X = np.array(X)
+    model = keras_setup(lr=lr, seed=0, add_fn=fn)
+    X = np.array(X); X_nonlabel = np.array(X_nonlabel)
     Y = np.array(Y)
-    Z = np.array(Z)
+    Z = np.array(Z); Z_nonlabel = np.array(Z_nonlabel)
     ### outsample test
     outsample = []
     for t in outsamplelist:
@@ -491,6 +510,23 @@ for repeat in range(0, 100):
         for n in range(len(Z_te_outsample)):
             teSE = Z_te_outsample[n][0]; tese = Z_te_outsample[n][1]
             mssave[teSE, tese] = model.predict(np.array([X_te_outsample[n]]))[0][1]
+            print(teSE, tese, mssave[teSE, tese])
+            
+    # manual test
+    if len(Z_nonlabel) > 0: # 있을때만 해
+        final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_outsample_final.h5'
+        if not(os.path.isfile(final_weightsave)) or False:
+            model = keras_setup(lr=lr, seed=0, add_fn=fn)
+            for epoch in range(4000):
+                hist = model.fit(X2, Y2, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te_outsample, Y_te_outsample))
+                acc = list(np.array(hist.history['accuracy']))[-1]
+                if acc > 0.75 and epoch > 500: break
+            model.save_weights(final_weightsave)
+            
+        model.load_weights(final_weightsave)
+        for n in range(len(Z_nonlabel)):
+            teSE = Z_nonlabel[n][0]; tese = Z_nonlabel[n][1]
+            mssave[teSE, tese] = model.predict(np.array([X_nonlabel[n]]))[0][1]
             print(teSE, tese, mssave[teSE, tese])
             
     mssave_final.append(mssave)
@@ -569,7 +605,8 @@ plt.plot(np.nanmean(AA_PDpain, axis=0))
 plt.plot(np.nanmean(AA_PDnonpain, axis=0))
 
 # SNU PSL evaluation
-AA_SNU_psl = mssave[pslGroup + ipsaline_pslGroup + ipclonidineGroup,:4]
+# AA_SNU_psl = mssave[pslGroup + ipsaline_pslGroup + ipclonidineGroup,:4]
+AA_SNU_psl = mssave[ipsaline_pslGroup + ipclonidineGroup,:4]
 AA_SNU_sham = mssave[shamGroup,:4]
 
 plt.figure()
@@ -618,7 +655,7 @@ AA_SNU_GBVX = pd.concat([pd.DataFrame(base), pd.DataFrame(GBVX3), pd.DataFrame(G
 
 #%%
 
-mssave[highGroup3]
+plt.plot(np.nanmean(mssave[morphineGroup], axis=0))
 
 mssave2 = mssave > 0.5
 mssave2 = np.array(mssave2, dtype=float)
