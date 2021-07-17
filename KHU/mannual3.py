@@ -138,7 +138,7 @@ for SE in range(N):
         allo = np.zeros(signalss_raw[SE][se].shape) * np.nan
         if len(bahavss[SE][se][0]) > 0 and not(np.isnan(np.mean(bahavss[SE][se][0]))):
             behav_thr = bahavss[SE][se][1]
-            if SE >= 230 and behav_thr < 1: behav_thr = 0.15
+            # if SE >= 230 and behav_thr < 1: behav_thr = 0.15
             movratio = np.mean(movement_syn[SE][se] > behav_thr)
             if movratio == 1: movratio = 0.99; print('mov 100%', SE, se); 
             bratio = (1-movratio) * 0.3
@@ -146,8 +146,14 @@ for SE in range(N):
         
         for ROI in range(signalss_raw[SE][se].shape[1]):
             matrix = signalss_raw[SE][se][:,ROI]
-            base = np.sort(matrix)[0:np.max([int(round(matrix.shape[0]*bratio)), 20])]
-            base_mean = np.median(base)
+            
+            minbase = 20
+            for jj in range(2000):
+                base = np.sort(matrix)[0:np.max([int(round(matrix.shape[0]*bratio)), minbase])]
+                base_mean = np.median(base)
+                if base_mean != 0: break
+                minbase  += 1
+                
             matrix2 = (matrix-base_mean)/base_mean
             if np.isnan(np.mean(matrix2)): print('nan warning', SE, se, ROI)
             allo[:,ROI] = matrix2
@@ -340,7 +346,7 @@ print(model.summary())
 #%% XYZgen
 
 mssave_final = []
-settingID = 'model3_morphine_seout_0716'
+settingID = 'model3_morphine_seout_0716_fix1'
 # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
 # wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup  + salineGroup + highGroup3 + morphineGroup
 wantedlist = morphineGroup
@@ -382,7 +388,7 @@ for repeat in range(0, 100):
         if passw:
             if not(np.isnan(target_sig2[SE][stanse][0])):
                 bthr = bahavss[SE][stanse][1] * (0.1/0.15)
-                if SE >= 230 and behav_thr < 1: bthr = 0.15 * (0.1/0.15)
+                # if SE >= 230 and behav_thr < 1: bthr = 0.15 * (0.1/0.15)
                 vix2 = np.where(target_sig2[SE][stanse] <= bthr)[0]
                 sig = target_sig[SE][stanse][vix2,:]
                 stand2 = np.mean(sig, axis=0) / np.mean(sig)
@@ -403,7 +409,7 @@ for repeat in range(0, 100):
                     behavthr = bahavss[SE][se][0]
                     if not(np.isnan(target_sig2[SE][se][0])):
                         bthr = bahavss[SE][se][1] * (0.1/0.15)
-                        if SE >= 230 and behav_thr < 1: bthr = 0.15 * (0.1/0.15)
+                        # if SE >= 230 and behav_thr < 1: bthr = 0.15 * (0.1/0.15)
                         vix = np.where(target_sig2[SE][se] > bthr)[0]
                         vix2 = np.where(target_sig2[SE][se] <= bthr)[0]
                     
@@ -429,7 +435,7 @@ for repeat in range(0, 100):
                         if [SE, se] in group_pain_training: label = [0, 1]
                         
                         bthr = bahavss[SE][se][1]
-                        if SE >= 230 and behav_thr < 1: bthr = 0.15
+                        # if SE >= 230 and behav_thr < 1: bthr = 0.15
                         f0 = np.mean(movement_syn[SE][se] > bthr)
                         
                         
@@ -447,6 +453,12 @@ for repeat in range(0, 100):
     X = np.array(X); X_nonlabel = np.array(X_nonlabel)
     Y = np.array(Y)
     Z = np.array(Z); Z_nonlabel = np.array(Z_nonlabel)
+    
+    shuffle_list = list(range(len(X))); random.shuffle(shuffle_list)
+    X = X[shuffle_list]
+    Y = Y[shuffle_list]
+    Z = Z[shuffle_list]
+
     ### outsample test
     outsample = []
     for t in outsamplelist:
@@ -534,6 +546,7 @@ for repeat in range(0, 100):
 #%%
 
 mssave = np.nanmean(mssave_final, axis=0)
+print('len(mssave_final)', len(mssave_final))
 
 plt.figure()
 plt.title('PD')
