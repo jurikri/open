@@ -119,6 +119,8 @@ PSLscsaline =  msGroup['PSLscsaline']
 highGroup3 =  msGroup['highGroup3']
 PSLgroup_khu =  msGroup['PSLgroup_khu']
 morphineGroup = msGroup['morphineGroup']
+KHUsham = msGroup['KHUsham']
+
 PDpain = msGroup['PDpain']
 PDnonpain = msGroup['PDnonpain']
 
@@ -164,7 +166,7 @@ for SE in range(N):
             
             # SNU formalin
             nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
-            painc.append(SE in highGroup and se in [1])
+            painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [1])
             painc.append(SE in midleGroup and se in [1])
             painc.append(SE in ketoGroup and se in [1])
             painc.append(SE in highGroup2 and se in [1])
@@ -448,7 +450,7 @@ print(model.summary())
 
 #%%     project_list
 project_list = []
-project_list.append(['20210705_model_1', 100]) # project name, seed
+project_list.append(['20210720_model_2', 100]) # project name, seed
 
 ### wantedlist
 q = project_list[0]; nix = 0
@@ -470,7 +472,7 @@ for nix, q in enumerate(project_list):
         
 ### wantedlist
     runlist = list(range(N))
-    validlist =  [pslGroup + shamGroup]
+    validlist =  [PSLgroup_khu + morphineGroup + KHUsham]
     # validlist =  
 
 ### learning 
@@ -504,7 +506,7 @@ for nix, q in enumerate(project_list):
                 trlist = list(set(runlist) - set(vlist))
 
                 # training set
-                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=True)
+                X_tr, Y_tr, Z_tr = ms_sampling(forlist = trlist, ROIsw=False)
                 print('tr set num #', len(Y_tr), np.sum(np.array(Y_tr), axis=0), np.mean(np.array(Y_tr), axis=0))
                 
                 X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr, offsw=False) # ratio 10 초과시 random down -> 1:1로 upsample, -> shuffle
