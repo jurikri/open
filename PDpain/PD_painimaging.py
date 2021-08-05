@@ -170,20 +170,28 @@ mssave_tr = np.zeros((N, 10)) * np.nan
 SE = 286
 #%%
 
-THR = 0.24
+THR = 0.20
 mssave = np.zeros((N,MAXSE)) * np.nan
 for SE in PDpain + PDnonpain:
     roiNum = signalss[SE][0].shape[1]
     seNum = len(signalss_raw[SE])
     
+    tmp = []
     stanse = 0
-    sig = signalss[SE][stanse] 
-    stand = np.mean(sig, axis=0) / np.mean(sig)
+    sig = np.mean(signalss[SE][stanse], axis=0)
+    stand = sig / np.sum(sig) * roiNum
+    
+    stanse = 1
+    sig = np.mean(signalss[SE][stanse], axis=0)
+    stand2 = sig / np.sum(sig) * roiNum
+    
+    tmp.append(stand); tmp.append(stand2)
+    stand = np.mean(np.array(tmp), axis=0)
     
     for se in range(seNum):
-        if se != stanse:
-            sig = signalss[SE][se]
-            exp = np.mean(sig, axis=0) / np.mean(sig)
+        if not se in [0,1]:
+            sig = np.mean(signalss[SE][se], axis=0)
+            exp = sig / np.sum(sig) * roiNum
             f1 = np.mean(np.abs(exp - stand) > THR)
             mssave[SE,se] = f1
 
@@ -199,6 +207,24 @@ msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
 
+#%%
+msmatrix = []
+for i in list(range(0,10,2)):
+    msmatrix.append(np.nanmean(mssave[:,i:i+1], axis=1))
+msmatrix = np.transpose(np.array(msmatrix))
+
+msplot = msmatrix[PDpain,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+msplot = msmatrix[PDnonpain,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+Aprism_pdpain =  msmatrix[PDpain,:5]
+Aprism_pdnonpain =  msmatrix[PDnonpain,:5]
 
 #%%
             # estimation
