@@ -20,6 +20,7 @@ import random
 import time
 from tqdm import tqdm
 from scipy import stats
+import scipy
 
 # for se in range(13):
 #     print(signalss[181][se].shape)
@@ -170,7 +171,6 @@ SE = 286
 #%%
 
 THR = 0.24
-
 mssave = np.zeros((N,MAXSE)) * np.nan
 for SE in PDpain + PDnonpain:
     roiNum = signalss[SE][0].shape[1]
@@ -187,8 +187,19 @@ for SE in PDpain + PDnonpain:
             f1 = np.mean(np.abs(exp - stand) > THR)
             mssave[SE,se] = f1
 
-plt.plot(np.nanmean(mssave[PDpain,:10], axis=0))
-plt.plot(np.nanmean(mssave[PDnonpain,:10], axis=0))
+plt.figure()
+
+msplot = mssave[PDpain,:10]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+msplot = mssave[PDnonpain,:10]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+
 #%%
             # estimation
             
