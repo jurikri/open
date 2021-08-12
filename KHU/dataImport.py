@@ -43,6 +43,7 @@ highGroup3 =        list(range(247,268)); highGroup3.remove(259)
 
 PSLgroup_khu =      [239, 240, 241, 242, 243, 244, 245, 246]
 morphineGroup =     [273, 274, 275, 276, 277, 294, 295, 296, 297, 298, 299, 300, 301]
+KHUsham =           list(range(302, 312))
 
 PDpain =            list(range(278, 286))
 PDnonpain =         list(range(286, 294))
@@ -89,6 +90,8 @@ msGroup['PSLscsaline'] = PSLscsaline
 msGroup['highGroup3'] = highGroup3
 msGroup['PSLgroup_khu'] = PSLgroup_khu
 msGroup['morphineGroup'] = morphineGroup
+msGroup['KHUsham'] = KHUsham
+
 
 msGroup['PDpain'] = PDpain
 msGroup['PDnonpain'] = PDnonpain
@@ -284,12 +287,16 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 while True:
                     k += 1
                     print('k', k)
-                    try:
+                    if k == 0:
                         df = pd.read_excel(loadpath, sheet_name=k, header=None)
                         array0.append(np.array(df))
-                    except:
-                        break
-                
+                    elif k != 0:
+                        try:
+                            df = pd.read_excel(loadpath, sheet_name=k, header=None)
+                            array0.append(np.array(df))
+                        except:
+                            break
+                    
                 print(SE, 'khu format으로 처리됩니다.', 'total session #', k)
                 se = 0
                 for se in range(k):
@@ -522,9 +529,7 @@ def msMovementExtraction(list1, skipsw=False):
             loadpath = path + '\\' + behav_data[i]
             if behav_data[i][-4:] == '.csv': loadpath = path + '\\' + behav_data[i][0:3] + '.avi.mat'
 
-            if os.path.exists(savename) and skipsw:
-                print('이미 처리됨. skip', savename)
-                continue
+            if os.path.exists(savename) and skipsw: print('이미 처리됨. skip', savename); continue
             
             if not(os.path.exists(loadpath)): print('파일없음', loadpath)
             else:
@@ -623,8 +628,12 @@ def msMovementExtraction(list1, skipsw=False):
                        
                 if N == 223 and i in [3]: msmatrix[:5000] = 0
                 if SE >= 239: thr = 0.15
-                if SE >= 298 and i >= 6: thr = 0.8 
+                if SE >= 298 and i >= 6: thr = 0.8
+                if SE >= 302: thr = 0.7
                 
+                # if [SE, i] in [[222, 3], [223, 2], [189, 0]]:
+                #     msmatrix, thr = [], []
+                    
                 msdict = {'msmatrix': msmatrix, 'thr': thr}
                 with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
                     pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
@@ -809,20 +818,22 @@ def visualizaiton_save(runlist, signalss=None, behavss2=None, dpi=100):
             plt.close(SE)
 
 #%%
-import sys; sys.exit()
-runlist = range(268, 273)
-skipsw = True
-msMovementExtraction(runlist, skipsw=skipsw)
-mssignal_save(list1=runlist, gfiltersw=True, skipsw=skipsw, khuoffset=0)
+# import sys; sys.exit()
+runlist = range(302, N)
+msMovementExtraction(runlist, skipsw=False)
+mssignal_save(list1=runlist, gfiltersw=True, skipsw=False, khuoffset=0)
 
 runlist = range(N)
 signalss, behavss, signalss_raw, roi_del_ix_save = mssignal_save_merge()
+
+# behavss[223][2]
+# behavss[222][3]
 
 behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
 
 # import sys; sys.exit()
 
-visualizaiton_save(runlist = list(range(268, 273)), signalss=signalss, behavss2=behavss2)
+visualizaiton_save(runlist = KHUsham, signalss=signalss, behavss2=behavss2)
 savepath = 'C:\\mass_save\\PSLpain\\mspickle.pickle';
 def dict_save(savepath):
     msdata = {
