@@ -22,6 +22,7 @@ import time
 from tqdm import tqdm
 from scipy import stats
 import scipy
+import time
 
 MAXSE = 20
 #%% mFunction
@@ -549,9 +550,10 @@ for repeat in range(0, 50):
         if len(Y_te) > 0:
             final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cvlist) + '_final.h5'
             if not(os.path.isfile(final_weightsave)) or False:
-                print('learning', cvlist)
-                print('tr distribution', np.mean(Y_tr, axis=0))
-                print('te distribution', np.mean(Y_te, axis=0))
+                if False:
+                    print('learning', cvlist)
+                    print('tr distribution', np.mean(Y_tr, axis=0))
+                    print('te distribution', np.mean(Y_te, axis=0))
                 
                 model = keras_setup(lr=lr, seed=0, add_fn=fn)
                 for epoch in range(4000):
