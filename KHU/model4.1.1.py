@@ -82,7 +82,26 @@ for SE in range(N):
         if len(behav_tmp) > 0:
             movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss[SE][se].shape[0])[0,:]
             if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
+            
+#%%
 
+for SE in range(N):
+    for se in range(len(signalss_raw[SE])):
+        tmp = np.array(signalss_raw[SE][se])
+        
+        signalss[SE][se] = tmp / np.mean(tmp)
+        
+        # roiNum = tmp.shape[1]
+        # mamatrix = np.zeros(tmp.shape) * np.nan
+        # for ROI in range(roiNum):
+        #     mamatrix[:,ROI] = tmp[:,ROI] / np.mean(tmp[:,ROI])
+        # signalss[SE][se] = mamatrix
+
+# t4 = np.zeros((N,MAXSE)) * np.nan
+# for SE in range(N):
+#     for se in range(len(signalss_raw[SE])):
+#         t4[SE,se] = 
+          
 #%% grouping
 group_pain_training = []
 group_nonpain_training = []
@@ -295,12 +314,11 @@ print(model.summary())
 
 #%% XYZgen
 
-settingID = 'model4.1.1_20211126' 
-
-wantedlist = KHUsham + morphineGroup
-
+settingID = 'model4.1.1_20211129' 
 GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
-nonlabels = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + GBVX
+
+wantedlist = KHUsham + morphineGroup + pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + GBVX
+nonlabels = []
 
 RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211122\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\model3\\' + settingID + '\\'
@@ -365,7 +383,6 @@ for SE in range(N):
                 ex1 = SE >= 230 and se==t
                 
                 # if not(ex0 or ex1):
-                    
                 if not(se in selist):
                     if len(target_sig2[SE][se]) > 0:
                         if np.isnan(np.mean(target_sig2[SE][se])): print('e2'); import sys; sys.exit()   
@@ -411,22 +428,21 @@ for SE in range(N):
                         if [SE, se] in group_nonpain_training: label = [1, 0]
                         if [SE, se] in group_pain_training: label = [0, 1]
                          
-                        # feature5 = t5[SE,se]
                         
-                        xtmp = [f0, f1, f2, f3, f4, f5]
+                        xtmp = [f0, f1, f2, f3, f5]
                         if not(label is None):
                             X.append(xtmp)
                             Y.append(label)
                             Z.append([SE, se])
                             
-                        elif label is None:
+                        elif SE in nonlabels:
                             X_nonlabel.append(xtmp)
                             Z_nonlabel.append([SE, se])               
 #%%
 layer_1 = 32; overwrite = True
 
 repeat_save = []
-for repeat in range(10):
+for repeat in range(1):
     fn = len(X[0])
     model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
     print(model.summary())
