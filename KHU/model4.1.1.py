@@ -95,7 +95,7 @@ for SE in range(N):
         for se in range(MAXSE):
             painc, nonpainc, test_only = [], [], []
             # snu
-            if False:
+            if True:
                 nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
                 nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
                 painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [1])
@@ -117,7 +117,7 @@ for SE in range(N):
                     nonpainc.append(SE in ipclonidineGroup and se in [0])
             
                 # GBVX 30 mins
-                if False:
+                if True:
                     GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
                     nonpainc.append(SE in GBVX and se in [0,1])
                     nonpainc.append(SE in [164, 166] and se in [2,3,4,5])
@@ -125,8 +125,8 @@ for SE in range(N):
                     nonpainc.append(SE in [172] and se in [4,5,7,8])
                     nonpainc.append(SE in [174] and se in [4,5])
                     nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11])
-                    painc.append(SE in [179] and se in [8,9])
-                    painc.append(SE in [181] and se in [4,5])
+                    # painc.append(SE in [179] and se in [8,9])
+                    # painc.append(SE in [181] and se in [4,5])
             
                 # snu oxali
                 if True:
@@ -295,7 +295,7 @@ print(model.summary())
 
 #%% XYZgen
 
-settingID = 'model4.1.1_20211123' 
+settingID = 'model4.1.1_20211126' 
 
 wantedlist = KHUsham + morphineGroup
 
