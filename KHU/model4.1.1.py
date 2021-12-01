@@ -136,7 +136,7 @@ for SE in range(N):
                     nonpainc.append(SE in ipclonidineGroup and se in [0])
             
                 # GBVX 30 mins
-                if True:
+                if False:
                     GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
                     nonpainc.append(SE in GBVX and se in [0,1])
                     nonpainc.append(SE in [164, 166] and se in [2,3,4,5])
@@ -240,7 +240,7 @@ from tensorflow.keras.layers import Flatten
 from numpy.random import seed as nseed #
 import tensorflow as tf
 
-def keras_setup(lr=0.01, batchnmr=False, seed=1, add_fn=None, layer_1=None):
+def keras_setup(lr=0.01, batchnmr=False, seed=1, add_fn=None, layer_1=None, layer_2=None):
     #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
 
     init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
@@ -263,7 +263,7 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1, add_fn=None, layer_1=None):
     # if batchnmr: input10 = BatchNormalization()(input10)
     # input10 = Dropout(dropout_rate1)(input10) # dropout
     
-    input10 = Dense(int(layer_1), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(input2_1) # fully conneted layers, relu
+    input10 = Dense(int(layer_2), kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(input2_1) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
     input10 = Dropout(dropout_rate1)(input10) # dropout
     
@@ -309,18 +309,18 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, verbose=0):
         if verbose:  print('data set num #', len(Y), np.mean(np.array(Y), axis=0))
     return X, Y, Z
 
-model = keras_setup(lr=lr, seed=0, add_fn=2, layer_1=layer_1)
+model = keras_setup(lr=lr, seed=0, add_fn=2, layer_1=layer_1, layer_2=layer_1)
 print(model.summary())
 
 #%% XYZgen
 
-settingID = 'model4.1.1_20211129' 
+settingID = 'model4.1.1_20211130_1' 
 GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
 
-wantedlist = KHUsham + morphineGroup + pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + GBVX
-nonlabels = []
+wantedlist = KHUsham + morphineGroup # + pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
+nonlabels = [] #GBVX
 
-RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211122\\' + settingID + '\\'
+RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\model3\\' + settingID + '\\'
 if not os.path.exists(RESULT_SAVE_PATH): os.mkdir(RESULT_SAVE_PATH)
 
@@ -439,12 +439,12 @@ for SE in range(N):
                             X_nonlabel.append(xtmp)
                             Z_nonlabel.append([SE, se])               
 #%%
-layer_1 = 32; overwrite = True
-
+layer_1 = 2**11; overwrite = False
+layer_2 = 32
 repeat_save = []
-for repeat in range(1):
+for repeat in range(5):
     fn = len(X[0])
-    model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
+    model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
     print(model.summary())
     X = np.array(X); X_nonlabel = np.array(X_nonlabel)
     Y = np.array(Y)
@@ -482,11 +482,11 @@ for repeat in range(1):
                     print('tr distribution', np.mean(Y_tr, axis=0))
                     print('te distribution', np.mean(Y_te, axis=0))
                 
-                model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
+                model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
                 for epoch in range(10000):
                     hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=1, verbose=1, validation_data= (X_te, Y_te))
                     acc = list(np.array(hist.history['accuracy']))[-1]
-                    if acc > 0.71 and epoch > 500: break
+                    if acc > 0.77 and epoch > 500: break
                 model.save_weights(final_weightsave)
         # test
             model.load_weights(final_weightsave)
@@ -499,11 +499,11 @@ for repeat in range(1):
     if len(Z_te_outsample) > 0: # 있을때만 해
         final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_outsample_final.h5'
         if not(os.path.isfile(final_weightsave)) or overwrite:
-            model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
+            model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
             for epoch in range(10000):
                 hist = model.fit(X, Y, batch_size=2**11, epochs=1, verbose=0)
                 acc = list(np.array(hist.history['accuracy']))[-1]
-                if acc > 0.71 and epoch > 500: break
+                if acc > 0.77 and epoch > 500: break
             model.save_weights(final_weightsave)
             
         model.load_weights(final_weightsave)
@@ -576,7 +576,7 @@ plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='
 
 #%% 평가2 - all day mean or max
 
-same_days = [[2,3,4,5], [6,7,8,9]]
+same_days = [[2,3,4,5], [6,7,8,9], [10,11,12]]
 mssave2 = np.zeros((N, len(same_days))) * np.nan
 for i in range(len(same_days)):
     mssave2[:,i] = np.nanmean(mssave[:, same_days[i]], axis=1)
@@ -593,33 +593,56 @@ e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
 
 
+#%%
+nonpain = list(sham_d3) + list(sham_d10)
+pain = list(psl_d3) + list(psl_d10)
+msFunction.msROC(sham_d10, psl_d10)
+
 psl_d3 = mssave2[morphineGroup,0]
 psl_d10 = mssave2[morphineGroup,1]
+psl_d10_morphine = mssave2[morphineGroup,2]
 sham_d3 = mssave2[KHUsham,0]
 sham_d10 = mssave2[KHUsham,1]
+sham_d10_morphine = mssave2[KHUsham,2]
 
-msFunction.msROC(sham_d3, psl_d3)
-msFunction.msROC(sham_d10, psl_d10)
+Aprism2 = pd.DataFrame(sham_d3)
+Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d3)), ignore_index=True, axis=1)
+Aprism2 = pd.concat((Aprism2, pd.DataFrame(sham_d10)), ignore_index=True, axis=1)
+Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d10)), ignore_index=True, axis=1)
+Aprism2 = pd.concat((Aprism2, pd.DataFrame(sham_d10_morphine)), ignore_index=True, axis=1)
+Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d10_morphine)), ignore_index=True, axis=1)
+
+
+Aprism = msFunction.msarray([6])
+Aprism[0] += list(msFunction.nanex(sham_d3))
+Aprism[1] += list(msFunction.nanex(sham_d10))
+Aprism[2] += list(msFunction.nanex(sham_d10_morphine))
+Aprism[3] += list(msFunction.nanex(psl_d3))
+Aprism[4] += list(msFunction.nanex(psl_d10))
+Aprism[5] += list(msFunction.nanex(psl_d10_morphine))
+
+Aprism_info = np.zeros((len(Aprism),3))
+for i in range(len(Aprism)):
+    Aprism_info[i, :] = np.nanmean(Aprism[i]), scipy.stats.sem(Aprism[i], nan_policy='omit'), len(Aprism[i])
+
 
 #%% 
 
 
-
-
-msplot = mssave[shamGroup,:]
+msplot = mssave[shamGroup,1:3]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
 
-msplot = mssave[pslGroup,:]
+msplot = mssave[pslGroup,1:3]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
-msplot = mssave[ipsaline_pslGroup + ipclonidineGroup,:]
+msplot = mssave[ipsaline_pslGroup + ipclonidineGroup,:][:,[1,3]]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
 
 
 GBVX_nonpain_d3, GBVX_nonpain_d10 = [], []
@@ -647,30 +670,42 @@ for SE in [164, 166, 167, 172, 174, 177, 179, 181]:
 GBVX_nonpain_d3 = msFunction.nanex(GBVX_nonpain_d3)
 GBVX_nonpain_d10 = msFunction.nanex(GBVX_nonpain_d10)
 
-np.mean(GBVX_nonpain_d3)
-np.mean(GBVX_nonpain_d10)
+np.nanmean(GBVX_nonpain_d3)
+np.nanmean(GBVX_nonpain_d10)
 
 
-#
+msplot = np.zeros((50, 2)) * np.nan
+msplot[:len(GBVX_nonpain_d3),0] = GBVX_nonpain_d3
+msplot[:len(GBVX_nonpain_d10),1] = GBVX_nonpain_d10
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
+
+#%%
 
 Aprism = msFunction.msarray([6])
+Aprism[0] += list(msFunction.nanex(mssave[shamGroup,1]))
+Aprism[1] += list(msFunction.nanex(mssave[pslGroup,1]))
+Aprism[1] += list(msFunction.nanex(mssave[ipsaline_pslGroup + ipclonidineGroup,1]))
+Aprism[2] += list(msFunction.nanex(GBVX_nonpain_d3))
 
-Aprism[0] += list(mssave[shamGroup,1])
+Aprism[3] += list(msFunction.nanex(mssave[shamGroup,2]))
+Aprism[4] += list(msFunction.nanex(mssave[pslGroup,2]))
+Aprism[4] += list(msFunction.nanex(mssave[ipsaline_pslGroup + ipclonidineGroup,3]))
+Aprism[5] += list(msFunction.nanex(GBVX_nonpain_d10))
 
-Aprism[1] += list(mssave[shamGroup,2])
+Aprism2 = np.zeros((len(Aprism), 100)) * np.nan
+for i in range(len(Aprism)):
+    Aprism2[i,:len(Aprism[i])] = Aprism[i]
 
-Aprism[2] += list(mssave[pslGroup,1])
-Aprism[2] += list(mssave[ipsaline_pslGroup + ipclonidineGroup,1])
+Aprism3 = np.zeros((len(Aprism), 3)) * np.nan
+Aprism3[:,0] = np.nanmean(Aprism2, axis=1)
+Aprism3[:,1] = scipy.stats.sem(Aprism2, axis=1, nan_policy='omit').data
+Aprism3[:,2] = np.nansum(np.isnan(Aprism2)==0, axis=1)
 
-Aprism[3] += list(mssave[pslGroup,2])
-Aprism[3] += list(mssave[ipsaline_pslGroup + ipclonidineGroup,3])
 
-Aprism[4] += list(GBVX_nonpain_d3)
-Aprism[5] += list(GBVX_nonpain_d10)
 
-Aprism_info = np.zeros((6,3))
-for i in range(6):
-    Aprism_info[i, :] = np.nanmean(Aprism[i]), scipy.stats.sem(Aprism[i], nan_policy='omit'), len(Aprism[i])
+
     
     
 #%% KHU_CFA
