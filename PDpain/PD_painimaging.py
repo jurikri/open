@@ -26,65 +26,6 @@ import scipy
 #     print(signalss[181][se].shape)
 
 MAXSE = 20
-#%% mFunction
-
-def msROC(class0, class1):
-    import numpy as np
-    from sklearn import metrics
-    
-    pos_label = 1; roc_auc = -np.inf; fig = None
-
-    class0 = np.array(class0); class1 = np.array(class1)
-    class0 = class0[np.isnan(class0)==0]; class1 = class1[np.isnan(class1)==0]
-    
-    anstable = list(np.ones(class1.shape[0])) + list(np.zeros(class0.shape[0]))
-    predictValue = np.array(list(class1)+list(class0)); predictAns = np.array(anstable)       
-    fpr, tpr, thresholds = metrics.roc_curve(predictAns, predictValue, pos_label=pos_label)
-    
-    maxix = np.argmax((1-fpr) * tpr)
-    specificity = 1-fpr[maxix]; sensitivity = tpr[maxix]
-    accuracy = ((class1.shape[0] * sensitivity) + (class0.shape[0]  * specificity)) / (class1.shape[0] + class0.shape[0])
-    roc_auc = metrics.auc(fpr,tpr)
-    
-    return accuracy, roc_auc
-
-
-def downsampling(msssignal, wanted_size):
-    downratio = msssignal.shape[0]/wanted_size
-    downsignal = np.zeros(wanted_size)
-    downsignal[:] = np.nan
-    for frame in range(wanted_size):
-        s = int(round(frame*downratio))
-        e = int(round(frame*downratio+downratio))
-        downsignal[frame] = np.mean(msssignal[s:e])
-        
-    return np.array(downsignal)
-
-def ms_syn(target_signal=None, target_size=None):
-    downratio = target_signal.shape[0] / target_size
-    wanted_size = int(round(target_signal.shape[0] / downratio))
-    allo = np.zeros(wanted_size) * np.nan
-    for frame in range(wanted_size):
-        s = int(round(frame*downratio))
-        e = int(round(frame*downratio+downratio))
-        allo[frame] = np.mean(target_signal[s:e])
-    return allo
-
-def ms_smooth(mssignal=None, ws=None):
-    msout = np.zeros(len(mssignal)) * np.nan
-    for t in range(len(mssignal)):
-        s = np.max([t-ws, 0])
-        e = np.min([t+ws, len(mssignal)])
-        msout[t] = np.mean(mssignal[s:e])
-    return msout
-
-def gaus(mu=None, sigma=None):
-        x1 = mu - sigma * 7
-        x2 = mu + sigma * 7
-        x = np.linspace(x1, x2, 1000)
-        y = (1 / np.sqrt(2 * np.pi * sigma**2)) * np.exp(-(x-mu)**2 / (2 * sigma**2))
-        return x, y 
-
 #%% data import
 
 gsync = 'C:\\mass_save\\PSLpain\\'
@@ -93,7 +34,7 @@ with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
 
 FPS = msdata_load['FPS']
 N = msdata_load['N']
-behavss = msdata_load['behavss2']   # 움직임 정보
+behavss = msdata_load['behavss']   # 움직임 정보
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
 signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
@@ -131,22 +72,10 @@ KHUsham = msGroup['KHUsham']
 PDpain = msGroup['PDpain']
 PDnonpain = msGroup['PDnonpain']
 
-# signals_raw에서 직접 수정할경우
-# signalss = msFunction.msarray([N])
-# for SE in PSLgroup_khu + morphineGroup:
+# for SE in range(N):
 #     for se in range(len(signalss_raw[SE])):
-#         allo = np.zeros(signalss_raw[SE][se].shape) * np.nan
-#         for ROI in range(signalss_raw[SE][se].shape[1]):
-#             matrix = signalss_raw[SE][se][:,ROI]
-#             if len(bahavss[SE][se][0]) > 0:
-#                 bratio = (1-np.mean(bahavss[SE][se][0] > 0.15)) * 0.3
-#             else: bratio = 0.3
-#             base = np.sort(matrix)[0:int(round(matrix.shape[0]*bratio))]
-#             base_mean = np.mean(base)
-#             matrix2 = matrix/base_mean
-#             allo[:,ROI] = matrix2
-#             # plt.plot(matrix2)
-#         signalss[SE].append(allo)
+#         tmp = np.array(signalss_raw[SE][se])
+#         signalss[SE][se] = tmp / np.mean(tmp)
 
 movement_syn = msFunction.msarray([N,MAXSE])
 for SE in range(N):
@@ -154,16 +83,16 @@ for SE in range(N):
     for se in range(len(signalss[SE])):
         behav_tmp = behavss[SE][se][0]
         if len(behav_tmp) > 0:
-            movement_syn[SE][se] = downsampling(behav_tmp, signalss[SE][se].shape[0])
-
+            movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss[SE][se].shape[0])[0,:]
+            if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
 #%%
 signalss2 = msFunction.msarray([N,MAXSE])
-WS = int(round(FPS*240))
-BINS = int(round(FPS*10))
-THR = 0.3
 
 THR = 0.2
-mssave = np.zeros((N,MAXSE)) * np.nan
+mssave = msFunction.msarray([N,MAXSE])
+mssave_up = msFunction.msarray([N,MAXSE])
+mssave_down = msFunction.msarray([N,MAXSE])
+
 for SE in PDpain + PDnonpain:
     roiNum = signalss[SE][0].shape[1]
     seNum = len(signalss_raw[SE])
@@ -181,73 +110,62 @@ for SE in PDpain + PDnonpain:
         signalss2[SE][se] = np.delete(signalss[SE][se], list(maxix)+list(minix), axis=1)
         signalss2[SE][se] = signalss[SE][se]
     
-    tmp = []
-    stanse = 0
-    sig = np.mean(signalss2[SE][stanse], axis=0)
-    stand = sig / np.sum(sig) * roiNum
-    
-    stanse = 1
-    sig = np.mean(signalss2[SE][stanse], axis=0)
-    stand2 = sig / np.sum(sig) * roiNum
-    
-    tmp.append(stand); tmp.append(stand2)
-    stand = np.mean(np.array(tmp), axis=0)
-    
-    for se in range(seNum):
-        if not se in [0, 1]:
-            sig = np.mean(signalss2[SE][se], axis=0)
-            exp = sig / np.sum(sig) * roiNum
-            f1 = np.mean(np.abs(exp - stand) > 0.2)
-            mssave[SE,se] = f1
-            mssave[SE,se] = np.mean(movement_syn[SE][se] )
-    
-    #
-    if False: # max pick
-        stanse_list = [0, 1]
-        stand_matrix = []
-        for stanse in stanse_list:
-            mssignal = np.array(signalss2[SE][stanse])
-            # msbins = list(range(0, mssignal.shape[0]-WS, BINS))
+    selist = [0, 1] 
+    for stanse in selist:
+        # bthr = behavss[SE][stanse][1]
+        # if np.isnan(np.mean(movement_syn[SE][stanse])): continue
+        # vix2 = np.where(movement_syn[SE][stanse] <= bthr)[0]
+        
+        sig = signalss2[SE][stanse] # [vix2,:]
+        sig2 = np.mean(sig, axis=0)
+        roiNum = signalss2[SE][stanse].shape[1]
+        stand2 = sig2  / np.sum(sig2) * roiNum
+        
+        for se in range(2, seNum):
+            # bthr = behavss[SE][se][1]
+            # if np.isnan(np.mean(movement_syn[SE][se])): continue
+            # vix2 = np.where(movement_syn[SE][se] <= bthr)[0]
             
-            # for bn in msbins:
-            mssignal2 = np.array(mssignal)
-            # if len(mssignal2) == WS:
-            sig = np.mean(mssignal2, axis=0)
-            stand_tmp = sig / np.sum(sig) * roiNum
-            stand_matrix.append(stand_tmp)
-        stand_matrix = np.array(stand_matrix)
-        stand = np.max(stand_matrix, axis=0)
+            sig = signalss2[SE][se] # [vix2,:]
+            sig2 = np.mean(sig, axis=0)
+            roiNum = signalss2[SE][se].shape[1]
+            exp = sig2  / np.sum(sig2) * roiNum
             
-        for se in range(seNum):
-            exp_matrix = []
-            if not se in stanse_list:
-                mssignal = np.array(signalss2[SE][se])
-                msbins = list(range(0, mssignal.shape[0]-WS, BINS))
-                
-                if not [SE, se] in [[285, 4]]:
-                    for bn in msbins:
-                        mssignal2 = np.array(mssignal[bn:bn+WS])
-                        if len(mssignal2) == WS:
-                            sig = np.mean(mssignal2, axis=0)
-                            exp_tmp = sig / np.sum(sig) * roiNum
-                        exp_matrix.append(exp_tmp)
-                    exp_matrix = np.array(exp_matrix)
-                    exp = np.max(exp_matrix, axis=0)
+            f1 = np.mean(np.abs(exp - stand2) > THR)
+            mssave[SE][se].append(f1)
             
-                    f1 = np.mean(np.abs(exp - stand) > THR)
-                    mssave[SE,se] = f1
-
-# for i in range(N):
-#     mssave[i,:] = mssave[i,:] / mssave[i,2]
+            msup = (exp - stand2) > THR
+            mssave_up[SE][se].append(msup)
+            
+            msdown = (stand2 - exp) > THR
+            mssave_down[SE][se].append(msdown)
+            
+            
+mssave2 = np.zeros((N,MAXSE)) * np.nan
+mssave2_up = np.zeros((N,MAXSE)) * np.nan
+mssave2_down = np.zeros((N,MAXSE)) * np.nan
+mov = np.zeros((N,MAXSE)) * np.nan
+t4 = np.zeros((N,MAXSE)) * np.nan
+for row in range(N):
+    for col in range(MAXSE):
+        mssave2[row, col] = np.nanmean(mssave[row][col])
+        mssave2_up[row, col] = np.nanmean(mssave_up[row][col])
+        mssave2_down[row, col] = np.nanmean(mssave_down[row][col])
+        t4[row, col] = np.nanmean(signalss2[row][col])
+        if not(np.isnan(np.mean(movement_syn[row][col]))):
+            bthr = behavss[SE][stanse][1]
+            mov[row, col] = np.mean(movement_syn[row][col] > bthr)
+            
+        
+#%%
 
 plt.figure()
-
-msplot = mssave[PDpain,:10]
+msplot = mssave2[PDnonpain,0:10]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
 
-msplot = mssave[PDnonpain,:10]
+msplot = mssave2[PDpain,0:10]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
@@ -255,15 +173,15 @@ plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='
 #%%
 msmatrix = []
 for i in list(range(0,10,2)):
-    msmatrix.append(np.nanmax(mssave[:,i:i+1], axis=1))
+    msmatrix.append(np.nanmax(mssave2[:,i:i+1], axis=1))
 msmatrix = np.transpose(np.array(msmatrix))
 
-msplot = msmatrix[PDpain,:5]
+msplot = msmatrix[PDnonpain,:5]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
 
-msplot = msmatrix[PDnonpain,:5]
+msplot = msmatrix[PDpain,:5]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
@@ -271,75 +189,66 @@ plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='
 Aprism_pdpain =  msmatrix[PDpain,:5]
 Aprism_pdnonpain =  msmatrix[PDnonpain,:5]
 
+
 #%%
-            # estimation
-            
-            for se in range(seNum):
-                mssignal = np.array(signalss[SE][se])
-                ac = np.mean(signalss[SE][se][bn:bn+WS, :], axis=0)
-                ac = ac / np.sum(ac)
-                
-                pain_matrix  base_matrix
-                
-                  
-                # for ROI in range(roiNum):
-                #    mu = np.mean(base_matrix[:,ROI])
-                #    sigma = np.std(base_matrix[:,ROI])
-                #    x, y = gaus(mu = mu, sigma = sigma)
-                   
-                #    mu2 = np.mean(pain_matrix[:,ROI])
-                #    sigma2 = np.std(pain_matrix[:,ROI])
-                #    x2, y2 = gaus(mu = mu2, sigma = sigma2)
-                   
-                #    if False:
-                #        plt.plot(x,y)
-                #        plt.plot(x2,y2)
-                #        plt.figure()
-                #        xplot = list(base_matrix[:,ROI])
-                #        plt.scatter(len(xplot)*[0], xplot)
-                #        xplot = list(pain_matrix[:,ROI])
-                #        plt.scatter(len(xplot)*[1], xplot)
-                   
-                #    p0 = stats.norm.pdf(ac[ROI], mu, sigma)
-                #    p1 = stats.norm.pdf(ac[ROI], mu2, sigma2)
-                   
-                #    if p0 < p1:
-                #        if se in telist: pmatrix[cv, se, ROI] = ac[ROI] * roiNum
-                #        if se in basese + painse: pmatrix_tr[cv, se, ROI] = ac[ROI] * roiNum
-    
-    msin = np.nanmean(np.nanmean(pmatrix, axis=0), axis=1)
-    mssave[SE,:len(msin)] = msin
-    
-    msin = np.nanmean(np.nanmean(pmatrix_tr, axis=0), axis=1)
-    mssave_tr[SE,:len(msin)] = msin
-    
-plt.figure()
-plt.plot(np.nanmean(mssave[PDpain,:], axis=0))
-plt.plot(np.nanmean(mssave[PDnonpain,:], axis=0))
 
+msmatrix2 = np.zeros(msmatrix.shape)
+for i in range(len(msmatrix)):
+    msmatrix2[i,:] = msmatrix[i,:] / msmatrix[i,1]
+
+msplot = msmatrix2[PDnonpain,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+msplot = msmatrix2[PDpain,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+
+
+
+
+#%%
+#%%
+target = np.array(t4)
 
 plt.figure()
-plt.plot(np.nanmean(mssave_tr[PDpain,:], axis=0))
-plt.plot(np.nanmean(mssave_tr[PDnonpain,:], axis=0))
+msplot = target[PDnonpain,0:10]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+msplot = target[PDpain,0:10]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+msmatrix = []
+for i in list(range(0,10,2)):
+    msmatrix.append(np.nanmax(target[:,i:i+1], axis=1))
+msmatrix = np.transpose(np.array(msmatrix))
+
+plt.figure()
+msplot = msmatrix[PDnonpain,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+msplot = msmatrix[PDpain,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o')
+
+Aprism_pdpain =  msmatrix[PDpain,:5]
+Aprism_pdnonpain =  msmatrix[PDnonpain,:5]
 
 
+sham = msmatrix[PDnonpain,:5]
+PD = msmatrix[PDpain,:5]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Aprsim = np.concatenate((np.transpose(sham), np.transpose(PD)), axis=1)
 
 
 
