@@ -157,43 +157,88 @@ for SE in range(N):
             movement_syn[SE][se] = downsampling(behav_tmp, signalss[SE][se].shape[0])
 
 #%%
-# FPS = 5.13 # PD
-WS = 1040
-BINS = 200
+signalss2 = msFunction.msarray([N,MAXSE])
+WS = int(round(FPS*240))
+BINS = int(round(FPS*10))
+THR = 0.3
 
-tlist = list(range(2, 6))
-vlist = [[2,3], [4,5], [6,7], [8,9]]
-
-mssave = np.zeros((N, 10)) * np.nan
-mssave_tr = np.zeros((N, 10)) * np.nan
-
-SE = 286
-#%%
-
-THR = 0.20
+THR = 0.2
 mssave = np.zeros((N,MAXSE)) * np.nan
 for SE in PDpain + PDnonpain:
     roiNum = signalss[SE][0].shape[1]
     seNum = len(signalss_raw[SE])
     
+    # ROI ex
+    exnum = int(round(roiNum * 0.02)) # %
+    
+    tmp = []
+    for se in range(seNum):
+        tmp.append(np.mean(signalss[SE][se], axis=0))
+    msrank = np.mean(np.array(tmp), axis=0)
+    maxix = np.argsort(msrank)[::-1][:exnum]
+    minix = np.argsort(msrank)[::][:exnum]
+    for se in range(seNum):
+        signalss2[SE][se] = np.delete(signalss[SE][se], list(maxix)+list(minix), axis=1)
+        signalss2[SE][se] = signalss[SE][se]
+    
     tmp = []
     stanse = 0
-    sig = np.mean(signalss[SE][stanse], axis=0)
+    sig = np.mean(signalss2[SE][stanse], axis=0)
     stand = sig / np.sum(sig) * roiNum
     
     stanse = 1
-    sig = np.mean(signalss[SE][stanse], axis=0)
+    sig = np.mean(signalss2[SE][stanse], axis=0)
     stand2 = sig / np.sum(sig) * roiNum
     
     tmp.append(stand); tmp.append(stand2)
     stand = np.mean(np.array(tmp), axis=0)
     
     for se in range(seNum):
-        if not se in [0,1]:
-            sig = np.mean(signalss[SE][se], axis=0)
+        if not se in [0, 1]:
+            sig = np.mean(signalss2[SE][se], axis=0)
             exp = sig / np.sum(sig) * roiNum
-            f1 = np.mean(np.abs(exp - stand) > THR)
+            f1 = np.mean(np.abs(exp - stand) > 0.2)
             mssave[SE,se] = f1
+            mssave[SE,se] = np.mean(movement_syn[SE][se] )
+    
+    #
+    if False: # max pick
+        stanse_list = [0, 1]
+        stand_matrix = []
+        for stanse in stanse_list:
+            mssignal = np.array(signalss2[SE][stanse])
+            # msbins = list(range(0, mssignal.shape[0]-WS, BINS))
+            
+            # for bn in msbins:
+            mssignal2 = np.array(mssignal)
+            # if len(mssignal2) == WS:
+            sig = np.mean(mssignal2, axis=0)
+            stand_tmp = sig / np.sum(sig) * roiNum
+            stand_matrix.append(stand_tmp)
+        stand_matrix = np.array(stand_matrix)
+        stand = np.max(stand_matrix, axis=0)
+            
+        for se in range(seNum):
+            exp_matrix = []
+            if not se in stanse_list:
+                mssignal = np.array(signalss2[SE][se])
+                msbins = list(range(0, mssignal.shape[0]-WS, BINS))
+                
+                if not [SE, se] in [[285, 4]]:
+                    for bn in msbins:
+                        mssignal2 = np.array(mssignal[bn:bn+WS])
+                        if len(mssignal2) == WS:
+                            sig = np.mean(mssignal2, axis=0)
+                            exp_tmp = sig / np.sum(sig) * roiNum
+                        exp_matrix.append(exp_tmp)
+                    exp_matrix = np.array(exp_matrix)
+                    exp = np.max(exp_matrix, axis=0)
+            
+                    f1 = np.mean(np.abs(exp - stand) > THR)
+                    mssave[SE,se] = f1
+
+# for i in range(N):
+#     mssave[i,:] = mssave[i,:] / mssave[i,2]
 
 plt.figure()
 
@@ -210,7 +255,7 @@ plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='
 #%%
 msmatrix = []
 for i in list(range(0,10,2)):
-    msmatrix.append(np.nanmean(mssave[:,i:i+1], axis=1))
+    msmatrix.append(np.nanmax(mssave[:,i:i+1], axis=1))
 msmatrix = np.transpose(np.array(msmatrix))
 
 msplot = msmatrix[PDpain,:5]
