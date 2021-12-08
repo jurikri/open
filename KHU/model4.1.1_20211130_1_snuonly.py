@@ -35,7 +35,7 @@ with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
 
 FPS = msdata_load['FPS']
 N = msdata_load['N']
-bahavss = msdata_load['behavss2']   # 움직임 정보
+behavss = msdata_load['behavss']   # 움직임 정보
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
 signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
@@ -78,7 +78,7 @@ movement_syn = msFunction.msarray([N,MAXSE])
 for SE in range(N):
     tmp = []
     for se in range(len(signalss[SE])):
-        behav_tmp = bahavss[SE][se][0]
+        behav_tmp = behavss[SE][se][0]
         if len(behav_tmp) > 0:
             movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss[SE][se].shape[0])[0,:]
             if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
@@ -90,18 +90,7 @@ for SE in range(N):
         tmp = np.array(signalss_raw[SE][se])
         
         signalss[SE][se] = tmp / np.mean(tmp)
-        
-        # roiNum = tmp.shape[1]
-        # mamatrix = np.zeros(tmp.shape) * np.nan
-        # for ROI in range(roiNum):
-        #     mamatrix[:,ROI] = tmp[:,ROI] / np.mean(tmp[:,ROI])
-        # signalss[SE][se] = mamatrix
 
-# t4 = np.zeros((N,MAXSE)) * np.nan
-# for SE in range(N):
-#     for se in range(len(signalss_raw[SE])):
-#         t4[SE,se] = 
-          
 #%% grouping
 group_pain_training = []
 group_nonpain_training = []
@@ -129,7 +118,6 @@ for SE in range(N):
                     nonpainc.append(SE in shamGroup and se in [0,1,2])
                     
                     # snu psl+
-                    # painc.append(SE in ipsaline_pslGroup and se in [1,2])
                     painc.append(SE in ipsaline_pslGroup and se in [1,3])
                     nonpainc.append(SE in ipsaline_pslGroup and se in [0])
                     painc.append(SE in ipclonidineGroup and se in [1,3])
@@ -316,13 +304,22 @@ print(model.summary())
 #%% XYZgen
 
 # settingID = 'model4.1.1_2021202_1_khuonly' 
-settingID = 'model4.1.1_20211130_1_snuonly' 
+settingID = 'model4.1.1_20211207_snuonly' 
 
 
 GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
 
-wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
-nonlabels = GBVX
+
+# highGroup + highGroup2 + midleGroup + salineGroup + ketoGroup + lidocaineGroup
+# capsaicinGroup + CFAgroup + oxaliGroup + glucoseGroup
+# pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
+# nonlabels = GBVX
+
+wantedlist = highGroup + highGroup2 + midleGroup + salineGroup + ketoGroup + lidocaineGroup + \
+    capsaicinGroup + CFAgroup + oxaliGroup + glucoseGroup + \
+        pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup
+
+nonlabels = oxaliGroup + GBVX
 
 RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\model3\\' + settingID + '\\'
@@ -357,7 +354,7 @@ for SE in range(N):
     for stanse in selist: # nonpain label 없으면 전부 컷됨
         if len(target_sig2[SE][stanse]) > 0:
             if np.isnan(np.mean(target_sig2[SE][stanse])): print('e1'); import sys; sys.exit()   
-            bthr = bahavss[SE][stanse][1]
+            bthr = behavss[SE][stanse][1]
             vix = np.where(target_sig2[SE][stanse] > bthr)[0]
             vix2 = np.where(target_sig2[SE][stanse] <= bthr)[0]
             
@@ -390,13 +387,8 @@ for SE in range(N):
                 if not(se in selist):
                     if len(target_sig2[SE][se]) > 0:
                         if np.isnan(np.mean(target_sig2[SE][se])): print('e2'); import sys; sys.exit()   
-                        # label = None
-                        # if [SE, se] in group_nonpain_training: label = [1, 0]
-                        # if [SE, se] in group_pain_training: label = [0, 1]
-                        # labeled_sample = not(label is None)
-                        # nonlabeled_sample = (label is None and SE in nonlabel_group)
-                        
-                        bthr = bahavss[SE][se][1]
+       
+                        bthr = behavss[SE][se][1]
                         f0 = np.mean(movement_syn[SE][se] > bthr)
                         
                         vix = np.where(target_sig2[SE][se] > bthr)[0]
@@ -441,7 +433,45 @@ for SE in range(N):
                             
                         elif SE in nonlabels:
                             X_nonlabel.append(xtmp)
-                            Z_nonlabel.append([SE, se])               
+                            Z_nonlabel.append([SE, se])
+                            
+#%% feature vis
+if False:
+    def ms_bar_sem_plot(yinput):
+        # yinput shape : (category x values)
+        import matplotlib.pyplot as plt
+        import scipy.stats as s_stats
+    
+        xaxis = range(len(yinput))
+        ymean, error = [], []
+        for c in range(len(yinput)):
+            ymean.append(np.nanmean(yinput[c]))
+            error.append(s_stats.sem(yinput[c], nan_policy='omit'))  
+        
+        fig, ax = plt.subplots()
+        ax.bar(xaxis, ymean, yerr=error, align='center', alpha=0.5, ecolor='black', capsize=3, width=0.3)
+        ax.yaxis.grid(True)
+        
+    def ms_gaussian_plot(yinput):
+        import matplotlib.pyplot as plt
+        X = yinput
+        mm = np.mean(X)
+        ss = np.std(X)
+        x = np.linspace(mm-5*ss, mm+5*ss, 1000) # +- 5 SD, 1000 bins
+        p = stats.norm.pdf(x, mm, ss); plt.plot(x, p)
+    
+            
+    X = np.array(X); Y = np.array(Y); Z = np.array(Z); 
+    
+    nonpain = np.where(Y[:,0]==1)[0]
+    pain = np.where(Y[:,1]==1)[0]
+    
+    for fn in range(X.shape[1]):
+        if False:
+            yinput = [X[nonpain,fn], X[pain,fn]]
+            ms_bar_sem_plot(yinput)
+            msFunction.msROC(X[nonpain,fn], X[pain,fn])
+    
 #%%
 layer_1 = 2**11; overwrite = False
 layer_2 = 32
@@ -527,13 +557,17 @@ savepath = RESULT_SAVE_PATH + 'repeat_save.pickle'
 with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(repeat_save, f, pickle.HIGHEST_PROTOCOL)
     print(savepath, '저장되었습니다.')
-    
-    #%%
+
+#%%
 savepath = RESULT_SAVE_PATH + 'repeat_save.pickle'
 with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
     repeat_save = pickle.load(f)
     
 mssave = np.mean(np.array(repeat_save), axis=0)
+    
+
+    #%%
+
 
 plt.figure()
 plt.title(str(layer_1))
@@ -737,6 +771,21 @@ nonpain = list(sham_d3) + list(sham_d10)
 pain = list(psl_d3) + list(psl_d10)
 msFunction.msROC(sham_d10, psl_d10)
     
+#%%
+
+oxaliGroup + glucoseGroup
+
+msplot = mssave[oxaliGroup,:]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+
+
+msplot = mssave[glucoseGroup,:]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
 #%% KHU_CFA
 
 KHU_CFA_100 = KHU_CFA[:7]
