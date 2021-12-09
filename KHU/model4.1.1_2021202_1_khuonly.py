@@ -35,7 +35,7 @@ with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
 
 FPS = msdata_load['FPS']
 N = msdata_load['N']
-bahavss = msdata_load['behavss2']   # 움직임 정보
+behavss = msdata_load['behavss']   # 움직임 정보
 msGroup = msdata_load['msGroup'] # 그룹정보
 msdir = msdata_load['msdir'] # 기타 코드가 저장된 외부저장장치 경로
 signalss = msdata_load['signalss'] # 투포톤 이미징데이터 -> 시계열
@@ -74,34 +74,21 @@ KHU_CFA = msGroup['KHU_CFA']
 PDpain = msGroup['PDpain']
 PDnonpain = msGroup['PDnonpain']
 
-movement_syn = msFunction.msarray([N,MAXSE])
-for SE in range(N):
-    tmp = []
-    for se in range(len(signalss[SE])):
-        behav_tmp = bahavss[SE][se][0]
-        if len(behav_tmp) > 0:
-            movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss[SE][se].shape[0])[0,:]
-            if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
-            
-#%%
-
 for SE in range(N):
     for se in range(len(signalss_raw[SE])):
         tmp = np.array(signalss_raw[SE][se])
         
         signalss[SE][se] = tmp / np.mean(tmp)
-        
-        # roiNum = tmp.shape[1]
-        # mamatrix = np.zeros(tmp.shape) * np.nan
-        # for ROI in range(roiNum):
-        #     mamatrix[:,ROI] = tmp[:,ROI] / np.mean(tmp[:,ROI])
-        # signalss[SE][se] = mamatrix
 
-# t4 = np.zeros((N,MAXSE)) * np.nan
-# for SE in range(N):
-#     for se in range(len(signalss_raw[SE])):
-#         t4[SE,se] = 
-          
+movement_syn = msFunction.msarray([N,MAXSE])
+for SE in range(N):
+    tmp = []
+    for se in range(len(signalss[SE])):
+        behav_tmp = behavss[SE][se][0]
+        if len(behav_tmp) > 0:
+            movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss[SE][se].shape[0])[0,:]
+            if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
+
 #%% grouping
 group_pain_training = []
 group_nonpain_training = []
@@ -315,13 +302,13 @@ print(model.summary())
 
 #%% XYZgen
 
-settingID = 'model4.1.1_2021202_1_khuonly' 
+settingID = 'model4.1.1_2021208_khuonly' 
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 
 GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
 
-wantedlist = morphineGroup + KHUsham + KHU_CFA
+wantedlist = morphineGroup + KHUsham + highGroup3 + PSLgroup_khu + KHU_CFA
 nonlabels = []
 
 RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
@@ -357,7 +344,7 @@ for SE in range(N):
     for stanse in selist: # nonpain label 없으면 전부 컷됨
         if len(target_sig2[SE][stanse]) > 0:
             if np.isnan(np.mean(target_sig2[SE][stanse])): print('e1'); import sys; sys.exit()   
-            bthr = bahavss[SE][stanse][1]
+            bthr = behavss[SE][stanse][1]
             vix = np.where(target_sig2[SE][stanse] > bthr)[0]
             vix2 = np.where(target_sig2[SE][stanse] <= bthr)[0]
             
@@ -396,7 +383,7 @@ for SE in range(N):
                         # labeled_sample = not(label is None)
                         # nonlabeled_sample = (label is None and SE in nonlabel_group)
                         
-                        bthr = bahavss[SE][se][1]
+                        bthr = behavss[SE][se][1]
                         f0 = np.mean(movement_syn[SE][se] > bthr)
                         
                         vix = np.where(target_sig2[SE][se] > bthr)[0]
@@ -443,10 +430,10 @@ for SE in range(N):
                             X_nonlabel.append(xtmp)
                             Z_nonlabel.append([SE, se])               
 #%%
-layer_1 = 2**11; overwrite = False
+layer_1 = 2**11; overwrite = True
 layer_2 = 32
 repeat_save = []
-for repeat in range(5):
+for repeat in range(10):
     fn = len(X[0])
     model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
     print(model.summary())
@@ -743,7 +730,7 @@ KHU_CFA_100 = KHU_CFA[:7]
 KHU_CFA_50 = KHU_CFA[7:]
 
 ##
-target_group = list(KHU_CFA_100)
+target_group = list(KHU_CFA_50)
 plt.figure()
 plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
 
@@ -776,35 +763,6 @@ for i in range(len(mssave_basenmr)):
 
 Aprism_mssave3 = mssave_basenmr
 
-# mssave2 = []
-# maxlensave = []
-
-# 
-
-# mssave_basenmr[]
-
-
-# for t in target_group:
-#     mssave_basenmr[t,:] = mssave_basenmr[t,:] /  np.mean(mssave_basenmr[t,same_days[2]])
-
-# for i in range(len(same_days)):
-#     mssave2.append((mssave_basenmr[target_group,:][:, same_days[i]]).flatten())
-#     maxlensave.append(len(mssave2[i]))
-    
-# mssave2 = np.array(mssave2)
-# mssave3 = np.zeros((len(same_days), np.max(maxlensave))) * np.nan
-# for i in range(len(same_days)):
-#     mssave3[i,:len(mssave2[i])] = mssave2[i]
-
-# print(np.nanmin(mssave3 ))
-
-
-# Aprism_mssave3 = mssave3
-
-# plt.figure()
-# msplot_mean = np.nanmean(mssave3, axis=1)
-# e = scipy.stats.sem(mssave3, axis=1, nan_policy='omit')
-# plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
 #%% KHU formalin
 
