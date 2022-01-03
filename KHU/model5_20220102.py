@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 """
 Created on Thu May 27 13:24:00 2021
 
@@ -137,13 +137,13 @@ for SE in range(N):
                     nonpainc.append(SE in ipsaline_pslGroup and se in [0])
                     nonpainc.append(SE in ipclonidineGroup and se in [0])
                     
-                    if True:
+                    if False:
                         painc.append(SE in pslGroup and se in [1,2])
                         painc.append(SE in ipsaline_pslGroup and se in [1,3])
                             
                 
                 # GBVX 30 mins
-                if False:
+                if True:
                     GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
                     nonpainc.append(SE in GBVX and se in [0,1])
                     nonpainc.append(SE in [164, 166] and se in [2,3,4,5])
@@ -162,7 +162,7 @@ for SE in range(N):
                     nonpainc.append(SE in [188, 189, 200, 201] and se in [2])
                     nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4])
                     
-                    if True:
+                    if False:
                         painc.append(SE in oxaliGroup and se in [1])
                         painc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [2])
             
@@ -184,7 +184,7 @@ for SE in range(N):
                 nonpainc.append(SE in KHU_CFA and se in [0,1,2,3])
                 if True:
                     painc.append(SE in KHU_CFA and se in [4,5,8,9])
-                nonpainc.append(SE in KHU_CFA and se in [6,7]) # keto 100 mg/kg
+                nonpainc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
                 
             if True:
                 # khu psl
@@ -199,7 +199,7 @@ for SE in range(N):
                 nonpainc.append(SE in KHUsham and se in range(10,13)) # morphine
             
             # PD
-            if False:
+            if True:
                 nonpainc.append(SE in PDnonpain and se in list(range(2,10)))
                 nonpainc.append(SE in PDnonpain and se in list(range(0,2)))
                 nonpainc.append(SE in PDpain and se in list(range(0,2)))
@@ -271,7 +271,7 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1, add_fn=None, layer_1=None, laye
     
     input2 = tf.keras.layers.Input(shape=(add_fn))
     input10 = input2
-    # input10 = Dense(int(layer_1), kernel_initializer = init, kernel_regularizer=regularizers.l2(0), activation='relu')(input2) # fully conneted layers, relu
+    input10 = Dense(int(10), kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
 
     # input_cocat = keras.layers.Concatenate(axis=1)([input1_1, input2_1])
     
@@ -336,13 +336,14 @@ print(model.summary())
 
 settingID = 'model5_20220102_0' # feature +/- 나눈 후 5번 검증 (base)
 settingID = 'model5_20220102_1' # shallow model
-
+settingID = 'model5_20220102_3' # shallow model
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 
 GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
 
-wantedlist = morphineGroup + KHUsham + KHU_CFA
+wantedlist = KHU_CFA + morphineGroup + KHUsham 
+
 # wantedlist = highGroup3 + KHU_CFA
 # wantedlist = morphineGroup + KHUsham + PSLgroup_khu + pslGroup + shamGroup + ipsaline_pslGroup + \
 #     ipclonidineGroup + oxaliGroup + glucoseGroup
@@ -353,7 +354,7 @@ nonlabels = []
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
 if not os.path.exists(RESULT_SAVE_PATH): os.mkdir(RESULT_SAVE_PATH)
 
-#%%
+#%% XYZgen2
 repeat = 0
 verbose = 0
 mssave_final = []
@@ -479,7 +480,8 @@ for SE in range(N):
                          
                         
                         # xtmp = [f0, f1, f2, f3, f4, f5, f6, f7, f8]
-                        xtmp = [f0, f1, f2, f3, f11, f22, f33, f4, f5]
+                        # xtmp = [f0, f1, f2, f3, f11, f22, f33, f4, f5]
+                        xtmp = [f3, f33, f4, f5]
                         if SE in nonlabels:
                             X_nonlabel.append(xtmp)
                             Z_nonlabel.append([SE, se])  
@@ -504,12 +506,12 @@ for f in range(X.shape[1]):
     e = [np.std(X[nonpain,f]), np.std(X[pain,f])]
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
                             
-#%%
+#%% tr
 acc_thr = 0.77
-layer_1 = 2**11; overwrite = True
+layer_1 = 2**11; overwrite = False
 layer_2 = 32
 repeat_save = []
-for repeat in range(5):
+for repeat in range(3):
     fn = len(X[0])
     model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
     print(model.summary())
@@ -551,31 +553,33 @@ for repeat in range(5):
             if not(os.path.isfile(final_weightsave)) or overwrite:
                 if True:
                     print('learning', cvlist)
-                    print('tr distribution', np.mean(Y_tr, axis=0))
+                    print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
                     print('te distribution', np.mean(Y_te, axis=0))
                 
                 model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
-                for epoch in range(1000000):
-                    hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=1000000, verbose=1, validation_data= (X_dev, Y_dev))
-                    acc = list(np.array(hist.history['accuracy']))[-1]
-                    if acc > acc_thr and epoch > 500: break
+                # for epoch in range(1):
+                verbose = 0
+                if cv == 0: verbose = 1
+                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=20000, verbose=verbose)
+                    # acc = list(np.array(hist.history['accuracy']))[-1]
+                    # if acc > acc_thr and epoch > 500: break
                 model.save_weights(final_weightsave)
         # test
             model.load_weights(final_weightsave)
             for n in range(len(Z_te)):
                 teSE = Z_te[n][0]; tese = Z_te[n][1]
                 mssave[teSE][tese].append(model.predict(np.array([X_te[n]]))[0][1])
-                if verbose==1: print(teSE, tese, np.mean(mssave[teSE][tese]))
+                if verbose==1 and False: print(teSE, tese, np.mean(mssave[teSE][tese]))
             
     # outsample, learning, test
     if len(Z_te_outsample) > 0: # 있을때만 해
         final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_outsample_final.h5'
         if not(os.path.isfile(final_weightsave)) or overwrite:
             model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
-            for epoch in range(1000000):
-                hist = model.fit(X, Y, batch_size=2**11, epochs=1, verbose=0)
-                acc = list(np.array(hist.history['accuracy']))[-1]
-                if acc > acc_thr and epoch > 500: break
+            # for epoch in range(1000000):
+            hist = model.fit(X, Y, batch_size=2**11, epochs=30000, verbose=0)
+                # acc = list(np.array(hist.history['accuracy']))[-1]
+                # if acc > acc_thr and epoch > 500: break
             model.save_weights(final_weightsave)
             
         model.load_weights(final_weightsave)
@@ -596,38 +600,14 @@ with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(repeat_save, f, pickle.HIGHEST_PROTOCOL)
     print(savepath, '저장되었습니다.')
 
-
-#%%
-X = np.array(X)
-Y = np.array(Y)
-Z = np.array(Z)
-vix = np.sum(Y, axis=1)>0
-X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
-X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
-np.mean(Y_total, axis=0)
-model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1, layer_2=layer_2)
-hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=300000, verbose=1)
-
-
-xhat = model.predict(X)[:,1]
-mssave = msFunction.msarray([N,MAXSE])
-for i in range(len(Z)):
-    teSE =  Z[i][0]
-    tese =  Z[i][1]
-    mssave[teSE][tese].append(xhat[i])
-
-mssave2 = np.zeros((N,MAXSE)) * np.nan
-for row in range(N):
-    for col in range(MAXSE):
-        mssave2[row, col] = np.nanmean(mssave[row][col])
-mssave = mssave2
-    
-#%% dataload
+#% dataload
 savepath = RESULT_SAVE_PATH + 'repeat_save.pickle'
 with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
     repeat_save = pickle.load(f)
     
-mssave = np.mean(np.array(repeat_save), axis=0)
+mssave = np.nanmean(np.array(repeat_save), axis=0)
+
+
 
 #%% KHUPSL
 
@@ -692,13 +672,39 @@ msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
 
+#%% total tr
+X = np.array(X)
+Y = np.array(Y)
+Z = np.array(Z)
+vix = np.sum(Y, axis=1)>0
+X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
+X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
+print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
+model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, layer_2=layer_2)
+hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=10000, verbose=1)
+
+
+xhat = model.predict(X)[:,1]
+mssave = msFunction.msarray([N,MAXSE])
+for i in range(len(Z)):
+    teSE =  Z[i][0]
+    tese =  Z[i][1]
+    mssave[teSE][tese].append(xhat[i])
+
+mssave2 = np.zeros((N,MAXSE)) * np.nan
+for row in range(N):
+    for col in range(MAXSE):
+        mssave2[row, col] = np.nanmean(mssave[row][col])
+mssave = mssave2
+
+
 #%% KHU_CFA
 
 KHU_CFA_100 = KHU_CFA[:7]
 KHU_CFA_50 = KHU_CFA[7:]
 
 ##
-target_group = list(KHU_CFA_100)
+target_group = list(KHU_CFA_50)
 plt.figure()
 plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
 
@@ -716,13 +722,16 @@ if False:
     class1 = mssave[KHUsham,2:10]
     accuracy, roc_auc, _ = msFunction.msROC(class1, class0); print(accuracy, roc_auc)
     
-    np.nanmean(mssave[PSLgroup_khu, :], axis=0)
+    plt.plot(np.nanmean(mssave[PSLgroup_khu, :], axis=0))
     
     #% KHU_CFA day merge
     same_days = [[0,1], [2,3], [4,5], [6,7], [8,9], [10,11], [12,13]]
     mssave2 = np.zeros((N, len(same_days))) * np.nan
     for i in range(len(same_days)):
         mssave2[:,i] = np.nanmean(mssave[:, same_days[i]], axis=1)
+        
+    Aprism = mssave2[target_group,:]
+    plt.plot(np.nanmean(mssave2[target_group,:], axis=0))
     
     mssave_basenmr = mssave2[target_group,:] + 0.52
     for i in range(len(mssave_basenmr)):
