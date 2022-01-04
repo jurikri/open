@@ -181,12 +181,12 @@ for SE in range(N):
         for se in range(MAXSE):
             painc, nonpainc, test_only = [], [], []
             # snu
-            if True: # snu total
+            if False: # snu total
                 if True:
                     nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
                     nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
                     
-                    if False:
+                    if True:
                         painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [1])
                         painc.append(SE in CFAgroup and se in [1,2])
                         painc.append(SE in capsaicinGroup and se in [1])
@@ -197,7 +197,7 @@ for SE in range(N):
                     nonpainc.append(SE in ipsaline_pslGroup and se in [0])
                     nonpainc.append(SE in ipclonidineGroup and se in [0])
                     
-                    if False:
+                    if True:
                         painc.append(SE in pslGroup and se in [1,2])
                         painc.append(SE in ipsaline_pslGroup and se in [1,3])
                             
@@ -212,7 +212,7 @@ for SE in range(N):
                     nonpainc.append(SE in [174] and se in [4,5])
                     nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11])
                     
-                    if False:
+                    if True:
                         painc.append(SE in [179] and se in [8,9])
                         painc.append(SE in [181] and se in [4,5])
             
@@ -222,7 +222,7 @@ for SE in range(N):
                     nonpainc.append(SE in [188, 189, 200, 201] and se in [2])
                     nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4])
                     
-                    if False:
+                    if True:
                         painc.append(SE in oxaliGroup and se in [1])
                         painc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [2])
             
@@ -234,7 +234,7 @@ for SE in range(N):
                 nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
                 nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] + [268, 270, 271] and se in [2])
                 nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
-                if False:
+                if True:
                     painc.append(SE in list(range(230, 239)) and se in [1])
                     painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
                     painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
@@ -244,6 +244,7 @@ for SE in range(N):
                 nonpainc.append(SE in KHU_CFA and se in [0,1,2,3])
                 if True:
                     painc.append(SE in KHU_CFA and se in [4,5,8,9])
+                    painc.append(SE in KHU_CFA[:7] and se in [10])
                 # nonpainc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
                 
             if True:
@@ -252,7 +253,7 @@ for SE in range(N):
                 nonpainc.append(SE in morphineGroup and se in [0,1])
                 nonpainc.append(SE in KHUsham and se in range(0,10))
                 if True:
-                    painc.append(SE in morphineGroup and se in [2,3,4,5,6,7,8,9])
+                    painc.append(SE in morphineGroup and se in [2,3,6,7,8,9])
                     painc.append(SE in PSLgroup_khu and se in [1,2])
                     
                 # nonpainc.append(SE in morphineGroup and se in [10,11,12]) # morphine
@@ -272,158 +273,6 @@ for SE in range(N):
             if np.sum(np.array(nonpainc)) > 0: group_nonpain_training.append([SE, se])
 
 total_list = list(set(list(np.array(group_pain_training)[:,0]) + list(np.array(group_nonpain_training)[:,0])))
-
-# #%%
-
-# movement = np.zeros((N, MAXSE)) * np.nan
-# for SE in morphineGroup + KHUsham:
-#     for se in range(len(signalss_raw[SE])):
-#         bthr = behavss[SE][se][1]
-#         mov = np.mean(movement_syn[SE][se] > bthr)
-#         if mov == np.inf or mov == 0: continue
-#         movement[SE, se] = mov
-        
-# msdata = movement[morphineGroup, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# msdata = movement[KHUsham, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# #%%
-
-# t4 = np.zeros((N, MAXSE)) * np.nan
-# for SE in morphineGroup + KHUsham + KHU_CFA:
-#     for se in range(len(signalss_raw[SE])):
-#         bthr = behavss[SE][se][1]
-#         vix = np.where(movement_syn[SE][se] > bthr)[0]
-#         t4[SE, se] = np.mean(signalss2[SE][se])
-        
-         
-# msdata = t4[morphineGroup, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# msdata = t4[KHUsham, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# msdata = t4[KHU_CFA, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# #%%
-# # msin = signalss2[SE][se]
-
-# def ms_proportional_scaling(msin):
-#     tmp = np.mean(msin, axis=0)
-#     tmp2 = np.std(tmp)
-    
-#     return tmp2
-
-# stand = [0]
-# msmatrix = np.zeros((N, MAXSE)) * np.nan
-# for SE in morphineGroup + KHUsham:
-#     for se in range(len(signalss_raw[SE])):
-#         msmatrix[SE, se] = t4[SE,se] - movement[SE,se]*5
-
-    
-# msdata = msmatrix[morphineGroup, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# msdata = msmatrix[KHUsham, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-
-#%%
-
-# msmatrix = np.zeros((N, MAXSE)) * np.nan
-# for SE in morphineGroup + KHUsham + KHU_CFA:
-#     for se in range(len(signalss_raw[SE])):
-#         bthr = behavss[SE][se][1]
-#         mov = np.mean(movement_syn[SE][se] > bthr)
-        
-#         msmatrix[SE, se] = np.mean(signalss2[SE][se])
-#         # msmatrix[SE, se] = mov
-        
-# msdata = msmatrix[morphineGroup, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# msdata = msmatrix[KHUsham, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-# if False:
-#     msdata = msmatrix[KHU_CFA[:7], :]
-#     x = range(msdata.shape[1])
-#     y = np.nanmean(msdata, axis=0)
-#     error = np.nanstd(msdata, axis=0)
-#     plt.plot(x, y)
-#     plt.fill_between(x, y-error, y+error, alpha=0.5)
-
-#%%
-# msmatrix = np.zeros((N, MAXSE)) * np.nan
-# SE = KHU_CFA[0]; se = 0
-# for SE in KHU_CFA:
-#     nonpain = []
-#     for se in [0,1]:
-#         bthr = behavss[SE][se][1]
-#         vix = np.where(movement_syn[SE][se] < bthr)[0]
-#         nonpain.append(np.mean(signalss2[SE][se][vix,:], axis=0))
-#     nonpain = np.array(nonpain); nonpain = np.mean(nonpain, axis=0)
-    
-#     pain = []
-#     for se in [4,5]:
-#         bthr = behavss[SE][se][1]
-#         vix = np.where(movement_syn[SE][se] < bthr)[0]
-#         pain.append(np.mean(signalss2[SE][se][vix,:], axis=0))
-#     pain  = np.array(pain); pain = np.mean(pain , axis=0)
-    
-#     # plt.plot(nonpain); plt.plot(pain)
-    
-#     for se in range(10):
-#         bthr = behavss[SE][se][1]
-#         vix = np.where(movement_syn[SE][se] < bthr)[0]
-#         tmp = np.mean(signalss2[SE][se][vix,:], axis=0)
-#         msmatrix[SE,se] = np.mean(np.abs(tmp - pain))
-    
-# msdata = msmatrix[KHU_CFA, :]
-# x = range(msdata.shape[1])
-# y = np.nanmean(msdata, axis=0)
-# error = np.nanstd(msdata, axis=0)
-# plt.plot(x, y)
-# plt.fill_between(x, y-error, y+error, alpha=0.5)
 
 
 #%% keras setup
@@ -486,7 +335,7 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1, add_fn=None, layer_1=None, laye
     input2 = tf.keras.layers.Input(shape=(add_fn))
     input10 = input2
     input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
-    # input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
+    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
 
     # input_cocat = keras.layers.Concatenate(axis=1)([input1_1, input2_1])
     
@@ -557,7 +406,8 @@ settingID = 'model5_20220103_0' # shallow model
 
 GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
 
-wantedlist = KHU_CFA + morphineGroup + KHUsham 
+wantedlist = KHU_CFA + morphineGroup + KHUsham
+outsamples = KHU_CFA + morphineGroup + KHUsham 
 
 # wantedlist = highGroup3 + KHU_CFA
 # wantedlist = morphineGroup + KHUsham + PSLgroup_khu + pslGroup + shamGroup + ipsaline_pslGroup + \
@@ -726,7 +576,7 @@ if not(os.path.isfile(savename)):
         pickle.dump(inter_corr, f, pickle.HIGHEST_PROTOCOL)
         print(savename, '저장되었습니다.')
 
-#%% 데이터에 feature 추가
+#% 데이터에 feature 추가
 with open(savename, 'rb') as f:  # Python 3: open(..., 'wb')
     inter_corr = pickle.load(f)
         
@@ -757,42 +607,6 @@ for f in range(X.shape[1]):
     # msplot_mean = [np.mean(X[nonpain,f]), np.mean(X[pain,f])]
     # e = [np.std(X[nonpain,f]), np.std(X[pain,f])]
     # plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-#%% total tr
-X = np.array(X)
-Y = np.array(Y)
-Z = np.array(Z)
-vix = np.sum(Y, axis=1)>0
-X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
-X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
-print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
-
-layer_1 = 200; epochs = 20000
-
-model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1)
-print(model.summary())
-hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
-
-if False:
-    xhat = model.predict(X_total)[:,1]
-    vix = np.where((Y_total[:,1] - np.array((xhat>0.5), dtype=float))==0)[0]
-    print('acc', len(vix) / len(X_total))
-    
-    model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1)
-    hist = model.fit(X_total[vix], Y_total[vix], batch_size=2**11, epochs=epochs, verbose=1)
-
-xhat = model.predict(X)[:,1]
-mssave_total = msFunction.msarray([N,MAXSE])
-for i in range(len(Z)):
-    teSE =  Z[i][0]
-    tese =  Z[i][1]
-    mssave_total[teSE][tese].append(xhat[i])
-
-mssave2_total = np.zeros((N,MAXSE)) * np.nan
-for row in range(N):
-    for col in range(MAXSE):
-        mssave2_total[row, col] = np.nanmean(mssave_total[row][col])
-mssave_total = mssave2_total
 
 #%% 검증
 def ms_report(mssave):
@@ -832,14 +646,62 @@ def ms_report(mssave):
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
-ms_report(mssave_total)   
+
+#%% total tr
+X = np.array(X)
+Y = np.array(Y)
+Z = np.array(Z)
+vix = np.sum(Y, axis=1)>0
+X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
+X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
+print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
+
+layer_1 = 2**10; epochs = 30000
+
+model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1)
+print(model.summary())
+hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
+
+if False:
+    xhat = model.predict(X_total)[:,1]
+    vix = np.where((Y_total[:,1] - np.array((xhat>0.5), dtype=float))==0)[0]
+    print('acc', len(vix) / len(X_total))
+    
+    model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1)
+    hist = model.fit(X_total[vix], Y_total[vix], batch_size=2**11, epochs=epochs, verbose=1)
+
+xhat = model.predict(X)[:,1]
+mssave_total = msFunction.msarray([N,MAXSE])
+for i in range(len(Z)):
+    teSE =  Z[i][0]
+    tese =  Z[i][1]
+    mssave_total[teSE][tese].append(xhat[i])
+
+mssave2_total = np.zeros((N,MAXSE)) * np.nan
+for row in range(N):
+    for col in range(MAXSE):
+        mssave2_total[row, col] = np.nanmean(mssave_total[row][col])
+mssave_total = mssave2_total
+
+ms_report(mssave_total) 
 
 #%%
 
+def random_sample_cv(tlist=None, n_fold=10):
+    import random
+    tlist = list(tlist)
+    tlist2 = list(tlist)
+    cv_sample_num = int(round(len(tlist)/n_fold))
+    cv_save = []
+    for cv in range(n_fold):
+        rix = random.sample(tlist2, np.min([cv_sample_num, len(tlist2)]))
+        tlist2 = list(set(tlist2)-set(rix))
+        cv_save.append(rix)
+    return cv_save
 
 
-   
-#%% tr
+
+#%% cv 생성
 overwrite = True
 fn = len(X[0])
 
@@ -852,73 +714,94 @@ for t in nonlabels:
 X_te_outsample = X_nonlabel[nonlabel]  
 Z_te_outsample = Z_nonlabel[nonlabel]
 
+def SEse_find(Z=None, Y=None, SE=None, se=None):
+    
+    if SE in X_vix = np.array(X[vix]):
+        Z = np.array(Z)
+        vix = np.where(np.logical_and(Z[:,0]==SE, Z[:,1]==se))[0]
+        if len(vix) > 0: return list(vix)
+        else: return []
+    else: return []
+
+vix = np.where(np.sum(Y, axis=1)>0)[0]
+X_vix = np.array(X[vix]); Y_vix = np.array(Y[vix]); Z_vix = np.array(Z[vix])
+
+cvlist = []
+for SE in range(N):
+    if SE < 247: 
+        for se in range(len(signalss_raw[SE])):
+            i = SEse_find(Z=Z_vix, SE=SE, se=se)
+            if len(i) > 0: cvlist.append(i)
+    elif SE >= 247 and SE < 273:
+        for se in range(3):
+            i = SEse_find(Z=Z_vix, SE=SE, se=se)
+            if len(i) > 0: cvlist.append(i)
+        
+        i0 = SEse_find(Z=Z_vix, SE=SE, se=3)
+        i1 = SEse_find(Z=Z_vix, SE=SE, se=4)
+        i = i0+i1
+        if len(i) > 0: cvlist.append(i)
+    elif SE >= 273 and SE < 325:
+        for se in list(range(0,len(signalss_raw[SE]),2)):
+            i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
+            i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
+            i = i0+i1
+            if len(i) > 0: cvlist.append(i)
+
+#%% tr
+model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
+print(model.summary())
+
 repeat_save = []
 for repeat in range(1):
-    model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
-    print(model.summary())
     ### outsample test
-    
-    if True: print('repeat', repeat, 'data num', len(Y), 'Y2 dis', np.mean(Y, axis=0))
+    print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
-    for cv in range(0, len(wantedlist)):
-        if type(wantedlist[cv]) != list: cvlist = [wantedlist[cv]]
-        else: cvlist = wantedlist[cv]
-        
-        tlist2 = list(range(len(Z)))
+    
+    tlist = list(range(len(cvlist)))
+    cvnum = 20
+    cv_save = random_sample_cv(tlist=tlist, n_fold=cvnum)
+    totallist = list(range(len(Y_vix)))
+    for cv in range(0, cvnum):
         telist = []
-        for t in cvlist:
-            telist += list(np.where(Z[:,0]==t)[0])
-        trlist = list(set(tlist2)-set(telist))
-        
-        X_tr = X[trlist]; X_te = X[telist]
-        Y_tr = Y[trlist]; Y_te = Y[telist]
-        Z_tr = Z[trlist]; Z_te = Z[telist]
-        
-        vix = np.sum(Y_tr, axis=1)>0
-        X_tr = X_tr[vix]; Y_tr = Y_tr[vix]; Z_tr = Z_tr[vix]
-        vix = np.sum(Y_te, axis=1)>0
-        X_dev = X_te[vix]; Y_dev = Y_te[vix]; Z_dev = Z_te[vix]
+        for j in cv_save[cv]:
+            telist += cvlist[j] 
 
+        trlist = list(set(totallist)-set(telist))
+        
+        X_tr = X_vix[trlist]; X_te = X_vix[telist]
+        Y_tr = Y_vix[trlist]; Y_te = Y_vix[telist]
+        Z_tr = Z_vix[trlist]; Z_te = Z_vix[telist]
+        
         X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
-        if len(Y_te) > 0:
-            final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cvlist) + '_final.h5'
-            if not(os.path.isfile(final_weightsave)) or overwrite:
-                if True:
-                    print('learning', cvlist)
-                    print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
-                    print('te distribution', np.mean(Y_te, axis=0))
-                
-                model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
-                # for epoch in range(1):
-                verbose = 0
-                if cv == 0: verbose = 1
-                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
-                    # acc = list(np.array(hist.history['accuracy']))[-1]
-                    # if acc > acc_thr and epoch > 500: break
-                model.save_weights(final_weightsave)
-        # test
-            model.load_weights(final_weightsave)
-            for n in range(len(Z_te)):
-                teSE = Z_te[n][0]; tese = Z_te[n][1]
-                mssave[teSE][tese].append(model.predict(np.array([X_te[n]]))[0][1])
-                if verbose==1 and False: print(teSE, tese, np.mean(mssave[teSE][tese]))
-            
-    # outsample, learning, test
-    if len(Z_te_outsample) > 0: # 있을때만 해
-        final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_outsample_final.h5'
+        final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cv) + '_final.h5'
         if not(os.path.isfile(final_weightsave)) or overwrite:
+            if True:
+                print('learning', cv)
+                print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
+                print('te distribution', np.mean(Y_te, axis=0))
+            
             model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
-            # for epoch in range(1000000):
-            hist = model.fit(X, Y, batch_size=2**11, epochs=30000, verbose=0)
-                # acc = list(np.array(hist.history['accuracy']))[-1]
-                # if acc > acc_thr and epoch > 500: break
+            # for epoch in range(1):
+            verbose = 0
+            if cv == 0: verbose = 1
+            hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=0)
             model.save_weights(final_weightsave)
             
-        model.load_weights(final_weightsave)
-        for n in range(len(Z_te_outsample)):
-            teSE = Z_te_outsample[n][0]; tese = Z_te_outsample[n][1]
-            mssave[teSE][tese].append(model.predict(np.array([X_te_outsample[n]]))[0][1])
-            if verbose==1: print(teSE, tese, np.mean(mssave[teSE][tese]))
+        # test
+            model.load_weights(final_weightsave)
+            yhat = model.predict(X_te)[:,1]
+            
+            for n in range(len(yhat)):
+                teSE = Z_te[n][0]; tese = Z_te[n][1]
+                mssave[teSE][tese].append(yhat[n])
+            
+            outlist = np.where(np.sum(Y, axis=1)==0)[0]
+            yhat_out = model.predict(X[outlist])[:,1]
+            for out_SE in wantedlist:
+                for n in np.where(Z[outlist][:,0]==out_SE)[0]:
+                    teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
+                    mssave[teSE][tese].append(yhat_out[n])
 
     mssave2 = np.zeros((N,MAXSE)) * np.nan
     for row in range(N):
