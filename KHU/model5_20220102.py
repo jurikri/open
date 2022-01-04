@@ -9,6 +9,7 @@ import sys;
 sys.path.append('D:\\mscore\\code_lab\\')
 sys.path.append('C:\\mscode\\')
 sys.path.append('C:\\Users\\skklab\\Documents\mscode\\')
+sys.path.append('K:\\mscode_m2\\')
 
 import msFunction
 import os  
@@ -35,6 +36,7 @@ MAXSE = 40
 # gsync = 'D:\\2p_pain\\'
 # gsync = 'C:\\mass_save\\PSLpain\\'
 gsync = 'C:\\SynologyDrive\\2p_data\\'
+if os.path.isdir('K:\\mscode_m2'): gsync = 'K:\\SynologyDrive\\2p_data\\'
 with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
 
@@ -256,7 +258,7 @@ for SE in range(N):
                 nonpainc.append(SE in PSLgroup_khu and se in [0])
                 nonpainc.append(SE in morphineGroup and se in [0,1])
                 
-                mslist = [2,3,4,5,6,7]
+                mslist = [2,3,4,5,6,7,8,9]
                 nonpainc.append(SE in KHUsham and se in mslist)
                 if True:
                     painc.append(SE in morphineGroup and se in mslist)
@@ -431,6 +433,9 @@ nonlabels = []
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
+
+if os.path.isdir('K:\\mscode_m2'): RESULT_SAVE_PATH = 'K:\\mscode_m2\\220220102\\' + settingID + '\\'
+
 if not os.path.exists(RESULT_SAVE_PATH): os.mkdir(RESULT_SAVE_PATH)
 
 #%% XYZgen2
@@ -574,6 +579,8 @@ for SE in range(N):
 #%% feature 추가 생성
 
 savename = 'C:\\SynologyDrive\\2p_data\\' + 'inter_corr.pickle'
+if os.path.isdir('K:\\mscode_m2'): savename = 'K:\\SynologyDrive\\2p_data\\' + 'inter_corr.pickle'
+
 if not(os.path.isfile(savename)):
     inter_corr = np.zeros((N, MAXSE)) * np.nan
     for SE in tqdm(range(N)):
@@ -698,7 +705,7 @@ for row in range(N):
     for col in range(MAXSE):
         mssave2_total[row, col] = np.nanmean(mssave_total[row][col])
 mssave_total = mssave2_total
-epochs = 1000
+# epochs = 1000
 ms_report(mssave_total) 
 
 #%%
@@ -718,7 +725,7 @@ def random_sample_cv(tlist=None, n_fold=10):
 
 
 #%% cv 생성
-overwrite = True
+
 fn = len(X[0])
 
 X = np.array(X); X_nonlabel = np.array(X_nonlabel)
@@ -731,8 +738,7 @@ X_te_outsample = X_nonlabel[nonlabel]
 Z_te_outsample = Z_nonlabel[nonlabel]
 
 def SEse_find(Z=None, Y=None, SE=None, se=None):
-    
-    if SE in X_vix = np.array(X[vix]):
+    if SE in wantedlist:
         Z = np.array(Z)
         vix = np.where(np.logical_and(Z[:,0]==SE, Z[:,1]==se))[0]
         if len(vix) > 0: return list(vix)
@@ -764,18 +770,19 @@ for SE in range(N):
             i = i0+i1
             if len(i) > 0: cvlist.append(i)
 
+print('len(cvlist)', len(cvlist))
 #%% tr
-model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
+model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
-
+overwrite = False
 repeat_save = []
-for repeat in range(1):
+for repeat in range(5):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
     
     tlist = list(range(len(cvlist)))
-    cvnum = 20
+    cvnum = 134
     cv_save = random_sample_cv(tlist=tlist, n_fold=cvnum)
     totallist = list(range(len(Y_vix)))
     for cv in range(0, cvnum):
@@ -797,11 +804,11 @@ for repeat in range(1):
                 print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
                 print('te distribution', np.mean(Y_te, axis=0))
             
-            model = keras_setup(lr=lr, seed=0, add_fn=fn, layer_1=layer_1)
+            mmodel = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
             # for epoch in range(1):
             verbose = 0
             if cv == 0: verbose = 1
-            hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=0)
+            hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
             model.save_weights(final_weightsave)
             
         # test
