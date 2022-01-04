@@ -8,6 +8,8 @@ Created on Thu May 27 13:24:00 2021
 import sys; 
 sys.path.append('D:\\mscore\\code_lab\\')
 sys.path.append('C:\\mscode\\')
+sys.path.append('C:\\Users\\skklab\\Documents\mscode\\')
+
 import msFunction
 import os  
 try: import pickle5 as pickle
@@ -25,6 +27,8 @@ import scipy
 import time
 
 MAXSE = 40
+
+# plt.plot(range(10))
 
 #%% data import
 
@@ -251,9 +255,11 @@ for SE in range(N):
                 # khu psl
                 nonpainc.append(SE in PSLgroup_khu and se in [0])
                 nonpainc.append(SE in morphineGroup and se in [0,1])
-                nonpainc.append(SE in KHUsham and se in range(0,10))
+                
+                mslist = [2,3,4,5,6,7]
+                nonpainc.append(SE in KHUsham and se in mslist)
                 if True:
-                    painc.append(SE in morphineGroup and se in [2,3,6,7,8,9])
+                    painc.append(SE in morphineGroup and se in mslist)
                     painc.append(SE in PSLgroup_khu and se in [1,2])
                     
                 # nonpainc.append(SE in morphineGroup and se in [10,11,12]) # morphine
@@ -303,7 +309,7 @@ n_hidden = int(2**7) # LSTM node 갯수, bidirection 이기 때문에 2배수로
 layer_1 = int(2**7) # fully conneted laye node 갯수 # 8 # 원래 6 
     
 l2_rate = 1e-3
-dropout_rate1 = 0.2 # dropout rate
+dropout_rate1 = 0.1 # dropout rate
 dropout_rate2 = 0.1 # 
     
 from tensorflow.keras import regularizers
@@ -321,7 +327,7 @@ from tensorflow.keras.layers import Flatten
 from numpy.random import seed as nseed #
 import tensorflow as tf
 
-def keras_setup(lr=0.01, batchnmr=False, seed=1, add_fn=None, layer_1=None, layer_2=None):
+def keras_setup(lr=0.01, dropout_rate1=0, batchnmr=False, seed=1, add_fn=None, layer_1=None, layer_2=None):
     #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
 
     init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
@@ -334,8 +340,16 @@ def keras_setup(lr=0.01, batchnmr=False, seed=1, add_fn=None, layer_1=None, laye
     
     input2 = tf.keras.layers.Input(shape=(add_fn))
     input10 = input2
-    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
-    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
+    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0), activation='relu')(input10) # fully conneted layers, relu
+    if batchnmr: input10 = BatchNormalization()(input10)
+    input10 = Dropout(dropout_rate1)(input10) # dropout
+    input10 = Dense(int(layer_1/2), kernel_initializer = init, kernel_regularizer=regularizers.l2(0.05), activation='relu')(input10) # fully conneted layers, relu
+    if batchnmr: input10 = BatchNormalization()(input10)
+    input10 = Dropout(dropout_rate1)(input10) # dropout
+    input10 = Dense(int(layer_1/4), kernel_initializer = init, kernel_regularizer=regularizers.l2(0.05), activation='sigmoid')(input10) # fully conneted layers, relu
+    if batchnmr: input10 = BatchNormalization()(input10)
+    input10 = Dropout(dropout_rate1)(input10) # dropout
+    # input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
 
     # input_cocat = keras.layers.Concatenate(axis=1)([input1_1, input2_1])
     
@@ -656,10 +670,12 @@ X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
 X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
 print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
 
-layer_1 = 2**10; epochs = 30000
+layer_1 = 30; epochs = 10000
 
-model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1)
+model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
+#%%
+
 hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
 
 if False:
@@ -682,7 +698,7 @@ for row in range(N):
     for col in range(MAXSE):
         mssave2_total[row, col] = np.nanmean(mssave_total[row][col])
 mssave_total = mssave2_total
-
+epochs = 1000
 ms_report(mssave_total) 
 
 #%%
