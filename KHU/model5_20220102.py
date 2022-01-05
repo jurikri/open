@@ -710,13 +710,14 @@ ms_report(mssave_total)
 
 #%%
 
-def random_sample_cv(tlist=None, n_fold=10):
+def random_sample_cv(tlist=None, n_fold=10, rseed=1):
     import random
     tlist = list(tlist)
     tlist2 = list(tlist)
     cv_sample_num = int(round(len(tlist)/n_fold))
     cv_save = []
     for cv in range(n_fold):
+        random.seed(rseed)
         rix = random.sample(tlist2, np.min([cv_sample_num, len(tlist2)]))
         tlist2 = list(set(tlist2)-set(rix))
         cv_save.append(rix)
@@ -776,14 +777,14 @@ model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=
 print(model.summary())
 overwrite = False
 repeat_save = []
-for repeat in range(5):
+for repeat in range(1):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
     
     tlist = list(range(len(cvlist)))
     cvnum = 134
-    cv_save = random_sample_cv(tlist=tlist, n_fold=cvnum)
+    cv_save = random_sample_cv(tlist=tlist, n_fold=cvnum, rseed=repeat)
     totallist = list(range(len(Y_vix)))
     for cv in range(0, cvnum):
         telist = []
