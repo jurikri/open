@@ -176,94 +176,93 @@ for SE in range(N):
     if not SE in [179, 181]: # ROI 매칭안되므로 임시 제거
         for se in range(MAXSE):
             painc, nonpainc, test_only = [], [], []
+
+
+            snu_base = True
+            snu_acute = False
+            snu_chronic = True
+            
+            khu_base = True
+            khu_acute = False
+            khu_chronic = True
+
             # snu
-            if False: # snu total
-                if True:
-                    nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
-                    nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
-                    
-                    if True:
-                        painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [1])
-                        painc.append(SE in CFAgroup and se in [1,2])
-                        painc.append(SE in capsaicinGroup and se in [1])
-                    
-                if True:
-                    nonpainc.append(SE in pslGroup and se in [0])
-                    nonpainc.append(SE in shamGroup and se in [0,1,2])
-                    nonpainc.append(SE in ipsaline_pslGroup and se in [0])
-                    nonpainc.append(SE in ipclonidineGroup and se in [0])
-                    
-                    if True:
-                        painc.append(SE in pslGroup and se in [1,2])
-                        painc.append(SE in ipsaline_pslGroup and se in [1,3])
-                            
+            GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
+            if snu_base:
+                nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
+                nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
+                nonpainc.append(SE in pslGroup and se in [0])
+                nonpainc.append(SE in shamGroup and se in [0,1,2])
+                nonpainc.append(SE in ipsaline_pslGroup and se in [0])
+                nonpainc.append(SE in ipclonidineGroup and se in [0])
+                nonpainc.append(SE in GBVX and se in [0,1])
+                nonpainc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [3])
+                nonpainc.append(SE in [188, 189, 200, 201] and se in [2])
+                nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4])
+            
+            if snu_acute:
+                painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [1])
+                painc.append(SE in capsaicinGroup and se in [1])
                 
-                # GBVX 30 mins
-                if True:
-                    GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
-                    nonpainc.append(SE in GBVX and se in [0,1])
-                    # nonpainc.append(SE in [164, 166] and se in [2,3,4,5]) # GBVX
-                    # nonpainc.append(SE in [167] and se in [4,5,6,7]) # GBVX
-                    # nonpainc.append(SE in [172] and se in [4,5,7,8]) # GBVX
-                    # nonpainc.append(SE in [174] and se in [4,5]) # GBVX
-                    # nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11]) # GBVX
-                    
-                    if True:
-                        painc.append(SE in [179] and se in [8,9])
-                        painc.append(SE in [181] and se in [4,5])
-            
-                # snu oxali
-                if True:
-                    nonpainc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [3])
-                    nonpainc.append(SE in [188, 189, 200, 201] and se in [2])
-                    nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4])
-                    
-                    if True:
-                        painc.append(SE in oxaliGroup and se in [1])
-                        painc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [2])
-            
-            
-            if True:
+            if snu_chronic:
+                painc.append(SE in CFAgroup and se in [1,2])
+                painc.append(SE in pslGroup and se in [1,2])
+                painc.append(SE in ipsaline_pslGroup and se in [1,3])
                 
+                painc.append(SE in [179] and se in [8,9]) # GBVX group내의 pain
+                painc.append(SE in [181] and se in [4,5]) # GBVX group내의 pain
+                
+                painc.append(SE in oxaliGroup and se in [1])
+                painc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [2])
+                    
+            if False: # GBVX analgesic effect
+                # nonpainc.append(SE in [164, 166] and se in [2,3,4,5]) # GBVX
+                # nonpainc.append(SE in [167] and se in [4,5,6,7]) # GBVX
+                # nonpainc.append(SE in [172] and se in [4,5,7,8]) # GBVX
+                # nonpainc.append(SE in [174] and se in [4,5]) # GBVX
+                # nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11]) # GBVX
+                pass
+                    
+
+            if khu_base:  
                 # khu formalin
                 nonpainc.append(SE in list(range(230, 239)) and se in [0])
                 nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
                 nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] + [268, 270, 271] and se in [2])
                 nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
-                if True:
-                    painc.append(SE in list(range(230, 239)) and se in [1])
-                    painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
-                    painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
-
-                
-                # khu cfa
                 nonpainc.append(SE in KHU_CFA and se in [0,1,2,3])
-                if True:
-                    painc.append(SE in KHU_CFA and se in [4,5,8,9])
-                    painc.append(SE in KHU_CFA[:7] and se in [10])
-                # nonpainc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
-                
-            if True:
-                # khu psl
                 nonpainc.append(SE in PSLgroup_khu and se in [0])
-                nonpainc.append(SE in morphineGroup and se in [0,1])
+                nonpainc.append(SE in morphineGroup and se in [0,1]) 
                 
-                mslist = [2,3,4,5,6,7,8,9]
+                mslist = [2,3,4,5,6,7,8,9] # overfit check 용
                 nonpainc.append(SE in KHUsham and se in mslist)
-                if True:
-                    painc.append(SE in morphineGroup and se in mslist)
-                    painc.append(SE in PSLgroup_khu and se in [1,2])
-                    
-                # nonpainc.append(SE in morphineGroup and se in [10,11,12]) # morphine
-                # nonpainc.append(SE in KHUsham and se in range(10,13)) # morphine
-            
-            # PD
-            if True:
+                
                 nonpainc.append(SE in PDnonpain and se in list(range(2,10)))
                 nonpainc.append(SE in PDnonpain and se in list(range(0,2)))
                 nonpainc.append(SE in PDpain and se in list(range(0,2)))
-                if True:
-                    painc.append(SE in PDpain and se in list(range(4,6)))
+            
+            if khu_acute:  
+                painc.append(SE in list(range(230, 239)) and se in [1])
+                painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
+                painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
+
+            
+            if khu_chronic:
+                painc.append(SE in KHU_CFA and se in [4,5,8,9])
+                painc.append(SE in KHU_CFA[:7] and se in [10])
+                painc.append(SE in morphineGroup and se in mslist)
+                painc.append(SE in PSLgroup_khu and se in [1,2])
+                painc.append(SE in PDpain and se in list(range(4,6)))
+                
+            if False: # keto analgesic effects
+                # nonpainc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
+                # nonpainc.append(SE in KHU_CFA[7:] and se in [6,7]) # keto 50 mg/kg
+                pass
+                
+            if False:  # morhpine analgesic effects
+                # nonpainc.append(SE in morphineGroup and se in [10,11,12]) # morphine
+                # nonpainc.append(SE in KHUsham and se in range(10,13)) # morphine
+                pass
             
             if [SE, se] in [[285, 4],[290, 5]]: continue # 시간짧음, movement 불일치
             
@@ -406,16 +405,17 @@ print(model.summary())
 
 # settingID = 'model5_20220102_0' # feature +/- 나눈 후 5번 검증 (base)
 # settingID = 'model5_20220102_1' # shallow model
-settingID = 'model5_20220105_addsnuall' # shallow model
-settingID = 'model5_20220105_alldata_allocation_fix'
-settingID = 'model5_20220105_1'
+# settingID = 'model5_20220105_addsnuall' # shallow model
+# settingID = 'model5_20220105_alldata_allocation_fix'
+# settingID = 'model5_20220105_1'
+
+settingID = 'model5_20220105_101101'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
+SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
+KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham
 
-GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
-
-wantedlist = KHU_CFA + morphineGroup + KHUsham
-outsamples = KHU_CFA + morphineGroup + KHUsham 
+wantedlist = SNU_chronicpain + KHU_chronicpain
 
 # wantedlist = highGroup3 + KHU_CFA
 # wantedlist = morphineGroup + KHUsham + PSLgroup_khu + pslGroup + shamGroup + ipsaline_pslGroup + \
@@ -568,7 +568,7 @@ for SE in range(N):
                             Y.append(label)
                             Z.append([SE, se])
                                 
-#%% feature 추가 생성
+#% feature 추가 생성
 
 savename = 'C:\\SynologyDrive\\2p_data\\' + 'inter_corr.pickle'
 if os.path.isdir('K:\\mscode_m2'): savename = 'K:\\SynologyDrive\\2p_data\\' + 'inter_corr.pickle'
@@ -848,7 +848,7 @@ model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=
 print(model.summary())
 overwrite = False
 repeat_save = []
-for repeat in range(5,10):
+for repeat in range(1):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
@@ -872,7 +872,7 @@ for repeat in range(5,10):
         final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cv) + '_final.h5'
         if not(os.path.isfile(final_weightsave)) or overwrite:
             if True:
-                print('learning', cv)
+                print('learning', cv, '/', len(cvlist))
                 print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
                 print('te distribution', np.mean(Y_te, axis=0))
             
@@ -918,7 +918,7 @@ with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
 mssave = np.nanmean(np.array(repeat_save), axis=0)
 
 ms_report(mssave)  
-
+# ms_report_snu_chronic(mssave_total) 
 #%% KHUPSL
 
 plt.figure()
