@@ -83,98 +83,88 @@ PDpain = msGroup['PDpain']
 PDnonpain = msGroup['PDnonpain']
 
 #%%
-from sklearn.linear_model import LinearRegression
 
-baseratio = 0.3
-signalss2 = msFunction.msarray([N,MAXSE])
-for SE in range(N):
-    msplot = []
-    for se in range(len(signalss_raw[SE])):
-        tmp = np.array(signalss_raw[SE][se])
-        allo = np.zeros(tmp.shape) * np.nan
-        for ROI in range(tmp.shape[1]):
-            vix = np.argsort(tmp[:,ROI])[:int(round(len(tmp[:,ROI])*baseratio))]
-            base = tmp[:,ROI][vix]
-            m = np.median(base)
-            s = np.std(base)
-            
-            allo[:, ROI] = (tmp[:,ROI] - m) / s
-            
-            df = np.mean(allo[:, ROI])
-            raw = np.mean(tmp[:,ROI])
-            msplot.append([raw, df])     
-        signalss2[SE][se] = allo
-        
-        if np.inf == np.mean([df, raw]): import sys;sys.exit()
-        
-        if False:
-            msplot = np.array(msplot)
-            line_fitter = LinearRegression()
-            X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
-            line_fitter.fit(X, msplot[:,1])
-            m = line_fitter.coef_
-            b = line_fitter.intercept_
+savename = 'C:\\SynologyDrive\\2p_data\\' + 'mspickle_add.pickle'
+if not(os.path.isfile(savename)):   
+    from sklearn.linear_model import LinearRegression
     
-            plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.5)
-            xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
-            plt.plot(xaxis, xaxis*m + b, c='orange')
-            print('slope', m)
-
-msplot = []
-for SE in range(N):
-    for se in range(len(signalss_raw[SE])):
-        if SE == 328 and se == 18: continue
-        raw = np.mean(signalss_raw[SE][se])
-        df = np.nanstd(signalss2[SE][se])
-        msplot.append([raw, df])
-        if np.mean([df, raw]) == np.inf: print(SE, se ); import sys;sys.exit()
-        if np.isnan(np.mean([df, raw])): print(SE, se ); import sys;sys.exit()
-            
-msplot = np.array(msplot)
-line_fitter = LinearRegression()
-X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
-line_fitter.fit(X, msplot[:,1])
-m = line_fitter.coef_
-b = line_fitter.intercept_
-
-plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.2)
-xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
-plt.plot(xaxis, xaxis*m + b, c='orange')
-print('slope', m)
-
-
-#%%
-print('PD move skip 중. check')
-movement_syn = msFunction.msarray([N,MAXSE])
-for SE in range(325):
-    tmp = []
-    for se in range(len(signalss_raw[SE])):
-        behav_tmp = behavss[SE][se][0]
-        if len(behav_tmp) > 0:
-            movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss2[SE][se].shape[0])[0,:]
-            if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
-
-#%%
-if False:
-    signalss = msFunction.msarray([N,MAXSE])
+    baseratio = 0.3
+    signalss2 = msFunction.msarray([N,MAXSE])
     for SE in range(N):
+        msplot = []
         for se in range(len(signalss_raw[SE])):
             tmp = np.array(signalss_raw[SE][se])
-            signalss[SE][se] = tmp / np.mean(tmp)
+            allo = np.zeros(tmp.shape) * np.nan
+            for ROI in range(tmp.shape[1]):
+                vix = np.argsort(tmp[:,ROI])[:int(round(len(tmp[:,ROI])*baseratio))]
+                base = tmp[:,ROI][vix]
+                m = np.median(base)
+                s = np.std(base)
+                
+                allo[:, ROI] = (tmp[:,ROI] - m) / s
+                
+                df = np.mean(allo[:, ROI])
+                raw = np.mean(tmp[:,ROI])
+                msplot.append([raw, df])     
+            signalss2[SE][se] = allo
+            
+            if np.inf == np.mean([df, raw]): import sys;sys.exit()
+            
+            if False:
+                msplot = np.array(msplot)
+                line_fitter = LinearRegression()
+                X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
+                line_fitter.fit(X, msplot[:,1])
+                m = line_fitter.coef_
+                b = line_fitter.intercept_
+        
+                plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.5)
+                xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
+                plt.plot(xaxis, xaxis*m + b, c='orange')
+                print('slope', m)
     
-    
-    
-    movement_syn_df = msFunction.msarray([N,MAXSE])
+    msplot = []
     for SE in range(N):
+        for se in range(len(signalss_raw[SE])):
+            if SE == 328 and se == 18: continue
+            raw = np.mean(signalss_raw[SE][se])
+            df = np.nanstd(signalss2[SE][se])
+            msplot.append([raw, df])
+            if np.mean([df, raw]) == np.inf: print(SE, se ); import sys;sys.exit()
+            if np.isnan(np.mean([df, raw])): print(SE, se ); import sys;sys.exit()
+                
+    msplot = np.array(msplot)
+    line_fitter = LinearRegression()
+    X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
+    line_fitter.fit(X, msplot[:,1])
+    m = line_fitter.coef_
+    b = line_fitter.intercept_
+    
+    plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.2)
+    xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
+    plt.plot(xaxis, xaxis*m + b, c='orange')
+    print('slope', m)
+    
+    print('PD move skip 중. check')
+    movement_syn = msFunction.msarray([N,MAXSE])
+    for SE in range(325):
         tmp = []
         for se in range(len(signalss_raw[SE])):
             behav_tmp = behavss[SE][se][0]
             if len(behav_tmp) > 0:
-                movement_syn_df[SE][se] = msFunction.downsampling(behav_tmp, signalss_df[SE][se].shape[0])[0,:]
-                if np.isnan(np.mean(movement_syn_df[SE][se])): movement_syn_df[SE][se] = []
-                
-    print('np.mean(signalss_df[0][0]', np.mean(signalss_df[0][0]))
-            
+                movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss2[SE][se].shape[0])[0,:]
+                if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
+
+    msdict = {'signalss2': signalss2, 'movement_syn': movement_syn}
+    with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
+        pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
+        print(savename, '저장되었습니다.')
+
+with open(savename, 'rb') as f:  # Python 3: open(..., 'wb')
+    msdict = pickle.load(f)
+    signalss2 = msdict['signalss2']
+    movement_syn =  msdict['movement_syn']
+    
 #%% grouping
 group_pain_training = []
 group_nonpain_training = []
@@ -212,11 +202,11 @@ for SE in range(N):
                 if True:
                     GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
                     nonpainc.append(SE in GBVX and se in [0,1])
-                    nonpainc.append(SE in [164, 166] and se in [2,3,4,5])
-                    nonpainc.append(SE in [167] and se in [4,5,6,7])
-                    nonpainc.append(SE in [172] and se in [4,5,7,8])
-                    nonpainc.append(SE in [174] and se in [4,5])
-                    nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11])
+                    # nonpainc.append(SE in [164, 166] and se in [2,3,4,5]) # GBVX
+                    # nonpainc.append(SE in [167] and se in [4,5,6,7]) # GBVX
+                    # nonpainc.append(SE in [172] and se in [4,5,7,8]) # GBVX
+                    # nonpainc.append(SE in [174] and se in [4,5]) # GBVX
+                    # nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11]) # GBVX
                     
                     if True:
                         painc.append(SE in [179] and se in [8,9])
@@ -416,7 +406,9 @@ print(model.summary())
 
 # settingID = 'model5_20220102_0' # feature +/- 나눈 후 5번 검증 (base)
 # settingID = 'model5_20220102_1' # shallow model
-settingID = 'model5_20220103_0' # shallow model
+settingID = 'model5_20220105_addsnuall' # shallow model
+settingID = 'model5_20220105_alldata_allocation_fix'
+settingID = 'model5_20220105_1'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 
@@ -666,6 +658,67 @@ def ms_report(mssave):
     msplot_mean = np.nanmean(msplot, axis=0)
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+    
+def ms_report_snu_chronic(mssave):
+    msplot = mssave[shamGroup,1:3]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
+    msplot = mssave[pslGroup,1:3]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+
+    msplot = mssave[ipsaline_pslGroup + ipclonidineGroup,:][:,[1,3]]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
+
+
+    GBVX_nonpain_d3, GBVX_nonpain_d10 = [], []
+    GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
+    for SE in [164, 166, 167, 172, 174, 177, 179, 181]:
+        d3c, d10c = [], []
+        for se in range(12):
+            d10c.append(SE in [164, 166] and se in [2,3])
+            
+            d3c.append(SE in [167] and se in [4,5])
+            d10c.append(SE in [167] and se in [6,7])
+            
+            d3c.append(SE in [172] and se in [4,5])
+            d10c.append(SE in [172] and se in [8,9])
+            
+            d3c.append(SE in [174] and se in [4,5])
+            
+            d3c.append(SE in [177,179,181] and se in [2,3])
+            d10c.append(SE in [177,179] and se in [6,7])
+
+            if np.sum(np.array(d3c)) > 0: GBVX_nonpain_d3.append(mssave[SE,se])
+            if np.sum(np.array(d10c)) > 0: GBVX_nonpain_d10.append(mssave[SE,se])
+            
+        
+    GBVX_nonpain_d3 = msFunction.nanex(GBVX_nonpain_d3)
+    GBVX_nonpain_d10 = msFunction.nanex(GBVX_nonpain_d10)
+
+    msplot = np.zeros((50, 2)) * np.nan
+    msplot[:len(GBVX_nonpain_d3),0] = GBVX_nonpain_d3
+    msplot[:len(GBVX_nonpain_d10),1] = GBVX_nonpain_d10
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
+
+    #%SNU oxaliplatin
+    plt.figure()
+    msplot = mssave[oxaliGroup,1:3]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
+    msplot = mssave[glucoseGroup,1:3]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
 
 #%% total tr
@@ -677,7 +730,7 @@ X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
 X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
 print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
 
-layer_1 = 30; epochs = 10000
+layer_1 = 30; epochs = 10000 # 30
 
 model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
@@ -707,7 +760,7 @@ for row in range(N):
 mssave_total = mssave2_total
 # epochs = 1000
 ms_report(mssave_total) 
-
+# ms_report_snu_chronic(mssave_total) 
 #%%
 
 def random_sample_cv(tlist=None, n_fold=10, rseed=1):
@@ -751,10 +804,11 @@ X_vix = np.array(X[vix]); Y_vix = np.array(Y[vix]); Z_vix = np.array(Z[vix])
 
 cvlist = []
 for SE in range(N):
-    if SE < 247: 
+    if SE < 247 or SE in PSLgroup_khu: 
         for se in range(len(signalss_raw[SE])):
             i = SEse_find(Z=Z_vix, SE=SE, se=se)
             if len(i) > 0: cvlist.append(i)
+            
     elif SE >= 247 and SE < 273:
         for se in range(3):
             i = SEse_find(Z=Z_vix, SE=SE, se=se)
@@ -764,26 +818,43 @@ for SE in range(N):
         i1 = SEse_find(Z=Z_vix, SE=SE, se=4)
         i = i0+i1
         if len(i) > 0: cvlist.append(i)
-    elif SE >= 273 and SE < 325:
+        
+    elif SE in PDpain + PDnonpain + KHU_CFA:
         for se in list(range(0,len(signalss_raw[SE]),2)):
             i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
             i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
             i = i0+i1
+            if SE in [312, 313] and se == 8:
+                i0 = SEse_find(Z=Z_vix, SE=SE, se=8)
+                i1 = SEse_find(Z=Z_vix, SE=SE, se=9)
+                i2 = SEse_find(Z=Z_vix, SE=SE, se=10)
+                i = i0+i1+i2
             if len(i) > 0: cvlist.append(i)
-
+            
+    elif SE in morphineGroup + KHUsham:
+        for se in list(range(2,len(signalss_raw[SE]),4)):
+            i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
+            i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
+            i2 = SEse_find(Z=Z_vix, SE=SE, se=se+2)
+            i3 = SEse_find(Z=Z_vix, SE=SE, se=se+3)
+            i = i0+i1+i2+i3
+            if len(i) > 0: cvlist.append(i)
+            
+    else: print(SE, 'is not allocated')
+            
 print('len(cvlist)', len(cvlist))
 #%% tr
 model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
 overwrite = False
 repeat_save = []
-for repeat in range(1):
+for repeat in range(5,10):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
     
     tlist = list(range(len(cvlist)))
-    cvnum = 134
+    cvnum = len(cvlist)
     cv_save = random_sample_cv(tlist=tlist, n_fold=cvnum, rseed=repeat)
     totallist = list(range(len(Y_vix)))
     for cv in range(0, cvnum):
@@ -813,19 +884,19 @@ for repeat in range(1):
             model.save_weights(final_weightsave)
             
         # test
-            model.load_weights(final_weightsave)
-            yhat = model.predict(X_te)[:,1]
-            
-            for n in range(len(yhat)):
-                teSE = Z_te[n][0]; tese = Z_te[n][1]
-                mssave[teSE][tese].append(yhat[n])
-            
-            outlist = np.where(np.sum(Y, axis=1)==0)[0]
-            yhat_out = model.predict(X[outlist])[:,1]
-            for out_SE in wantedlist:
-                for n in np.where(Z[outlist][:,0]==out_SE)[0]:
-                    teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
-                    mssave[teSE][tese].append(yhat_out[n])
+        model.load_weights(final_weightsave)
+        yhat = model.predict(X_te)[:,1]
+        
+        for n in range(len(yhat)):
+            teSE = Z_te[n][0]; tese = Z_te[n][1]
+            mssave[teSE][tese].append(yhat[n])
+        
+        outlist = np.where(np.sum(Y, axis=1)==0)[0]
+        yhat_out = model.predict(X[outlist])[:,1]
+        for out_SE in wantedlist:
+            for n in np.where(Z[outlist][:,0]==out_SE)[0]:
+                teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
+                mssave[teSE][tese].append(yhat_out[n])
 
     mssave2 = np.zeros((N,MAXSE)) * np.nan
     for row in range(N):
@@ -1001,6 +1072,7 @@ pain = list(psl_d3) + list(psl_d10)
 msFunction.msROC(sham_d10, psl_d10)
 #%% SNU PSL / GBVX
 
+mssave = np.array(list(mssave_total))
 
 msplot = mssave[shamGroup,1:3]
 msplot_mean = np.nanmean(msplot, axis=0)
@@ -1042,10 +1114,6 @@ for SE in [164, 166, 167, 172, 174, 177, 179, 181]:
     
 GBVX_nonpain_d3 = msFunction.nanex(GBVX_nonpain_d3)
 GBVX_nonpain_d10 = msFunction.nanex(GBVX_nonpain_d10)
-
-np.nanmean(GBVX_nonpain_d3)
-np.nanmean(GBVX_nonpain_d10)
-
 
 msplot = np.zeros((50, 2)) * np.nan
 msplot[:len(GBVX_nonpain_d3),0] = GBVX_nonpain_d3
