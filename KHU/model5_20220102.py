@@ -49,6 +49,9 @@ signalss = np.array(msdata_load['signalss']) # 투포톤 이미징데이터 -> �
 signalss_df = np.array(msdata_load['signalss']) # 투포톤 이미징데이터 -> 시계열
 signalss_raw = np.array(msdata_load['signalss_raw'])
 
+signalss2 = msdata_load['signalss2']
+movement_syn = msdata_load['movement_syn']
+
 highGroup = msGroup['highGroup']    # 5% formalin
 midleGroup = msGroup['midleGroup']  # 1% formalin
 lowGroup = msGroup['lowGroup']      # 0.25% formalin
@@ -73,7 +76,9 @@ beevenomGroup =  msGroup['beevenomGroup']
 oxaliGroup =  msGroup['oxaliGroup']
 glucoseGroup =  msGroup['glucoseGroup']
 PSLscsaline =  msGroup['PSLscsaline']
+
 highGroup3 =  msGroup['highGroup3']
+KHU_saline = msGroup['KHU_saline']
 PSLgroup_khu =  msGroup['PSLgroup_khu']
 morphineGroup = msGroup['morphineGroup']
 KHUsham = msGroup['KHUsham']
@@ -81,90 +86,9 @@ KHU_CFA = msGroup['KHU_CFA']
 
 PDpain = msGroup['PDpain']
 PDnonpain = msGroup['PDnonpain']
+pdmorphine = list(range(325, 332))
 
-#%%
 
-savename = 'C:\\SynologyDrive\\2p_data\\' + 'mspickle_add.pickle'
-if not(os.path.isfile(savename)):   
-    from sklearn.linear_model import LinearRegression
-    
-    baseratio = 0.3
-    signalss2 = msFunction.msarray([N,MAXSE])
-    for SE in range(N):
-        msplot = []
-        for se in range(len(signalss_raw[SE])):
-            tmp = np.array(signalss_raw[SE][se])
-            allo = np.zeros(tmp.shape) * np.nan
-            for ROI in range(tmp.shape[1]):
-                vix = np.argsort(tmp[:,ROI])[:int(round(len(tmp[:,ROI])*baseratio))]
-                base = tmp[:,ROI][vix]
-                m = np.median(base)
-                s = np.std(base)
-                
-                allo[:, ROI] = (tmp[:,ROI] - m) / s
-                
-                df = np.mean(allo[:, ROI])
-                raw = np.mean(tmp[:,ROI])
-                msplot.append([raw, df])     
-            signalss2[SE][se] = allo
-            
-            if np.inf == np.mean([df, raw]): import sys;sys.exit()
-            
-            if False:
-                msplot = np.array(msplot)
-                line_fitter = LinearRegression()
-                X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
-                line_fitter.fit(X, msplot[:,1])
-                m = line_fitter.coef_
-                b = line_fitter.intercept_
-        
-                plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.5)
-                xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
-                plt.plot(xaxis, xaxis*m + b, c='orange')
-                print('slope', m)
-    
-    msplot = []
-    for SE in range(N):
-        for se in range(len(signalss_raw[SE])):
-            if SE == 328 and se == 18: continue
-            raw = np.mean(signalss_raw[SE][se])
-            df = np.nanstd(signalss2[SE][se])
-            msplot.append([raw, df])
-            if np.mean([df, raw]) == np.inf: print(SE, se ); import sys;sys.exit()
-            if np.isnan(np.mean([df, raw])): print(SE, se ); import sys;sys.exit()
-                
-    msplot = np.array(msplot)
-    line_fitter = LinearRegression()
-    X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
-    line_fitter.fit(X, msplot[:,1])
-    m = line_fitter.coef_
-    b = line_fitter.intercept_
-    
-    plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.2)
-    xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
-    plt.plot(xaxis, xaxis*m + b, c='orange')
-    print('slope', m)
-    
-    print('PD move skip 중. check')
-    movement_syn = msFunction.msarray([N,MAXSE])
-    for SE in range(325):
-        tmp = []
-        for se in range(len(signalss_raw[SE])):
-            behav_tmp = behavss[SE][se][0]
-            if len(behav_tmp) > 0:
-                movement_syn[SE][se] = msFunction.downsampling(behav_tmp, signalss2[SE][se].shape[0])[0,:]
-                if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
-
-    msdict = {'signalss2': signalss2, 'movement_syn': movement_syn}
-    with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
-        print(savename, '저장되었습니다.')
-
-with open(savename, 'rb') as f:  # Python 3: open(..., 'wb')
-    msdict = pickle.load(f)
-    signalss2 = msdict['signalss2']
-    movement_syn =  msdict['movement_syn']
-    
 #%% grouping
 group_pain_training = []
 group_nonpain_training = []
@@ -233,6 +157,7 @@ for SE in range(N):
                 nonpainc.append(SE in KHU_CFA and se in [0,1,2,3])
                 nonpainc.append(SE in PSLgroup_khu and se in [0])
                 nonpainc.append(SE in morphineGroup and se in [0,1]) 
+                nonpainc.append(SE in KHU_saline and se in [0,1,2])
                 
                 mslist = [2,3,4,5,6,7,8,9] # overfit check 용
                 nonpainc.append(SE in KHUsham and se in mslist)
@@ -240,6 +165,7 @@ for SE in range(N):
                 nonpainc.append(SE in PDnonpain and se in list(range(2,10)))
                 nonpainc.append(SE in PDnonpain and se in list(range(0,2)))
                 nonpainc.append(SE in PDpain and se in list(range(0,2)))
+                nonpainc.append(SE in pdmorphine and se in [0,1,2,3])
             
             if khu_acute:  
                 painc.append(SE in list(range(230, 239)) and se in [1])
@@ -252,7 +178,15 @@ for SE in range(N):
                 painc.append(SE in KHU_CFA[:7] and se in [10])
                 painc.append(SE in morphineGroup and se in mslist)
                 painc.append(SE in PSLgroup_khu and se in [1,2])
-                painc.append(SE in PDpain and se in list(range(4,6)))
+                
+                if False:
+                    painc.append(SE in PDpain and se in list(range(2,10)))
+                    painc.append(SE in pdmorphine and se in [4,5])
+                    painc.append(SE in [325, 326] and se in [10,11,12,13,14,15])
+                    painc.append(SE in [327, 328] and se in [6,7,8,9,10,11, 16,17])
+                    painc.append(SE in [329, 330] and se in [6,7,8,9,10,11, 16,17,18,19,20,21])
+                    painc.append(SE in [331] and se in [10,11,12,13,14,15,16,17])
+                    
                 
             if False: # keto analgesic effects
                 # nonpainc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
@@ -409,13 +343,14 @@ print(model.summary())
 # settingID = 'model5_20220105_alldata_allocation_fix'
 # settingID = 'model5_20220105_1'
 
-settingID = 'model5_20220105_101101'
+settingID = 'model5_20220105_101101_pdmorphine'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
 KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham
+KHU_pdpain = PDpain + PDnonpain + pdmorphine
 
-wantedlist = SNU_chronicpain + KHU_chronicpain
+wantedlist = KHU_chronicpain + KHU_pdpain + SNU_chronicpain
 
 # wantedlist = highGroup3 + KHU_CFA
 # wantedlist = morphineGroup + KHUsham + PSLgroup_khu + pslGroup + shamGroup + ipsaline_pslGroup + \
@@ -455,7 +390,7 @@ for SE in range(N):
     
     selist = [0]
     if SE in morphineGroup + KHUsham + GBVX: selist = [0,1]
-    if SE in KHU_CFA: selist = [0,1,2,3]
+    if SE in KHU_CFA + pdmorphine: selist = [0,1,2,3]
     
     if SE in list(range(247, 273)): selist = [0,1]
 
@@ -840,6 +775,13 @@ for SE in range(N):
             i = i0+i1+i2+i3
             if len(i) > 0: cvlist.append(i)
             
+    elif SE in pdmorphine: # nonpain만 사용하는경우
+        for se in list(range(0, 4, 2)):
+            i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
+            i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
+            i = i0+i1
+            if len(i) > 0: cvlist.append(i)
+            
     else: print(SE, 'is not allocated')
             
 print('len(cvlist)', len(cvlist))
@@ -848,7 +790,7 @@ model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=
 print(model.summary())
 overwrite = False
 repeat_save = []
-for repeat in range(1):
+for repeat in range(7):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
@@ -1209,8 +1151,13 @@ Aprism_highgroup3_3 = mssave[highGroup3_3,:]
 
 #%%
 
+
+
 plt.figure()
 plt.plot(np.nanmean(mssave[PDpain,:], axis=0))
+plt.plot(np.nanmean(mssave[PDnonpain,:], axis=0))
+
+plt.plot(np.nanmean(mssave[pdmorphine,:], axis=0))
 
 
 # PD evaluation
