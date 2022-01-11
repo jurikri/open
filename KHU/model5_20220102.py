@@ -86,6 +86,10 @@ KHU_CFA = msGroup['KHU_CFA']
 
 PDpain = msGroup['PDpain']
 PDnonpain = msGroup['PDnonpain']
+
+PDmorphine = msGroup['PDmorphine']
+KHU_PSL_magnolin = msGroup['KHU_PSL_magnolin']
+
 pdmorphine = list(range(325, 332))
 
 
@@ -111,7 +115,7 @@ for SE in range(N):
             khu_chronic = True
 
             # snu
-            GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
+            GBVX = [164, 165, 166, 167, 172, 174, 177, 179, 181]
             if snu_base:
                 nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
                 nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
@@ -165,8 +169,9 @@ for SE in range(N):
                 nonpainc.append(SE in PDnonpain and se in list(range(2,10)))
                 nonpainc.append(SE in PDnonpain and se in list(range(0,2)))
                 nonpainc.append(SE in PDpain and se in list(range(0,2)))
-                nonpainc.append(SE in pdmorphine and se in [0,1,2,3])
-            
+                nonpainc.append(SE in PDmorphine and se in [0,1,2,3])
+                nonpainc.append(SE in KHU_PSL_magnolin and se in [0,1,2,3])
+                
             if khu_acute:  
                 painc.append(SE in list(range(230, 239)) and se in [1])
                 painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
@@ -178,10 +183,11 @@ for SE in range(N):
                 painc.append(SE in KHU_CFA[:7] and se in [10])
                 painc.append(SE in morphineGroup and se in mslist)
                 painc.append(SE in PSLgroup_khu and se in [1,2])
+                painc.append(SE in KHU_PSL_magnolin and se in [4,5,6,7])
                 
                 if False:
                     painc.append(SE in PDpain and se in list(range(2,10)))
-                    painc.append(SE in pdmorphine and se in [4,5])
+                    painc.append(SE in PDmorphine and se in [4,5])
                     painc.append(SE in [325, 326] and se in [10,11,12,13,14,15])
                     painc.append(SE in [327, 328] and se in [6,7,8,9,10,11, 16,17])
                     painc.append(SE in [329, 330] and se in [6,7,8,9,10,11, 16,17,18,19,20,21])
@@ -343,16 +349,15 @@ print(model.summary())
 # settingID = 'model5_20220105_alldata_allocation_fix'
 # settingID = 'model5_20220105_1'
 
-settingID = 'model5_20220105_101101_pdmorphine'
+settingID = 'model5_20220111_101101_magnolin'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
-KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham
-KHU_pdpain = PDpain + PDnonpain + pdmorphine
+KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
+KHU_pdpain = PDpain + PDnonpain + PDmorphine
 
-wantedlist = KHU_chronicpain + KHU_pdpain + SNU_chronicpain
-
-# wantedlist = highGroup3 + KHU_CFA
+# wantedlist = SNU_chronicpain + KHU_chronicpain + KHU_pdpain
+wantedlist = KHU_PSL_magnolin + SNU_chronicpain
 # wantedlist = morphineGroup + KHUsham + PSLgroup_khu + pslGroup + shamGroup + ipsaline_pslGroup + \
 #     ipclonidineGroup + oxaliGroup + glucoseGroup
 # wantedlist = [247, 248, 250, 251, 257, 258, 259, 262]
@@ -390,7 +395,7 @@ for SE in range(N):
     
     selist = [0]
     if SE in morphineGroup + KHUsham + GBVX: selist = [0,1]
-    if SE in KHU_CFA + pdmorphine: selist = [0,1,2,3]
+    if SE in KHU_CFA + PDmorphine + KHU_PSL_magnolin: selist = [0,1,2,3]
     
     if SE in list(range(247, 273)): selist = [0,1]
 
@@ -436,7 +441,7 @@ for SE in range(N):
                 # # 동일 headfix 상태에서 반복 이미징은 비교하지 않음.
                 if stanse%2==0: t = stanse+1
                 if stanse%2==1: t = stanse-1
-                ex1 = SE >= 230 and se==t
+                ex1 = se==t and len(selist) > 1
                 
                 if not(ex0 or ex1):
                 # if not(se in selist):
@@ -612,11 +617,10 @@ def ms_report_snu_chronic(mssave):
 
 
     GBVX_nonpain_d3, GBVX_nonpain_d10 = [], []
-    GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
     for SE in [164, 166, 167, 172, 174, 177, 179, 181]:
         d3c, d10c = [], []
         for se in range(12):
-            d10c.append(SE in [164, 166] and se in [2,3])
+            d10c.append(SE in [164, 165, 166] and se in [2,3])
             
             d3c.append(SE in [167] and se in [4,5])
             d10c.append(SE in [167] and se in [6,7])
@@ -669,33 +673,34 @@ layer_1 = 30; epochs = 10000 # 30
 
 model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
+# import sys; sys.exit()
 #%%
-
-hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
-
 if False:
-    xhat = model.predict(X_total)[:,1]
-    vix = np.where((Y_total[:,1] - np.array((xhat>0.5), dtype=float))==0)[0]
-    print('acc', len(vix) / len(X_total))
+    hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
     
-    model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1)
-    hist = model.fit(X_total[vix], Y_total[vix], batch_size=2**11, epochs=epochs, verbose=1)
-
-xhat = model.predict(X)[:,1]
-mssave_total = msFunction.msarray([N,MAXSE])
-for i in range(len(Z)):
-    teSE =  Z[i][0]
-    tese =  Z[i][1]
-    mssave_total[teSE][tese].append(xhat[i])
-
-mssave2_total = np.zeros((N,MAXSE)) * np.nan
-for row in range(N):
-    for col in range(MAXSE):
-        mssave2_total[row, col] = np.nanmean(mssave_total[row][col])
-mssave_total = mssave2_total
-# epochs = 1000
-ms_report(mssave_total) 
-# ms_report_snu_chronic(mssave_total) 
+    if False:
+        xhat = model.predict(X_total)[:,1]
+        vix = np.where((Y_total[:,1] - np.array((xhat>0.5), dtype=float))==0)[0]
+        print('acc', len(vix) / len(X_total))
+        
+        model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1)
+        hist = model.fit(X_total[vix], Y_total[vix], batch_size=2**11, epochs=epochs, verbose=1)
+    
+    xhat = model.predict(X)[:,1]
+    mssave_total = msFunction.msarray([N,MAXSE])
+    for i in range(len(Z)):
+        teSE =  Z[i][0]
+        tese =  Z[i][1]
+        mssave_total[teSE][tese].append(xhat[i])
+    
+    mssave2_total = np.zeros((N,MAXSE)) * np.nan
+    for row in range(N):
+        for col in range(MAXSE):
+            mssave2_total[row, col] = np.nanmean(mssave_total[row][col])
+    mssave_total = mssave2_total
+    # epochs = 1000
+    ms_report(mssave_total) 
+    # ms_report_snu_chronic(mssave_total) 
 #%%
 
 def random_sample_cv(tlist=None, n_fold=10, rseed=1):
@@ -710,8 +715,6 @@ def random_sample_cv(tlist=None, n_fold=10, rseed=1):
         tlist2 = list(set(tlist2)-set(rix))
         cv_save.append(rix)
     return cv_save
-
-
 
 #%% cv 생성
 
@@ -739,10 +742,18 @@ X_vix = np.array(X[vix]); Y_vix = np.array(Y[vix]); Z_vix = np.array(Z[vix])
 
 cvlist = []
 for SE in range(N):
-    if SE < 247 or SE in PSLgroup_khu: 
+    if (SE < 247 or SE in PSLgroup_khu) and not(SE in GBVX):
         for se in range(len(signalss_raw[SE])):
             i = SEse_find(Z=Z_vix, SE=SE, se=se)
             if len(i) > 0: cvlist.append(i)
+            
+    elif SE in GBVX: # nonpain만 사용하는경우 - baseline data가 안나오므로 무효할듯?
+        i0 = SEse_find(Z=Z_vix, SE=SE, se=0)
+        i1 = SEse_find(Z=Z_vix, SE=SE, se=1)
+        i = i0+i1
+        if len(i) > 0: 
+            import sys; sys.exit()
+            cvlist.append(i)
             
     elif SE >= 247 and SE < 273:
         for se in range(3):
@@ -775,8 +786,15 @@ for SE in range(N):
             i = i0+i1+i2+i3
             if len(i) > 0: cvlist.append(i)
             
-    elif SE in pdmorphine: # nonpain만 사용하는경우
+    elif SE in PDmorphine: # nonpain만 사용하는경우
         for se in list(range(0, 4, 2)):
+            i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
+            i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
+            i = i0+i1
+            if len(i) > 0: cvlist.append(i)
+            
+    elif SE in KHU_PSL_magnolin: # nonpain만 사용하는경우
+        for se in list(range(0, 8, 2)):
             i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
             i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
             i = i0+i1
@@ -785,12 +803,14 @@ for SE in range(N):
     else: print(SE, 'is not allocated')
             
 print('len(cvlist)', len(cvlist))
+
+import sys; sys.exit()
 #%% tr
 model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
-overwrite = False
+overwrite = True
 repeat_save = []
-for repeat in range(7):
+for repeat in range(10):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
@@ -803,42 +823,43 @@ for repeat in range(7):
         telist = []
         for j in cv_save[cv]:
             telist += cvlist[j] 
-
-        trlist = list(set(totallist)-set(telist))
-        
-        X_tr = X_vix[trlist]; X_te = X_vix[telist]
-        Y_tr = Y_vix[trlist]; Y_te = Y_vix[telist]
-        Z_tr = Z_vix[trlist]; Z_te = Z_vix[telist]
-        
-        X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
-        final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cv) + '_final.h5'
-        if not(os.path.isfile(final_weightsave)) or overwrite:
-            if True:
-                print('learning', cv, '/', len(cvlist))
-                print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
-                print('te distribution', np.mean(Y_te, axis=0))
             
-            mmodel = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
-            # for epoch in range(1):
-            verbose = 0
-            if cv == 0: verbose = 1
-            hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
-            model.save_weights(final_weightsave)
+        if len(telist) > 0:
+            trlist = list(set(totallist)-set(telist))
+            # print(len(totallist), len(trlist), len(telist))
+            X_tr = X_vix[trlist]; X_te = X_vix[telist]
+            Y_tr = Y_vix[trlist]; Y_te = Y_vix[telist]
+            Z_tr = Z_vix[trlist]; Z_te = Z_vix[telist]
             
-        # test
-        model.load_weights(final_weightsave)
-        yhat = model.predict(X_te)[:,1]
-        
-        for n in range(len(yhat)):
-            teSE = Z_te[n][0]; tese = Z_te[n][1]
-            mssave[teSE][tese].append(yhat[n])
-        
-        outlist = np.where(np.sum(Y, axis=1)==0)[0]
-        yhat_out = model.predict(X[outlist])[:,1]
-        for out_SE in wantedlist:
-            for n in np.where(Z[outlist][:,0]==out_SE)[0]:
-                teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
-                mssave[teSE][tese].append(yhat_out[n])
+            X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
+            final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cv) + '_final.h5'
+            if not(os.path.isfile(final_weightsave)) or overwrite:
+                if True:
+                    print('learning', cv, '/', len(cvlist))
+                    print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
+                    print('te distribution', np.mean(Y_te, axis=0))
+                
+                mmodel = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
+                # for epoch in range(1):
+                verbose = 0
+                if cv == 0: verbose = 1
+                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
+                model.save_weights(final_weightsave)
+                
+            # test
+            model.load_weights(final_weightsave)
+            yhat = model.predict(X_te)[:,1]
+            
+            for n in range(len(yhat)):
+                teSE = Z_te[n][0]; tese = Z_te[n][1]
+                mssave[teSE][tese].append(yhat[n])
+            
+            outlist = np.where(np.sum(Y, axis=1)==0)[0]
+            yhat_out = model.predict(X[outlist])[:,1]
+            for out_SE in wantedlist:
+                for n in np.where(Z[outlist][:,0]==out_SE)[0]:
+                    teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
+                    mssave[teSE][tese].append(yhat_out[n])
 
     mssave2 = np.zeros((N,MAXSE)) * np.nan
     for row in range(N):
@@ -860,7 +881,28 @@ with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
 mssave = np.nanmean(np.array(repeat_save), axis=0)
 
 ms_report(mssave)  
-# ms_report_snu_chronic(mssave_total) 
+# ms_report_snu_chronic(mssave) 
+
+
+#%% total acc
+msacc = []
+for i in range(len(Z_vix)):
+    SE = Z_vix[i][0]; se = Z_vix[i][1]
+    if not np.isnan(mssave[SE,se]):
+        msacc.append(Y_vix[i][1] == mssave[SE,se] > 0.5)
+print('accuracy', np.mean(msacc))
+    
+
+#%%
+
+# mssave10 = []
+# for i in range(len(repeat_save)):
+#     for j in range(i+1, len(repeat_save)):
+#         mssave10.append(np.nanmean(np.abs((np.nanmean((repeat_save[j] - 0.5)/(repeat_save[i] - 0.5))-1)*100)))
+
+# i = 1
+# mssave = np.nanmean(np.array(repeat_save[i:i+1]), axis=0)
+# ms_report(mssave) 
 #%% KHUPSL
 
 plt.figure()
@@ -1177,22 +1219,118 @@ plt.plot(np.nanmean(AA_PDnonpain, axis=0))
 
 #%%
 
-t6 = np.zeros((N, MAXSE)) * np.nan
-for i in range(len(t5)):
-    t6[i,:] = t5[i,:] / t5[i,0]
+mssave2 = np.array(list(mssave))
+
+PDmorphineA = [325, 326]
+PDmorphineB = [327, 328]
+PDmorphineC = [329, 330]
+PDmorphineD = [331]
+
+visse = 9
+PDmorphine_matrix = msFunction.msarray([len(pdmorphine), visse])
+
+for ix, SE in enumerate(pdmorphine):
+    for se in range(MAXSE):
+        if SE in pdmorphine and se in [0,1,2,3]:
+            PDmorphine_matrix[ix][0].append(mssave2[SE,se])
+        
+        if SE in PDmorphineA and se in [5,6]:
+            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+        if SE in PDmorphineA and se in [6,7]:
+            PDmorphine_matrix[ix][3].append(mssave2[SE,se])
+        if SE in PDmorphineA and se in [8,9]:
+            PDmorphine_matrix[ix][4].append(mssave2[SE,se])
+        if SE in PDmorphineA and se in [10,11]:
+            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+        if SE in PDmorphineA and se in [12,13,14,15]:
+            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+            
+        if SE in PDmorphineB and se in [5,6]:
+            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+        if SE in PDmorphineB and se in [6,7,8,9]:
+            PDmorphine_matrix[ix][2].append(mssave2[SE,se])
+        if SE in PDmorphineB and se in [10,11]:
+            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+        if SE in PDmorphineB and se in [12,13]:
+            PDmorphine_matrix[ix][3].append(mssave2[SE,se])
+        if SE in PDmorphineB and se in [14,15]:
+            PDmorphine_matrix[ix][4].append(mssave2[SE,se])
+        if SE in PDmorphineB and se in [16,17]:
+            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+        if SE in PDmorphineB and se in [18,19]:
+            PDmorphine_matrix[ix][7].append(mssave2[SE,se])
+        if SE in PDmorphineB and se in [20,21]:
+            PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+            
+        if SE in PDmorphineC and se in [5,6]:
+            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+        if SE in PDmorphineC and se in [6,7,8,9]:
+            PDmorphine_matrix[ix][2].append(mssave2[SE,se])
+        if SE in PDmorphineC and se in [10,11]:
+            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+        if SE in PDmorphineC and se in [12,13]:
+            PDmorphine_matrix[ix][7].append(mssave2[SE,se])
+        if SE in PDmorphineC and se in [14,15]:
+            PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+        if SE in PDmorphineC and se in [16,17]:
+            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+        if SE in PDmorphineC and se in [18,19]:
+            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+        if SE in PDmorphineC and se in [20,21]:
+            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+            
+        if SE in PDmorphineD and se in [5,6]:
+            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+        if SE in PDmorphineD and se in [6,7]:
+            PDmorphine_matrix[ix][3].append(mssave2[SE,se])
+        if SE in PDmorphineD and se in [8,9]:
+            PDmorphine_matrix[ix][4].append(mssave2[SE,se])
+        if SE in PDmorphineD and se in [10,11]:
+            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+        if SE in PDmorphineD and se in [12,13,14,15]:
+            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+        if SE in PDmorphineD and se in [16,17]:
+            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+        if SE in PDmorphineD and se in [18,19]:
+            PDmorphine_matrix[ix][7].append(mssave2[SE,se])
+        if SE in PDmorphineD and se in [20,21]:
+            PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+
+PDmorphine_matrix2 = np.zeros((len(pdmorphine), visse)) * np.nan
+for ix in range(len(pdmorphine)):
+    for se in range(visse):
+        PDmorphine_matrix2[ix,se] = np.mean(PDmorphine_matrix[ix][se])
+
+plt.plot(np.nanmean(PDmorphine_matrix2, axis=0))
+
+        
+for ix in range(len(pdmorphine)):
+    PDmorphine_matrix2[ix,:] = PDmorphine_matrix2[ix,:] / PDmorphine_matrix2[ix,0]
+
+#%%
 
 
-y = np.nanmean(t6[KHUsham,:], axis=0)
-e = scipy.stats.sem(t6[KHUsham,:], axis=0, nan_policy='omit')
-x = range(len(y))
-plt.plot(x, y)
-plt.fill_between(x, y-e, y+e)
 
-y = np.nanmean(t6[morphineGroup,:], axis=0)
-e = scipy.stats.sem(t6[KHUsham,:], axis=0, nan_policy='omit')
-x = range(len(y))
-plt.plot(x, y)
-plt.fill_between(x, y-e, y+e)
+plt.figure()
+msplot = mssave[KHU_PSL_magnolin,:]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
+
+#% mssave[KHU_PSL_magnolin,:] subject mean
+subject_mean = [[0,1,2,3], [4,5,6,7], [8,9], [10,11], [12,13]]
+msmatrix = np.zeros((N, len(subject_mean))) * np.nan
+
+for i in range(len(subject_mean)):
+    msmatrix[KHU_PSL_magnolin,i] = np.mean(mssave[KHU_PSL_magnolin,:][:, subject_mean[i]], axis=1)
+    
+plt.figure()
+msplot = msmatrix[KHU_PSL_magnolin,:]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
 
 
 
