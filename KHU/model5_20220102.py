@@ -90,7 +90,7 @@ PDnonpain = msGroup['PDnonpain']
 PDmorphine = msGroup['PDmorphine']
 KHU_PSL_magnolin = msGroup['KHU_PSL_magnolin']
 
-pdmorphine = list(range(325, 332))
+# pdmorphine = list(range(325, 332))
 
 
 #%% grouping
@@ -113,6 +113,8 @@ for SE in range(N):
             khu_base = True
             khu_acute = False
             khu_chronic = True
+            
+            CFAsw = False
 
             # snu
             GBVX = [164, 165, 166, 167, 172, 174, 177, 179, 181]
@@ -133,15 +135,18 @@ for SE in range(N):
                 painc.append(SE in capsaicinGroup and se in [1])
                 
             if snu_chronic:
-                painc.append(SE in CFAgroup and se in [1,2])
+                if CFAsw:
+                    painc.append(SE in CFAgroup and se in [1,2])
+                
                 painc.append(SE in pslGroup and se in [1,2])
                 painc.append(SE in ipsaline_pslGroup and se in [1,3])
                 
                 painc.append(SE in [179] and se in [8,9]) # GBVX group내의 pain
                 painc.append(SE in [181] and se in [4,5]) # GBVX group내의 pain
                 
-                painc.append(SE in oxaliGroup and se in [1])
-                painc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [2])
+                if CFAsw:
+                    painc.append(SE in oxaliGroup and se in [1])
+                    painc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [2])
                     
             if False: # GBVX analgesic effect
                 # nonpainc.append(SE in [164, 166] and se in [2,3,4,5]) # GBVX
@@ -179,8 +184,9 @@ for SE in range(N):
 
             
             if khu_chronic:
-                painc.append(SE in KHU_CFA and se in [4,5,8,9])
-                painc.append(SE in KHU_CFA[:7] and se in [10])
+                if CFAsw:
+                    painc.append(SE in KHU_CFA and se in [4,5,8,9])
+                    painc.append(SE in KHU_CFA[:7] and se in [10])
                 painc.append(SE in morphineGroup and se in mslist)
                 painc.append(SE in PSLgroup_khu and se in [1,2])
                 painc.append(SE in KHU_PSL_magnolin and se in [4,5,6,7])
@@ -210,8 +216,8 @@ for SE in range(N):
             if np.sum(np.array(nonpainc)) > 0: group_nonpain_training.append([SE, se])
 
 total_list = list(set(list(np.array(group_pain_training)[:,0]) + list(np.array(group_nonpain_training)[:,0])))
-
-
+total_list = total_list + KHU_PSL_magnolin
+total_list = list(set(total_list))
 #%% keras setup
 from tensorflow.keras.callbacks import EarlyStopping
 Callback = EarlyStopping
@@ -258,7 +264,7 @@ from tensorflow.keras.layers import Flatten
 from numpy.random import seed as nseed #
 import tensorflow as tf
 
-def keras_setup(lr=0.01, dropout_rate1=0, batchnmr=False, seed=1, add_fn=None, layer_1=None, layer_2=None):
+def keras_setup(lr=0.01, dropout_rate1=0, batchnmr=False, seed=1, add_fn=None, layer_1=None, layer_2=None, l2=0.01):
     #### keras #### keras  #### keras #### keras  ####keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
 
     init = initializers.he_uniform(seed=seed) # he initializer를 seed 없이 매번 random하게 사용 -> seed 줌
@@ -271,13 +277,13 @@ def keras_setup(lr=0.01, dropout_rate1=0, batchnmr=False, seed=1, add_fn=None, l
     
     input2 = tf.keras.layers.Input(shape=(add_fn))
     input10 = input2
-    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0), activation='relu')(input10) # fully conneted layers, relu
+    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2), activation='relu')(input10) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
     input10 = Dropout(dropout_rate1)(input10) # dropout
-    input10 = Dense(int(layer_1/2), kernel_initializer = init, kernel_regularizer=regularizers.l2(0.05), activation='relu')(input10) # fully conneted layers, relu
+    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2), activation='relu')(input10) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
     input10 = Dropout(dropout_rate1)(input10) # dropout
-    input10 = Dense(int(layer_1/4), kernel_initializer = init, kernel_regularizer=regularizers.l2(0.05), activation='sigmoid')(input10) # fully conneted layers, relu
+    input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2), activation='sigmoid')(input10) # fully conneted layers, relu
     if batchnmr: input10 = BatchNormalization()(input10)
     input10 = Dropout(dropout_rate1)(input10) # dropout
     # input10 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(0.001), activation='relu')(input10) # fully conneted layers, relu
@@ -349,18 +355,22 @@ print(model.summary())
 # settingID = 'model5_20220105_alldata_allocation_fix'
 # settingID = 'model5_20220105_1'
 
-settingID = 'model5_20220111_101101_magnolin'
+settingID = 'model5_20220112_101101_snukhu_tracking'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
 KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
 KHU_pdpain = PDpain + PDnonpain + PDmorphine
 
+len(SNU_chronicpain)
+len(KHU_chronicpain)
+len(KHU_pdpain)
 # wantedlist = SNU_chronicpain + KHU_chronicpain + KHU_pdpain
-wantedlist = KHU_PSL_magnolin + SNU_chronicpain
+wantedlist = morphineGroup + KHUsham + KHU_PSL_magnolin
 # wantedlist = morphineGroup + KHUsham + PSLgroup_khu + pslGroup + shamGroup + ipsaline_pslGroup + \
 #     ipclonidineGroup + oxaliGroup + glucoseGroup
 # wantedlist = [247, 248, 250, 251, 257, 258, 259, 262]
+len(wantedlist)
 nonlabels = []
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
@@ -578,26 +588,27 @@ def ms_report(mssave):
     KHU_CFA_50 = KHU_CFA[7:]
     
     ##
-    target_group = list(KHU_CFA_50)
-    # plt.figure()
-    # plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
-    
-    plt.figure()
-    msplot = mssave[target_group,0:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-    
-    
-    target_group = list(KHU_CFA_100)
-    # plt.figure()
-    # plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
-    
-    plt.figure()
-    msplot = mssave[target_group,0:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+    if False:
+        target_group = list(KHU_CFA_50)
+        # plt.figure()
+        # plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
+        
+        plt.figure()
+        msplot = mssave[target_group,0:]
+        msplot_mean = np.nanmean(msplot, axis=0)
+        e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+        plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+        
+        
+        target_group = list(KHU_CFA_100)
+        # plt.figure()
+        # plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
+        
+        plt.figure()
+        msplot = mssave[target_group,0:]
+        msplot_mean = np.nanmean(msplot, axis=0)
+        e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+        plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
     
 def ms_report_snu_chronic(mssave):
     msplot = mssave[shamGroup,1:3]
@@ -658,6 +669,30 @@ def ms_report_snu_chronic(mssave):
     msplot_mean = np.nanmean(msplot, axis=0)
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+    
+    
+def ms_report_khu_magnolin(mssave):    
+    plt.figure()
+    msplot = mssave[KHU_PSL_magnolin,:]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+    
+    
+    #% mssave[KHU_PSL_magnolin,:] subject mean
+    if False:
+        subject_mean = [[0,1,2,3], [4,5,6,7], [8,9], [10,11], [12,13]]
+        msmatrix = np.zeros((N, len(subject_mean))) * np.nan
+        
+        for i in range(len(subject_mean)):
+            msmatrix[KHU_PSL_magnolin,i] = np.mean(mssave[KHU_PSL_magnolin,:][:, subject_mean[i]], axis=1)
+            
+        plt.figure()
+        msplot = msmatrix[KHU_PSL_magnolin,:]
+        msplot_mean = np.nanmean(msplot, axis=0)
+        e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+        plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
 
 
 #%% total tr
@@ -669,13 +704,13 @@ X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
 X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
 print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
 
-layer_1 = 30; epochs = 10000 # 30
+layer_1 = 3; epochs = 10000 # 30
 
-model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
+model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=False, dropout_rate1=0.0, l2=0.0001)
 print(model.summary())
 # import sys; sys.exit()
-#%%
-if False:
+#%% overfit
+if True:
     hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
     
     if False:
@@ -699,7 +734,8 @@ if False:
             mssave2_total[row, col] = np.nanmean(mssave_total[row][col])
     mssave_total = mssave2_total
     # epochs = 1000
-    ms_report(mssave_total) 
+    ms_report(mssave_total)
+    ms_report_khu_magnolin(mssave_total)
     # ms_report_snu_chronic(mssave_total) 
 #%%
 
@@ -804,13 +840,27 @@ for SE in range(N):
             
 print('len(cvlist)', len(cvlist))
 
+msdict = {'Z_vix': Z_vix, 'cvlist': cvlist}
+savepath = RESULT_SAVE_PATH + 'cvlist.pickle'
+with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
+    print(savepath, '저장되었습니다.')
+
 import sys; sys.exit()
 #%% tr
+savepath = RESULT_SAVE_PATH + 'cvlist.pickle'
+with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
+    msdict = pickle.load(f)
+    Z_vix = msdict['Z_vix']
+    cvlist = msdict['cvlist']
+
+tr_graph_save = msFunction.msarray([len(cvlist), 4])
+
 model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
 overwrite = True
 repeat_save = []
-for repeat in range(10):
+for repeat in range(1): #, 100):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
@@ -832,15 +882,14 @@ for repeat in range(10):
             Z_tr = Z_vix[trlist]; Z_te = Z_vix[telist]
             
             X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
-            final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(cv) + '_final.h5'
+            final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(telist) + '_final.h5'
             if not(os.path.isfile(final_weightsave)) or overwrite:
                 if True:
                     print('learning', cv, '/', len(cvlist))
                     print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
                     print('te distribution', np.mean(Y_te, axis=0))
                 
-                mmodel = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
-                # for epoch in range(1):
+                model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
                 verbose = 0
                 if cv == 0: verbose = 1
                 hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
@@ -881,6 +930,7 @@ with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
 mssave = np.nanmean(np.array(repeat_save), axis=0)
 
 ms_report(mssave)  
+ms_report_khu_magnolin(mssave)
 # ms_report_snu_chronic(mssave) 
 
 
@@ -1310,26 +1360,6 @@ for ix in range(len(pdmorphine)):
 #%%
 
 
-
-plt.figure()
-msplot = mssave[KHU_PSL_magnolin,:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-
-#% mssave[KHU_PSL_magnolin,:] subject mean
-subject_mean = [[0,1,2,3], [4,5,6,7], [8,9], [10,11], [12,13]]
-msmatrix = np.zeros((N, len(subject_mean))) * np.nan
-
-for i in range(len(subject_mean)):
-    msmatrix[KHU_PSL_magnolin,i] = np.mean(mssave[KHU_PSL_magnolin,:][:, subject_mean[i]], axis=1)
-    
-plt.figure()
-msplot = msmatrix[KHU_PSL_magnolin,:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
 
 
 
