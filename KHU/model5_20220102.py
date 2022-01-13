@@ -103,7 +103,7 @@ SE = 0; se = 0
 for SE in range(N):
     if not SE in [179, 181]: # ROI 매칭안되므로 임시 제거
         for se in range(MAXSE):
-            painc, nonpainc, test_only = [], [], []
+            painc, nonpainc = [], []
 
 
             snu_base = True
@@ -144,7 +144,7 @@ for SE in range(N):
                 painc.append(SE in [179] and se in [8,9]) # GBVX group내의 pain
                 painc.append(SE in [181] and se in [4,5]) # GBVX group내의 pain
                 
-                if CFAsw:
+                if True:
                     painc.append(SE in oxaliGroup and se in [1])
                     painc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [2])
                     
@@ -355,7 +355,7 @@ print(model.summary())
 # settingID = 'model5_20220105_alldata_allocation_fix'
 # settingID = 'model5_20220105_1'
 
-settingID = 'model5_20220112_101101_snukhu_tracking'
+settingID = 'model5_20220112_101101_snukhu_tracking_oxali'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
@@ -574,16 +574,17 @@ for f in range(X.shape[1]):
 #%% 검증
 def ms_report(mssave):
     plt.figure()
-    msplot = mssave[morphineGroup,2:]
+    msplot = mssave[morphineGroup,2:13]
     msplot_mean = np.nanmean(msplot, axis=0)
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
     
-    msplot = mssave[KHUsham,2:]
+    msplot = mssave[KHUsham,2:13]
     msplot_mean = np.nanmean(msplot, axis=0)
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
     
+
     KHU_CFA_100 = KHU_CFA[:7]
     KHU_CFA_50 = KHU_CFA[7:]
     
@@ -688,7 +689,7 @@ def ms_report_khu_magnolin(mssave):
             msmatrix[KHU_PSL_magnolin,i] = np.mean(mssave[KHU_PSL_magnolin,:][:, subject_mean[i]], axis=1)
             
         plt.figure()
-        msplot = msmatrix[KHU_PSL_magnolin,:]
+        msplot = msmatrix[KHU_PSL_magnolin,:] > 0.5
         msplot_mean = np.nanmean(msplot, axis=0)
         e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
         plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
@@ -858,9 +859,9 @@ tr_graph_save = msFunction.msarray([len(cvlist), 4])
 
 model = keras_setup(lr=lr, seed=0, add_fn=X.shape[1], layer_1=layer_1, batchnmr=True, dropout_rate1=0.1)
 print(model.summary())
-overwrite = True
+overwrite = False
 repeat_save = []
-for repeat in range(1): #, 100):
+for repeat in range(6): #, 100):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
@@ -893,15 +894,34 @@ for repeat in range(1): #, 100):
                 verbose = 0
                 if cv == 0: verbose = 1
                 hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
+                
+                tr_graph_save[cv][0].append(np.array(hist.history['loss']))
+                tr_graph_save[cv][1].append(np.array(hist.history['accuracy']))
                 model.save_weights(final_weightsave)
                 
             # test
             model.load_weights(final_weightsave)
-            yhat = model.predict(X_te)[:,1]
+            yhat = model.predict(X_te)
+            
+            val_acc = np.mean((yhat[:,1]>0.5) - Y_te[:,1])
+            
+            def cross_entropy(p, q):
+                mssave = []
+                for i in range(len(p)):
+                    j = np.argmax(p[i])
+                    mssave.append([p[i][j] * np.log(q[i][j])])
+                return -np.mean(mssave)
+            
+            val_loss = cross_entropy(Y_te, yhat)
+
+            tr_graph_save[cv][2].append(val_loss)
+            tr_graph_save[cv][3].append(val_acc)
+            
+            
             
             for n in range(len(yhat)):
                 teSE = Z_te[n][0]; tese = Z_te[n][1]
-                mssave[teSE][tese].append(yhat[n])
+                mssave[teSE][tese].append(yhat[:,1][n])
             
             outlist = np.where(np.sum(Y, axis=1)==0)[0]
             yhat_out = model.predict(X[outlist])[:,1]
@@ -1014,8 +1034,6 @@ msplot = mssave2[KHUsham,:]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-
 
 #%% KHU_CFA
 
