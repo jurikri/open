@@ -19,6 +19,7 @@ from datetime import datetime
 import csv
 import random
 import time
+from tqdm import tqdm
 
 MAXSE = 100
 # set pathway
@@ -36,6 +37,7 @@ except:
             savepath = ''; # os.chdir(savepath);
 print('savepath', savepath)
 
+gsync = 'C:\\mass_save\\KSBMB_revision_AIbRNN\\'
 with open(gsync + 'mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
 
@@ -421,6 +423,8 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, verbose=0):
 
 
 #%% XYZgen
+FS = 497
+BINS = 10 # 최소 time frame 간격 # hyper
 
 X, Y, Z = [], [], [];
 Xte, Zte = [], [];
@@ -470,11 +474,7 @@ print('len(X)', len(X), '// np.mean(Y, axis=0)', np.mean(Y, axis=0))
 #         signal = np.array(signalss[SE][se])
 #         mslength[SE,se] = signal.shape[0]
         
-FS = 497
 print('full_sequence', FS, 'frames')
-
-BINS = 10 # 최소 time frame 간격 # hyper
-
 # learning intensity
 epochs = 1 # 
 lr = 1e-3 # learning rate
@@ -558,12 +558,12 @@ print(model.summary())
 settingID = 'model2_0'
 
 
-fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+# fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
 # runlist = highGroup3 + PSLgroup_khu + pslGroup + PSLgroup_khu
-wantedlist =  fset # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
+# wantedlist =  fset # highGroup3 # [PSLgroup_khu[2]] # [highGroup3[0]];
 
 
-RESULT_SAVE_PATH = gsync + 'kerasdata\\' + settingID + '\\'
+RESULT_SAVE_PATH = gsync + '20220113\\' + settingID + '\\'
 if os.path.isdir('K:\\mscode_m2'): RESULT_SAVE_PATH = 'K:\\mscode_m2\\220220102\\' + settingID + '\\'
 if not os.path.exists(RESULT_SAVE_PATH): os.mkdir(RESULT_SAVE_PATH)
 
@@ -582,18 +582,18 @@ X2, Y2, Z2 = X2[rix], Y2[rix], Z2[rix]
 model = keras_setup(lr=1e-3, xin=X2[0], seed=0, \
             l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
 
-hist = model.fit(X2, Y2, batch_size=2**9, epochs=200, verbose=1)
+hist = model.fit(X2, Y2, batch_size=2**9, epochs=1, verbose=1)
 
 
 #%% cvtraining
 
-model = keras_setup(lr=1e-3, xin=X_tr[0], seed=0, \
+model = keras_setup(lr=1e-3, xin=X2[0], seed=0, \
             l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
     
 cvlist = highGroup + midleGroup + ketoGroup + highGroup2  
-total = list(range(len(Y_tr)))
+total = list(range(len(Y2)))
 
-repeat = 0; cv = 0
+repeat = 0; cv = 0; overwrite = False
 
 mssave = msFunction.msarray([N,MAXSE])
 start = time.time()   
@@ -608,14 +608,16 @@ for cv in range(len(cvlist)):
     Y_tr = Y2[trlist]; #Y_te = Y2[telist]
     Z_tr = Z2[trlist]; #Z_te = Z2[telist]
     
-    telist_te = np.where(Zte[:,0]==cvSE)[0]; X_te = Xte[telist_te]
+    telist_te = np.where(Zte[:,0]==cvSE)[0];
+    X_te = Xte[telist_te]; Z_te = Zte[telist_te]
+    
     
     final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str([cvSE]) + '_final.h5'
     if not(os.path.isfile(final_weightsave)) or overwrite:
         print(repeat, 'learning', cv, '/', len(cvlist))
         print(len(total), len(telist), len(trlist))
         print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
-        print('te distribution', np.mean(Y_te, axis=0))
+        # print('te distribution', np.mean(Y_te, axis=0))
         
         model = keras_setup(lr=1e-3, xin=X_tr[0], seed=seed, \
                     l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
@@ -642,8 +644,7 @@ for cv in range(len(cvlist)):
 
     start = time.time()
 
-#%% general model
-
+#% general model
 final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + 'general' + '_final.h5'
 if not(os.path.isfile(final_weightsave)) or overwrite:
     model = keras_setup(lr=1e-3, xin=X2[0], seed=seed, \
@@ -680,7 +681,10 @@ for n in range(len(yhat)):
     teSE = Z_test[n][0]; tese = Z_test[n][1]
     mssave[teSE][tese].append(yhat[:,1][n])
 
-
+savepath = RESULT_SAVE_PATH + 'mssave.pickle'
+with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(mssave, f, pickle.HIGHEST_PROTOCOL)
+    print(savepath, '저장되었습니다.')
 #%%
 import sys; sys.exit()
     
