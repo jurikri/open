@@ -10,7 +10,8 @@ import pandas as pd
 import numpy as np
 from sklearn import metrics
 import matplotlib.pyplot as plt
-import pickle
+try: import pickle5 as pickle
+except: import pickle
 import os
 import random
 from scipy import stats
@@ -81,18 +82,20 @@ print('savepath', savepath)
 #
 
 # var import
-with open('D:\\mscore\\syncbackup\\paindecoder\\data\\mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
+with open('D:\\mscore\\syncbackup\\google_syn\\mspickle.pickle', 'rb') as f:  # Python 3: open(..., 'rb')
     msdata_load = pickle.load(f)
     
 FPS = msdata_load['FPS']
 N = msdata_load['N']
-bahavss = msdata_load['bahavss']
-behavss2 = msdata_load['behavss2']
+# bahavss = msdata_load['bahavss']
+# behavss2 = msdata_load['behavss2']
 msGroup = msdata_load['msGroup']
 msdir = msdata_load['msdir']
 signalss = msdata_load['signalss']
     
 highGroup = msGroup['highGroup']
+highGroup2 = msGroup['highGroup2']
+highGroup3 = msGroup['highGroup3']
 midleGroup = msGroup['midleGroup']
 lowGroup = msGroup['lowGroup']
 salineGroup = msGroup['salineGroup']
@@ -112,17 +115,34 @@ itClonidineGroup = msGroup['itClonidineGroup']
 ipsaline_pslGroup = msGroup['ipsaline_pslGroup']
 ipclonidineGroup = msGroup['ipclonidineGroup']
 gabapentinGroup = msGroup['gabapentinGroup']
-oxaliGroup = msGroup['oxaliGroup']
+PSLscsaline = msGroup['PSLscsaline']
+glucoseGroup = msGroup['glucoseGroup']
 
-msset = msGroup['msset']
-msset2 = msGroup['msset2']
+msset = msGroup['msset']; msset = np.array(msset)
+msset2 = msGroup['msset2']; msset2 = np.array(msset2)
 del msGroup['msset']; del msGroup['msset2']
 msset_total = np.array(pd.concat([pd.DataFrame(msset), pd.DataFrame(msset2)], ignore_index=True, axis=0))
 
-skiplist = restrictionGroup + lowGroup
+# se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup \
+# + itSalineGroup + itClonidineGroup # for test only
 
-fset = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
-se3set = capsaicinGroup + pslGroup + shamGroup + adenosineGroup + CFAgroup + chloroquineGroup
+# pslset = pslGroup + shamGroup + adenosineGroup + itSalineGroup + itClonidineGroup
+fset  = highGroup + midleGroup + yohimbineGroup + ketoGroup + highGroup2 
+baseonly = lowGroup + lidocainGroup + restrictionGroup
+gababase = list(range(164,169)) + list(range(172,176)) + list(range(177,183)) + [226,227]
+
+grouped_total_list = []
+keylist = list(msGroup.keys())
+for k in range(len(keylist)):
+    grouped_total_list += msGroup[keylist[k]]
+totaldataset = grouped_total_list
+
+msdata_load['msset_total'] = msset_total
+msdata_load['fset'] = fset
+msdata_load['baseonly'] = baseonly
+msdata_load['gababase'] = gababase
+msdata_load['totaldataset'] = totaldataset
+
 pslset = pslGroup + shamGroup + adenosineGroup
 
 # 제외 roi 적용 (mouse 통합)
@@ -138,8 +158,7 @@ for SE in range(N):
     
     tmp = []
     for SE2 in setnum:
-        for se in range(5):
-            tmp += list(roi_del_ix[SE2][se])
+        tmp += list(roi_del_ix[SE2])
     tmp = list(set(tmp))  
     
     for SE2 in setnum:
@@ -216,7 +235,7 @@ if False:
     model1 = np.nanmean(testsw3_mean, axis=2)
     
 
-# In[] Formalin CV-- model2 (AI)
+#%% Formalin CV-- model2 (AI)
  
 if True:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\kerasdata\\model2\\'               
@@ -242,11 +261,12 @@ if True:
                 testsw3_mean[SE,:,ix] = testsw3[SE,:]
     model2 = np.nanmean(testsw3_mean, axis=2)
     
-np.nanmean(model2)    
-# In Formalin CV-- model2 - mean (AA)
- 
-    
-    
+    import paindecoder_grouping
+    ins = paindecoder_grouping.grouping(msdata_load)
+    _, _ = ins.dict_gen(target = model2, msset='psl', legendsw=True, figsw=True)
+  
+#%% In Formalin CV-- model2 - mean (AA)
+  
 if False:
     savepath = 'D:\\mscore\\syncbackup\\google_syn\\model2\\'               
     project_list = []
@@ -330,30 +350,10 @@ if True:
                 testsw3_mean[:testsw3.shape[0],:,i] = testsw3
     model3 = np.nanmean(testsw3_mean, axis=2)
     
-###
-
-subset_mean = model3
-
-tmp1 = subset_mean[[169,170],0:2].flatten() # 14
-tmp2 = subset_mean[[171],0:2].flatten() # 9
-tmp3 = subset_mean[[176,183,184],0:2].flatten() # 10
-tmp4 = subset_mean[[185,186],2:4].flatten() # 20
-
-
-
-gbvx10 = np.concatenate((tmp1, tmp2, tmp3, tmp4), axis=0)
-            
-
-np.mean(gbvx10) + np.std(gbvx10, ddof=1) * 3
-
-
-
-
-
-
-
-
-
+    import paindecoder_grouping
+    ins = paindecoder_grouping.grouping(msdata_load)
+    _, _ = ins.dict_gen(target = model3, msset='psl', legendsw=True, figsw=True)
+    
 
 
 
@@ -426,7 +426,6 @@ for SE in range(N):
         model_basic[SE,se] = np.nanmean(mssave[SE][se])
 
 import paindecoder_grouping
-
 target = np.array(model_basic)
 aprism_oxali = paindecoder_grouping.dict_gen(target, msset='oxali', legendsw=True, figsw=True, figsw2=False)
 # In[] raw test (구버전) - with model3
@@ -515,6 +514,14 @@ if True:
     plt.axes().get_yaxis().set_visible(False)
     
     plt.colorbar()
+    
+    #%%
+    plt.figure(figsize=(6,1))
+    plt.plot(np.mean(model3_mean_overtime[167][0] > thr, axis=0)[:55])
+    savepath = 'C:\\SynologyDrive\\worik in progress\\20220114 - EMM revision\\figsave.png'
+    plt.savefig(savepath, dpi=500)
+    
+    
 
 # In[] label 재정렬 movement 
 t4 = np.zeros((N,5)); movement = np.zeros((N,5))
