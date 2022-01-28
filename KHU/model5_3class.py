@@ -215,23 +215,40 @@ for SE in range(N):
                     painc.append(SE in PSLgroup_khu and se in [1,2])
                     painc.append(SE in KHU_PSL_magnolin and se in [4,5,6,7])
                 
-                if False:
+                if True:
                     painc.append(SE in PDpain and se in list(range(2,10)))
                     painc.append(SE in PDmorphine and se in [4,5])
-                    painc.append(SE in [325, 326] and se in [10,11,12,13,14,15])
-                    painc.append(SE in [327, 328] and se in [6,7,8,9,10,11, 16,17])
-                    painc.append(SE in [329, 330] and se in [6,7,8,9,10,11, 16,17,18,19,20,21])
-                    painc.append(SE in [331] and se in [10,11,12,13,14,15,16,17])
+                    painc.append(SE in [325, 326] and se in [10,11])
+                    painc.append(SE in [327, 328] and se in [10,11,16,17])
+                    painc.append(SE in [329, 330] and se in [10,11,16,17])
+                    painc.append(SE in [331] and se in [10,11,16,17])
                     
-                
-            if True: # keto analgesic effects
+                    # i.p. saline
+                    painc.append(SE in [325, 326] and se in [12,13,14,15])
+                    painc.append(SE in [327, 328] and se in [6,7,8,9])
+                    painc.append(SE in [329, 330] and se in [6,7,8,9,18,19,20,21])
+                    painc.append(SE in [331] and se in [12,13,14,15])
+                    
+                    
+            if False: # keto analgesic effects
                 drugc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
                 drugc.append(SE in KHU_CFA[7:] and se in [6,7]) # keto 50 mg/kg
                 pass
                 
-            if True:  # morhpine analgesic effects
+            if False: # morhpine analgesic effects
                 drugc.append(SE in morphineGroup and se in [10,11,12]) # morphine
                 drugc.append(SE in KHUsham and se in range(10,13)) # morphine
+                pass
+            
+            if False:  # KHU_PSL_magnolin analgesic effects
+                drugc.append(SE in KHU_PSL_magnolin and se in [8,9,10,11,12,13]) # morphine
+                pass
+            
+            if True:  # PDmorphine analgesic effects
+                drugc.append(SE in [325, 326] and se in [6,7,8,9])
+                drugc.append(SE in [327, 328] and se in [12,13,14,15])
+                drugc.append(SE in [329, 330] and se in [12,13,14,15,18,19,20,21])
+                drugc.append(SE in [331] and se in [6,7,8,9,18,19,20,21])
                 pass
             
             if [SE, se] in [[285, 4],[290, 5]]: continue # 시간짧음, movement 불일치
@@ -243,7 +260,7 @@ for SE in range(N):
 total_list = list(set(list(np.array(group_pain_training)[:,0]) + list(np.array(group_nonpain_training)[:,0]) \
                   + list(np.array(group_drug_training)[:,0])))
     
-total_list = total_list + KHU_PSL_magnolin
+total_list = total_list + PDpain + PDmorphine
 total_list = list(set(total_list))
 
 #%% keras setup
@@ -319,36 +336,43 @@ def keras_setup(lr=0.01, dropout_rate1=0, batchnmr=False, seed=1, add_fn=None, l
     #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras  #### keras #### keras
     return model
 
+X_tmp = np.array(X_total)
+Y_tmp = np.array(Y_total)
+Z_tmp = np.array(Z_total)
 def upsampling(X_tmp, Y_tmp, Z_tmp, verbose=0):
     X = np.array(X_tmp)
     Y = np.array(Y_tmp)
     Z = np.array(Z_tmp)
     while True:
-        n_ix = np.where(Y[:,0]==1)[0]
-        p_ix = np.where(Y[:,1]==1)[0]
-        if verbose: print('sample distributions', 'nonpain', n_ix.shape[0], 'pain', p_ix.shape[0])
+        ixs = msFunction.msarray([3])
+        for label in range(Y.shape[1]):
+            ixs[label] = np.where(Y[:,label]==1)[0]
         
-        nnum = n_ix.shape[0]
-        pnum = p_ix.shape[0]
+        nums = np.zeros((Y.shape[1])) * np.nan
+        for label in range(Y.shape[1]):
+            nums[label] = len(ixs[label])
         
-        maxnum = np.max([nnum, pnum])
-        minnum = np.min([nnum, pnum])
-        
-        if verbose: print('ratio', maxnum / minnum)
-        addix = np.where(Y[:,np.argmin([nnum, pnum])]==1)[0]
-        # if not(maxnum // minnum < 2):
-        if maxnum // minnum > 1:
-            X = np.append(X, X[addix], axis=0)
-            Y = np.append(Y, Y[addix], axis=0)
-            Z = np.append(Z, Z[addix], axis=0)
-        elif maxnum // minnum == 1:
-            rix = random.sample(list(addix), maxnum-minnum)
-            X = np.append(X, X[rix], axis=0)
-            Y = np.append(Y, Y[rix], axis=0)
-            Z = np.append(Z, Z[rix], axis=0)
-            break 
-        else: break
-        if verbose:  print('data set num #', len(Y), np.mean(np.array(Y), axis=0))
+        maxnum = np.max(nums)
+        label_ix = list(range(Y.shape[1]))
+        up_ix = list(set(label_ix) - set([np.argmax(nums)]))
+        for i in range(len(up_ix)):
+            addix = np.where(Y[:,up_ix[i]]==1)[0]
+            minnum = len(addix)
+            # if not(maxnum // minnum < 2):
+            if maxnum // minnum > 1:
+                X = np.append(X, X[addix], axis=0)
+                Y = np.append(Y, Y[addix], axis=0)
+                Z = np.append(Z, Z[addix], axis=0)
+            elif maxnum // minnum == 1:
+                rix = random.sample(list(addix), int(maxnum-minnum))
+                X = np.append(X, X[rix], axis=0)
+                Y = np.append(Y, Y[rix], axis=0)
+                Z = np.append(Z, Z[rix], axis=0)
+                
+        tmp = np.mean(np.array(Y), axis=0)
+        if np.max(tmp) == np.min(tmp): break
+        if verbose or False: 
+            print('data set num #', len(Y), np.mean(np.array(Y), axis=0))
     return X, Y, Z
 
 model = keras_setup(lr=lr, seed=0, add_fn=2, layer_1=layer_1, layer_2=layer_1)
@@ -362,7 +386,7 @@ print(model.summary())
 # settingID = 'model5_20220105_alldata_allocation_fix'
 # settingID = 'model5_20220105_1'
 
-settingID = 'model5_20220124_inter_3class'
+settingID = 'model5_20220126_3class_inter_PD'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
@@ -373,7 +397,7 @@ KHU_pdpain = PDpain + PDnonpain + PDmorphine
 # len(KHU_chronicpain)
 # len(KHU_pdpain)
 # wantedlist = SNU_chronicpain + KHU_chronicpain + KHU_pdpain
-wantedlist = morphineGroup + KHUsham
+wantedlist = PDpain + PDnonpain + PDmorphine
 # wantedlist = morphineGroup + KHUsham + PSLgroup_khu + pslGroup + shamGroup + ipsaline_pslGroup + \
 #     ipclonidineGroup + oxaliGroup + glucoseGroup
 # wantedlist = [247, 248, 250, 251, 257, 258, 259, 262]
@@ -410,7 +434,7 @@ for SE in range(N):
     if SE in [179, 181]: continue
     
     selist = [0]
-    if SE in morphineGroup + KHUsham + GBVX: selist = [0,1]
+    if SE in morphineGroup + KHUsham + GBVX + PDpain + PDnonpain: selist = [0,1]
     if SE in KHU_CFA + PDmorphine + KHU_PSL_magnolin: selist = [0,1,2,3]
     
     if SE in list(range(247, 273)): selist = [0,1]
@@ -584,38 +608,199 @@ def ms_report(mssave):
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
     
-def ms_report_2d(mssave):
+def ms_report_2d(mssave, target):
+    def ms_2dscatter(x,y,c):
+        plt.scatter(np.nanmean(x), np.nanmean(y), c=c)
+        plt.errorbar(np.nanmean(x), np.nanmean(y), yerr=scipy.stats.sem(x, nan_policy='omit'), fmt="o", c=c)
+        plt.errorbar(np.nanmean(x), np.nanmean(y), xerr=scipy.stats.sem(y, nan_policy='omit'), fmt="o", c=c)
+
+    
     plt.figure()
-    plt.xlim([0.1,0.6])
-    plt.ylim([0.25,0.6])
-    
-    msplot = mssave[morphineGroup,2:10,:]
-    x = msplot[:,:,1]
-    y = msplot[:,:,0]
+    x_pain, x_nonpain, x_drug = [], [], []
+    y_pain, y_nonpain, y_drug = [], [], []
+    for SE in target:
+        for se in range(MAXSE):
+            if [SE, se] in group_pain_training: 
+                y_pain.append(mssave[SE,se,:][0])
+                x_pain.append(mssave[SE,se,:][1])
+                
+            if [SE, se] in group_nonpain_training: 
+                y_nonpain.append(mssave[SE,se,:][0])
+                x_nonpain.append(mssave[SE,se,:][1])
+                
+            if [SE, se] in group_drug_training: 
+                y_drug.append(mssave[SE,se,:][0])
+                x_drug.append(mssave[SE,se,:][1])
+                
+    x = list(x_pain)
+    y = list(y_pain)
     c = 'r'
-    plt.scatter(np.nanmean(x), np.nanmean(y), c=c)
-    plt.errorbar(np.nanmean(x), np.nanmean(y), yerr=scipy.stats.sem(x, nan_policy='omit')[0], fmt="o", c=c)
-    plt.errorbar(np.nanmean(x), np.nanmean(y), xerr=scipy.stats.sem(y, nan_policy='omit')[0], fmt="o", c=c)
+    ms_2dscatter(x,y,c)
     
-    msplot = mssave[KHUsham,2:10,:]
-    x = msplot[:,:,1]
-    y = msplot[:,:,0]
+    x = list(x_nonpain)
+    y = list(y_nonpain)
     c = 'b'
-    plt.scatter(np.nanmean(x), np.nanmean(y), c=c)
-    plt.errorbar(np.nanmean(x), np.nanmean(y), yerr=scipy.stats.sem(x, nan_policy='omit')[0], fmt="o", c=c)
-    plt.errorbar(np.nanmean(x), np.nanmean(y), xerr=scipy.stats.sem(y, nan_policy='omit')[0], fmt="o", c=c)
+    ms_2dscatter(x,y,c)
     
-    msplot = mssave[morphineGroup,10:,:]
-    x = msplot[:,:,1]
-    y = msplot[:,:,0]
+    x = list(x_drug)
+    y = list(y_drug)
     c = 'g'
-    plt.scatter(np.nanmean(x), np.nanmean(y), c=c)
-    plt.errorbar(np.nanmean(x), np.nanmean(y), yerr=scipy.stats.sem(x, nan_policy='omit')[0], fmt="o", c=c)
-    plt.errorbar(np.nanmean(x), np.nanmean(y), xerr=scipy.stats.sem(y, nan_policy='omit')[0], fmt="o", c=c)
+    ms_2dscatter(x,y,c)
     
-    msplot = mssave[KHUsham,10:,:]
-    plt.scatter(np.nanmean(msplot[:,:,1]), np.nanmean(msplot[:,:,0]), c='k')
+def ms_report_2d_mice(mssave, target):
+
+    plt.figure()
+    xydata = np.zeros((2,3,N,MAXSE)) * np.nan
+    for SE in target:
+        for se in range(MAXSE):
+            if [SE, se] in group_pain_training: 
+                xydata[1,0,SE,se] = mssave[SE,se,:][0]
+                xydata[0,0,SE,se] = mssave[SE,se,:][1]
+                
+            if [SE, se] in group_nonpain_training: 
+                xydata[1,1,SE,se] = mssave[SE,se,:][0]
+                xydata[0,1,SE,se] = mssave[SE,se,:][1]
+                
+            if [SE, se] in group_drug_training: 
+                xydata[1,2,SE,se] = mssave[SE,se,:][0]
+                xydata[0,2,SE,se] = mssave[SE,se,:][1]
     
+    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
+    plt.scatter(x, y, c='r')
+    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
+    plt.scatter(x, y, c='b')
+    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
+    plt.scatter(x, y, c='g')
+ 
+def ms_report_magnolin(mssave, target):
+    plt.figure()
+    xydata = np.zeros((2,5,N,MAXSE)) * np.nan
+    for SE in target:
+        for se in range(MAXSE):
+            if se in [0,1,2,3]:
+                xydata[1,0,SE,se] = mssave[SE,se,:][0]
+                xydata[0,0,SE,se] = mssave[SE,se,:][1]
+                
+            if se in [4,5,6,7]:
+                xydata[1,1,SE,se] = mssave[SE,se,:][0]
+                xydata[0,1,SE,se] = mssave[SE,se,:][1]
+                
+            if se in [8,9]:
+                xydata[1,2,SE,se] = mssave[SE,se,:][0]
+                xydata[0,2,SE,se] = mssave[SE,se,:][1]
+                
+            if se in [10,11]:
+                xydata[1,3,SE,se] = mssave[SE,se,:][0]
+                xydata[0,3,SE,se] = mssave[SE,se,:][1]
+                
+            if se in [12,13]:
+                xydata[1,4,SE,se] = mssave[SE,se,:][0]
+                xydata[0,4,SE,se] = mssave[SE,se,:][1]
+    
+    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='b')
+    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='r')
+    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='g')
+    x = msFunction.nanex(np.nanmean(xydata[0,3,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,3,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='k')
+    x = msFunction.nanex(np.nanmean(xydata[0,4,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,4,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='y')
+    
+def ms_report_morphine(mssave):
+    plt.figure()
+    xydata = np.zeros((2,5,N,MAXSE)) * np.nan
+    for SE in range(N):
+        for se in range(MAXSE):
+            if SE in KHUsham and se in [2,3,4,5]:
+                xydata[1,0,SE,se] = mssave[SE,se,:][0]
+                xydata[0,0,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in KHUsham and se in [6,7,8,9]:
+                xydata[1,1,SE,se] = mssave[SE,se,:][0]
+                xydata[0,1,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in morphineGroup and se in [2,3,4,5]:
+                xydata[1,2,SE,se] = mssave[SE,se,:][0]
+                xydata[0,2,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in morphineGroup and se in [6,7,8,9]:
+                xydata[1,3,SE,se] = mssave[SE,se,:][0]
+                xydata[0,3,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in morphineGroup and se in [10,11,12]:
+                xydata[1,4,SE,se] = mssave[SE,se,:][0]
+                xydata[0,4,SE,se] = mssave[SE,se,:][1]
+    
+    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='b')
+    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='r')
+    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='g')
+    x = msFunction.nanex(np.nanmean(xydata[0,3,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,3,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='k')
+    x = msFunction.nanex(np.nanmean(xydata[0,4,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,4,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='y')
+
+def ms_report_morphine(mssave):
+    plt.figure()
+    xydata = np.zeros((2,5,N,MAXSE)) * np.nan
+    for SE in range(N):
+        for se in range(MAXSE):
+            if SE in KHUsham and se in [2,3,4,5]:
+                xydata[1,0,SE,se] = mssave[SE,se,:][0]
+                xydata[0,0,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in KHUsham and se in [6,7,8,9]:
+                xydata[1,1,SE,se] = mssave[SE,se,:][0]
+                xydata[0,1,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in morphineGroup and se in [2,3,4,5]:
+                xydata[1,2,SE,se] = mssave[SE,se,:][0]
+                xydata[0,2,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in morphineGroup and se in [6,7,8,9]:
+                xydata[1,3,SE,se] = mssave[SE,se,:][0]
+                xydata[0,3,SE,se] = mssave[SE,se,:][1]
+                
+            if SE in morphineGroup and se in [10,11,12]:
+                xydata[1,4,SE,se] = mssave[SE,se,:][0]
+                xydata[0,4,SE,se] = mssave[SE,se,:][1]
+    
+    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='b')
+    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='r')
+    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='g')
+    x = msFunction.nanex(np.nanmean(xydata[0,3,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,3,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='k')
+    x = msFunction.nanex(np.nanmean(xydata[0,4,:,:], axis=1))
+    y = msFunction.nanex(np.nanmean(xydata[1,4,:,:], axis=1))
+    plt.scatter(np.mean(x), np.mean(y), c='y')  
+
+PDpain + PDnonpain +PDmorphine
+ms_report_2d(mssave2, 
+
 
 
 def ms_report_cfa(mssave):
@@ -733,7 +918,7 @@ X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
 X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
 print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
 
-layer_1 = 5; epochs = 3000 # 30
+layer_1 = 10; epochs = 3000 # 30
 
 from sklearn.decomposition import PCA
 pca_nc = 6
@@ -777,8 +962,14 @@ if True:
             tmp = np.nanmean(mssave_total[row][col], axis=0)
             if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp[:2]
             
-    ms_report_2d(mssave2)
+    msplot_PD(mssave2[:,:,1])
             
+    # ms_report_2d(mssave2)
+    # ms_report_cfa_2d(mssave2)
+    
+    # ms_report_2d(mssave2, PDmorphine)
+    # ms_report_2d(mssave2, PDpain+PDnonpain)
+
     # epochs = 1000
     # ms_report(mssave_total)
     # ms_report_cfa(mssave_total)
@@ -802,15 +993,15 @@ def SEse_find(Z=None, Y=None, SE=None, se=None):
         else: return []
     else: return []
 
-#%% inter - subject (session)
+#%% intra - subject (session)
 
 cvlist = []
 for SE in wantedlist:
     for se in range(MAXSE):
         i = SEse_find(Z=Z_vix, SE=SE, se=se)
         if len(i) > 0: cvlist.append(i)
-        
-#%% intra subject
+print('len(cvlist)', len(cvlist))
+#%% between subject
 
 cvlist = []
 for SE in wantedlist:
@@ -819,8 +1010,8 @@ for SE in wantedlist:
         i = SEse_find(Z=Z_vix, SE=SE, se=se)
         if len(i) > 0: cvlist_tmp = cvlist_tmp + i
     cvlist.append(cvlist_tmp)
-    
-#%% inter-subejct - day cv
+print('len(cvlist)', len(cvlist))
+#%% intra-subejct - day cv
 
 
 cvlist = []
@@ -894,11 +1085,11 @@ with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
     print(savepath, '저장되었습니다.')
     
 import sys; sys.exit()
-#%% tr
+#%% cv training
 tr_graph_save = msFunction.msarray([len(cvlist), 4])
 
 # X2 = pca.transform(X)
-model = keras_setup(lr=lr, seed=0, add_fn=X_vix.shape[1], layer_1=layer_1, \
+model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
                     batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
     
 print(model.summary())
@@ -909,9 +1100,6 @@ for repeat in range(1): #, 100):
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
     
-    # tlist = list(range(len(cvlist)))
-    # cvnum = len(cvlist)
-    # cv_save = random_sample_cv(tlist=tlist, n_fold=cvnum, rseed=repeat)
     totallist = list(range(len(Y_vix)))
     for cv in range(0, len(cvlist)):
         telist = cvlist[cv]
@@ -935,7 +1123,7 @@ for repeat in range(1): #, 100):
                     print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
                     print('te distribution', np.mean(Y_te, axis=0))
 
-                model = keras_setup(lr=lr, seed=0, add_fn=X_tr.shape[1], layer_1=layer_1, \
+                model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
                                     batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
                 verbose = 0
                 if cv == 0: verbose = 1
@@ -952,7 +1140,7 @@ for repeat in range(1): #, 100):
 
             X2 = pca.transform(X)
             outlist = np.where(np.sum(Y, axis=1)==0)[0]
-            yhat_out = model.predict(X2[outlist])[:,1]
+            yhat_out = model.predict(X2[outlist])
             for out_SE in wantedlist:
                 for n in np.where(Z[outlist][:,0]==out_SE)[0]:
                     teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
@@ -978,13 +1166,22 @@ with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
     
 mssave = np.nanmean(np.array(repeat_save), axis=0)
 
-ms_report_2d(mssave)
+#%%
 
+msplot_PD(mssave2[:,:,1])
 
-# ms_report(mssave)  
-# ms_report_khu_magnolin(mssave)
-# ms_report_cfa(mssave)
-# ms_report_snu_chronic(mssave) 
+ms_report_2d(mssave, morphineGroup + KHUsham)
+ms_report_2d(mssave, KHU_CFA)
+ms_report_2d(mssave, KHU_PSL_magnolin)
+
+ms_report_magnolin(mssave, KHU_PSL_magnolin)
+
+ms_report_2d_mice(mssave, morphineGroup + KHUsham)
+ms_report_2d_mice(mssave, KHU_CFA)
+
+nonpain = np.nanmean(mssave[KHUsham,2:10][:,:,1], axis=1)
+pain = np.nanmean(mssave[morphineGroup,2:10][:,:,1], axis=1)
+msFunction.msROC(nonpain, pain)
 
 
 #%% total acc
@@ -1322,92 +1519,114 @@ plt.plot(np.nanmean(AA_PDnonpain, axis=0))
 
 #%%
 
-mssave2 = np.array(list(mssave))
+   
+mssave2 =  mssave2[:,:,1]
+#%%
 
-PDmorphineA = [325, 326]
-PDmorphineB = [327, 328]
-PDmorphineC = [329, 330]
-PDmorphineD = [331]
-
-visse = 9
-PDmorphine_matrix = msFunction.msarray([len(pdmorphine), visse])
-
-for ix, SE in enumerate(pdmorphine):
-    for se in range(MAXSE):
-        if SE in pdmorphine and se in [0,1,2,3]:
-            PDmorphine_matrix[ix][0].append(mssave2[SE,se])
-        
-        if SE in PDmorphineA and se in [5,6]:
-            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-        if SE in PDmorphineA and se in [6,7]:
-            PDmorphine_matrix[ix][3].append(mssave2[SE,se])
-        if SE in PDmorphineA and se in [8,9]:
-            PDmorphine_matrix[ix][4].append(mssave2[SE,se])
-        if SE in PDmorphineA and se in [10,11]:
-            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-        if SE in PDmorphineA and se in [12,13,14,15]:
-            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+def msplot_PD(mssave2):
+    PDmorphineA = [325, 326]
+    PDmorphineB = [327, 328]
+    PDmorphineC = [329, 330]
+    PDmorphineD = [331]
+    
+    visse = 9
+    PDmorphine_matrix = msFunction.msarray([len(PDmorphine), visse])
+    
+    for ix, SE in enumerate(PDmorphine):
+        for se in range(MAXSE):
+            if SE in PDmorphine and se in [0,1,2,3]:
+                PDmorphine_matrix[ix][0].append(mssave2[SE,se])
             
-        if SE in PDmorphineB and se in [5,6]:
-            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-        if SE in PDmorphineB and se in [6,7,8,9]:
-            PDmorphine_matrix[ix][2].append(mssave2[SE,se])
-        if SE in PDmorphineB and se in [10,11]:
-            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-        if SE in PDmorphineB and se in [12,13]:
-            PDmorphine_matrix[ix][3].append(mssave2[SE,se])
-        if SE in PDmorphineB and se in [14,15]:
-            PDmorphine_matrix[ix][4].append(mssave2[SE,se])
-        if SE in PDmorphineB and se in [16,17]:
-            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-        if SE in PDmorphineB and se in [18,19]:
-            PDmorphine_matrix[ix][7].append(mssave2[SE,se])
-        if SE in PDmorphineB and se in [20,21]:
-            PDmorphine_matrix[ix][8].append(mssave2[SE,se])
-            
-        if SE in PDmorphineC and se in [5,6]:
-            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-        if SE in PDmorphineC and se in [6,7,8,9]:
-            PDmorphine_matrix[ix][2].append(mssave2[SE,se])
-        if SE in PDmorphineC and se in [10,11]:
-            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-        if SE in PDmorphineC and se in [12,13]:
-            PDmorphine_matrix[ix][7].append(mssave2[SE,se])
-        if SE in PDmorphineC and se in [14,15]:
-            PDmorphine_matrix[ix][8].append(mssave2[SE,se])
-        if SE in PDmorphineC and se in [16,17]:
-            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-        if SE in PDmorphineC and se in [18,19]:
-            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-        if SE in PDmorphineC and se in [20,21]:
-            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-            
-        if SE in PDmorphineD and se in [5,6]:
-            PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-        if SE in PDmorphineD and se in [6,7]:
-            PDmorphine_matrix[ix][3].append(mssave2[SE,se])
-        if SE in PDmorphineD and se in [8,9]:
-            PDmorphine_matrix[ix][4].append(mssave2[SE,se])
-        if SE in PDmorphineD and se in [10,11]:
-            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-        if SE in PDmorphineD and se in [12,13,14,15]:
-            PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-        if SE in PDmorphineD and se in [16,17]:
-            PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-        if SE in PDmorphineD and se in [18,19]:
-            PDmorphine_matrix[ix][7].append(mssave2[SE,se])
-        if SE in PDmorphineD and se in [20,21]:
-            PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+            if SE in PDmorphineA and se in [5,6]:
+                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+            if SE in PDmorphineA and se in [6,7]:
+                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
+            if SE in PDmorphineA and se in [8,9]:
+                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
+            if SE in PDmorphineA and se in [10,11]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in PDmorphineA and se in [12,13,14,15]:
+                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+                
+            if SE in PDmorphineB and se in [5,6]:
+                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+            if SE in PDmorphineB and se in [6,7,8,9]:
+                PDmorphine_matrix[ix][2].append(mssave2[SE,se])
+            if SE in PDmorphineB and se in [10,11]:
+                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+            if SE in PDmorphineB and se in [12,13]:
+                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
+            if SE in PDmorphineB and se in [14,15]:
+                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
+            if SE in PDmorphineB and se in [16,17]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in PDmorphineB and se in [18,19]:
+                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
+            if SE in PDmorphineB and se in [20,21]:
+                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+                
+            if SE in PDmorphineC and se in [5,6]:
+                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+            if SE in PDmorphineC and se in [6,7,8,9]:
+                PDmorphine_matrix[ix][2].append(mssave2[SE,se])
+            if SE in PDmorphineC and se in [10,11]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in PDmorphineC and se in [12,13]:
+                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
+            if SE in PDmorphineC and se in [14,15]:
+                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+            if SE in PDmorphineC and se in [16,17]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in PDmorphineC and se in [18,19]:
+                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+            if SE in PDmorphineC and se in [20,21]:
+                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+                
+            if SE in PDmorphineD and se in [5,6]:
+                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+            if SE in PDmorphineD and se in [6,7]:
+                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
+            if SE in PDmorphineD and se in [8,9]:
+                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
+            if SE in PDmorphineD and se in [10,11]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in PDmorphineD and se in [12,13,14,15]:
+                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+            if SE in PDmorphineD and se in [16,17]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in PDmorphineD and se in [18,19]:
+                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
+            if SE in PDmorphineD and se in [20,21]:
+                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
 
-PDmorphine_matrix2 = np.zeros((len(pdmorphine), visse)) * np.nan
-for ix in range(len(pdmorphine)):
-    for se in range(visse):
-        PDmorphine_matrix2[ix,se] = np.mean(PDmorphine_matrix[ix][se])
+    PDmorphine_matrix2 = np.zeros((len(PDmorphine), visse)) * np.nan
+    for ix in range(len(PDmorphine)):
+        for se in range(visse):
+            PDmorphine_matrix2[ix,se] = np.mean(PDmorphine_matrix[ix][se])
+    
+    plt.figure()
+    plt.plot(np.nanmean(PDmorphine_matrix2, axis=0))
+    msplot = PDmorphine_matrix2
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+    
+    
+    plt.figure()
+    msplot = mssave2[PDpain,:]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    plt.plot(msplot_mean, c='r')
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+    
+    msplot = mssave2[PDnonpain,:]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    plt.plot(msplot_mean, c='b')
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
 
-plt.plot(np.nanmean(PDmorphine_matrix2, axis=0))
-
-        
-for ix in range(len(pdmorphine)):
+        #%%
+for ix in range(len(PDmorphine)):
     PDmorphine_matrix2[ix,:] = PDmorphine_matrix2[ix,:] / PDmorphine_matrix2[ix,0]
 
 #%%
