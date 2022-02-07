@@ -138,23 +138,39 @@ for SE in range(N):
             # snu
             GBVX = [164, 165, 166, 167, 172, 174, 177, 179, 181]
             if snu_base:
-                nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
                 nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
+                nonpainc.append(SE in capsaicinGroup + CFAgroup and se in [0])
+                nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
                 
                 nonpainc.append(SE in pslGroup and se in [0])
-
                 nonpainc.append(SE in shamGroup and se in [0,1,2])
-                nonpainc.append(SE in ipsaline_pslGroup and se in [0])
-                nonpainc.append(SE in ipclonidineGroup and se in [0])
-                nonpainc.append(SE in GBVX and se in [0,1])
-                nonpainc.append(SE in list(range(192,200)) + [202, 203, 220, 221]  and se in [3])
-                nonpainc.append(SE in [188, 189, 200, 201] and se in [2])
-                nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4])
                 
-                nonpainc.append(SE in oxaliGroup and se in [0,1])
-                nonpainc.append(SE in [192, 194, 196, 198] + [202, 220]  and se in [6,7])
-                nonpainc.append(SE in [188, 200]  and se in [4,5])
-            
+                nonpainc.append(SE in [141, 142, 143] and se in [0]) # PSL + i.p. saline - group1
+                nonpainc.append(SE in [144, 145, 150, 152] and se in [0,1]) # PSL + i.p. saline - group2
+                nonpainc.append(SE in [146, 158] and se in [0,1]) # PSL + i.p. saline - group2
+                nonpainc.append(SE in [151,153,161,162] and se in [0,1]) # PSL + i.p. clonidine
+                
+                # oxali
+                nonpainc.append(SE in oxaliGroup and se in [0, 1])
+                nonpainc.append(SE in [188, 200] and se in [4, 5])
+                nonpainc.append(SE in [192, 194, 196, 202, 220] and se in [6, 7])
+                
+                # glucose
+                nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4,5,6,7])
+                
+                # GB/VX
+                nonpainc.append(SE in GBVX and se in [0,1,2,3,4,5,6,7])
+                
+                if False: # GBVXsw
+                    drugc.append(SE in [164,166] and se in [2,3,4,5])
+                    drugc.append(SE in [165] and se in [2,3])
+                    drugc.append(SE in [167] and se in [4,5,6,7])
+                    drugc.append(SE in [172] and se in [4,5,8,9])
+                    drugc.append(SE in [174] and se in [4,5])
+                    drugc.append(SE in [177] and se in [2,3,4,5,6,7])
+                    drugc.append(SE in [179] and se in [2,3,4,5,6,7,10,11])
+                    drugc.append(SE in [181] and se in [2,3,6,7])
+ 
             if snu_acute:
                 painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [1])
                 painc.append(SE in capsaicinGroup and se in [1])
@@ -167,13 +183,23 @@ for SE in range(N):
                     painc.append(SE in pslGroup and se in [1,2])
                     painc.append(SE in [70,71,75,76,79] and se in [3,4])
                     
-                    painc.append(SE in ipsaline_pslGroup and se in [1,3])
+                    # painc.append(SE in ipsaline_pslGroup and se in [1,3])
+                    painc.append(SE in [141, 142, 143] and se in [1,2]) # PSL + i.p. saline - group1
+                    painc.append(SE in [144, 145, 150, 152] and se in [2,3,6,7]) # PSL + i.p. saline - group2 (PSL)
+                    painc.append(SE in [144, 145, 150, 152] and se in [4,5,8,9]) # PSL + i.p. saline - group2 (PSL + saline)
+                    painc.append(SE in [146, 158] and se in [2,3]) # PSL + i.p. saline - group2 (PSL)
+                    painc.append(SE in [146, 158] and se in [4,5]) # PSL + i.p. saline - group2 (PSL + saline)
+                    
+                    painc.append(SE in [151,153,161,162] and se in [2,3,6,7]) # PSL + i.p. clonidine (PSL)
+                    # painc.append(SE in [151,153,161,162]and se in [4,5,8,9]) # PSL + i.p. clonidine (PSL + clonidine)
+
                     painc.append(SE in [179] and se in [8,9]) # GBVX group내의 pain
                     painc.append(SE in [181] and se in [4,5]) # GBVX group내의 pain
                 
                 if Oxalisw:
+                    # oxali
                     painc.append(SE in oxaliGroup and se in [2,3])
-                    painc.append(SE in [192, 194, 196, 198] + [202, 220]  and se in [4,5])
+                    painc.append(SE in [192, 194, 196, 202, 220, 198] and se in [4,5])
                     
             if False: # GBVX analgesic effect
                 # nonpainc.append(SE in [164, 166] and se in [2,3,4,5]) # GBVX
@@ -221,7 +247,6 @@ for SE in range(N):
                     
                 if PSLsw:
                     painc.append(SE in morphineGroup and se in mslist)
-                    
                     painc.append(SE in morphineGroup and se in mslist_test)
                     
                     painc.append(SE in PSLgroup_khu and se in [1,2])
@@ -397,7 +422,7 @@ print(model.summary())
 
 #%% pathset
 
-settingID = 'model5_20220204_morphine'
+settingID = 'model5_20220207_morphine'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
@@ -438,6 +463,9 @@ for SE in range(N):
     selist = [0]
     if SE in PSLgroup_khu + morphineGroup + KHUsham + GBVX + PDpain + PDnonpain: selist = [0,1]
     if SE in KHU_CFA + PDmorphine + KHU_PSL_magnolin: selist = [0,1,2,3]
+    
+    if SE in [144, 145, 150, 152] + [146, 158] + [151,153,161,162]: selist = [0,1] # PSL + i.p. saline
+    if SE in glucoseGroup: selist = [0,1]
     
     if SE in list(range(247, 273)): selist = [0,1]
 
@@ -1382,6 +1410,22 @@ plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='
 nonpain = mssave2[KHUsham,:2]
 pain = mssave2[morphineGroup+PSLgroup_khu,:2]
 print(msFunction.msROC(nonpain, pain))
+
+
+
+
+nonpain = pd.DataFrame(mssave2[KHUsham,:])
+pain = pd.DataFrame(mssave2[morphineGroup+PSLgroup_khu,:])
+Aprism = pd.concat((nonpain.iloc[:,0], pain.iloc[:,0], nonpain.iloc[:,1], pain.iloc[:,1], nonpain.iloc[:,2], pain.iloc[:,2]), axis=1, ignore_index=True)
+
+
+Aprism2 = np.zeros((3,6)) * np.nan
+Aprism2[:,0] = np.nanmean(np.array(nonpain), axis=0)
+Aprism2[:,1] = scipy.stats.sem(np.array(nonpain), axis=0, nan_policy='omit').data
+Aprism2[:,2] = np.sum(np.isnan(np.array(nonpain))==0, axis=0)
+Aprism2[:,3] = np.nanmean(np.array(pain), axis=0)
+Aprism2[:,4] = scipy.stats.sem(np.array(pain), axis=0, nan_policy='omit').data
+Aprism2[:,5] = np.sum(np.isnan(np.array(pain))==0, axis=0)
 
 #%%
 
