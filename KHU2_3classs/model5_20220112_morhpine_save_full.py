@@ -159,7 +159,7 @@ for SE in range(N):
                 nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4,5,6,7])
                 
                 # GB/VX
-                nonpainc.append(SE in GBVX and se in [0,1,2,3,4,5,6,7])
+                nonpainc.append(SE in GBVX and se in [0,1])
                 
                 if False: # GBVXsw
                     drugc.append(SE in [164,166] and se in [2,3,4,5])
@@ -1221,7 +1221,7 @@ model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
 print(model.summary())
 overwrite = False
 repeat_save = []
-for repeat in range(5): #, 100):
+for repeat in range(2): #, 100):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
