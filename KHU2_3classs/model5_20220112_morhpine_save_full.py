@@ -52,6 +52,8 @@ signalss_raw = np.array(msdata_load['signalss_raw'])
 signalss2 = msdata_load['signalss2']
 movement_syn = msdata_load['movement_syn']
 
+inter_corr = msdata_load['inter_corr']
+
 highGroup = msGroup['highGroup']    # 5% formalin
 midleGroup = msGroup['midleGroup']  # 1% formalin
 lowGroup = msGroup['lowGroup']      # 0.25% formalin
@@ -138,7 +140,9 @@ for SE in range(N):
             if snu_base:
                 nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
                 nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
+                
                 nonpainc.append(SE in pslGroup and se in [0])
+
                 nonpainc.append(SE in shamGroup and se in [0,1,2])
                 nonpainc.append(SE in ipsaline_pslGroup and se in [0])
                 nonpainc.append(SE in ipclonidineGroup and se in [0])
@@ -161,6 +165,8 @@ for SE in range(N):
                 
                 if PSLsw:
                     painc.append(SE in pslGroup and se in [1,2])
+                    painc.append(SE in [70,71,75,76,79] and se in [3,4])
+                    
                     painc.append(SE in ipsaline_pslGroup and se in [1,3])
                     painc.append(SE in [179] and se in [8,9]) # GBVX group내의 pain
                     painc.append(SE in [181] and se in [4,5]) # GBVX group내의 pain
@@ -229,13 +235,17 @@ for SE in range(N):
                     painc.append(SE in [327, 328] and se in [10,11,16,17])
                     painc.append(SE in [329, 330] and se in [10,11,16,17])
                     painc.append(SE in [331] and se in [10,11,16,17])
+                    painc.append(SE in [339] and se in [10,11])
+                    painc.append(SE in [340, 341] and se in [10,11])
                     
                     # i.p. saline
                     painc.append(SE in [325, 326] and se in [12,13,14,15])
                     painc.append(SE in [327, 328] and se in [6,7,8,9])
                     painc.append(SE in [329, 330] and se in [6,7,8,9,18,19,20,21])
                     painc.append(SE in [331] and se in [12,13,14,15])
-                    
+                    painc.append(SE in [339] and se in [12,13,14,15])
+                    painc.append(SE in [340, 341] and se in [6,7,8,9])
+                                       
                     
             if False: # keto analgesic effects
                 drugc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
@@ -256,6 +266,9 @@ for SE in range(N):
                 drugc.append(SE in [327, 328] and se in [12,13,14,15])
                 drugc.append(SE in [329, 330] and se in [12,13,14,15,18,19,20,21])
                 drugc.append(SE in [331] and se in [6,7,8,9,18,19,20,21])
+                drugc.append(SE in [339] and se in [6,7,8,9])
+                drugc.append(SE in [340, 341] and se in [12,13,14,15])
+                
                 pass
             
             if [SE, se] in [[285, 4],[290, 5]]: continue # 시간짧음, movement 불일치
@@ -384,14 +397,14 @@ print(model.summary())
 
 #%% pathset
 
-settingID = 'model5_20220203_morphine'
+settingID = 'model5_20220204_morphine'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
 KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
 KHU_pdpain = KHU_CFA + morphineGroup + KHUsham 
 
-wantedlist = PSLgroup_khu + morphineGroup + KHUsham
+wantedlist = morphineGroup + KHUsham + PSLgroup_khu
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
@@ -533,31 +546,7 @@ for SE in range(N):
                             Y.append(label)
                             Z.append([SE, se])
                                 
-#% feature 추가 생성
-
-savename = 'C:\\SynologyDrive\\2p_data\\' + 'inter_corr.pickle'
-if os.path.isdir('K:\\mscode_m2'): savename = 'K:\\SynologyDrive\\2p_data\\' + 'inter_corr.pickle'
-
-if not(os.path.isfile(savename)):
-    inter_corr = np.zeros((N, MAXSE)) * np.nan
-    for SE in tqdm(range(N)):
-        for se in range(len(signalss_raw[SE])):
-            xdata = np.array(signalss2[SE][se])
-            roiNum = xdata.shape[1]
-            rmatrix = np.zeros((roiNum,roiNum)) * np.nan
-            for ROI in range(roiNum):
-                for ROI2 in range(ROI+1, roiNum):
-                    rmatrix[ROI,ROI2] = scipy.stats.pearsonr(xdata[:,ROI], xdata[:,ROI2])[0]
-            inter_corr[SE,se] = np.nanmean(rmatrix)
-
-    with open(savename, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(inter_corr, f, pickle.HIGHEST_PROTOCOL)
-        print(savename, '저장되었습니다.')
-
-#% 데이터에 feature 추가
-with open(savename, 'rb') as f:  # Python 3: open(..., 'wb')
-    inter_corr = pickle.load(f)
-        
+#% feature 추가 생성    
 for i in range(len(X)):
     SE = Z[i][0]; se = Z[i][1]
     if np.isnan(inter_corr[SE,se]):
@@ -1028,10 +1017,19 @@ if False:
     
     if True:
         xhat = model.predict(X_total)[:,1]
-        
         painset = np.where(Y_total[:,1]==1)[0]
-        realpain = np.where(xhat>0.6)[0]
         
+        # 10%로 최적화
+        ms_thr = 0.6
+        ms_thrsave = []
+        for ms_thr in np.arange(0.4,0.7,0.01):
+            badlabel = np.where(np.logical_and(xhat<ms_thr, Y_total[:,1]==1))[0]
+            ms_ratio = len(badlabel) / len(Y_total)
+            ms_thrsave.append([ms_thr, ms_ratio])
+        ms_thrsave = np.array(ms_thrsave)   
+        
+        mix = np.argmin(np.abs(ms_thrsave[:,1] - 0.1))
+        realpain = np.where(xhat>ms_thrsave[mix,0])[0]
         eix = list(set(list(painset)) - set(list(realpain)))
         Y_total[eix,1] = 0
         vix = np.sum(Y_total, axis=1)>0
@@ -1067,6 +1065,7 @@ if False:
     # ms_report_khu_magnolin(mssave2[:,:,1])
     # msplot_PD(mssave2[:,:,1])
     
+
     savepath = RESULT_SAVE_PATH + 'eix.pickle'
     with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
         pickle.dump(eix, f, pickle.HIGHEST_PROTOCOL)
