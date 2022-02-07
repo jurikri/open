@@ -277,7 +277,7 @@ for SE in range(N):
                 drugc.append(SE in KHU_CFA[7:] and se in [6,7]) # keto 50 mg/kg
                 pass
                 
-            if True: # morhpine analgesic effects
+            if False: # morhpine analgesic effects
                 drugc.append(SE in morphineGroup and se in [10,11,12]) # morphine
                 drugc.append(SE in KHUsham and se in range(10,13)) # morphine
                 pass
@@ -286,7 +286,7 @@ for SE in range(N):
                 drugc.append(SE in KHU_PSL_magnolin and se in [8,9,10,11,12,13]) # morphine
                 pass
             
-            if False:  # PDmorphine analgesic effects
+            if True:  # PDmorphine analgesic effects
                 drugc.append(SE in [325, 326] and se in [6,7,8,9])
                 drugc.append(SE in [327, 328] and se in [12,13,14,15])
                 drugc.append(SE in [329, 330] and se in [12,13,14,15,18,19,20,21])
@@ -422,14 +422,14 @@ print(model.summary())
 
 #%% pathset
 
-settingID = 'model5_20220207_morphine'
+settingID = 'model5_20220207_PD'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
 KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
 KHU_pdpain = KHU_CFA + morphineGroup + KHUsham 
 
-wantedlist = morphineGroup + KHUsham + PSLgroup_khu
+wantedlist = PDpain + PDnonpain + PDmorphine
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
@@ -924,7 +924,7 @@ def msplot_PD(mssave2):
             if SE in PDmorphine and se in [0,1,2,3]:
                 PDmorphine_matrix[ix][0].append(mssave2[SE,se])
             
-            if SE in PDmorphineA and se in [5,6]:
+            if SE in PDmorphineA and se in [4,5]:
                 PDmorphine_matrix[ix][1].append(mssave2[SE,se])
             if SE in PDmorphineA and se in [6,7]:
                 PDmorphine_matrix[ix][3].append(mssave2[SE,se])
@@ -935,7 +935,7 @@ def msplot_PD(mssave2):
             if SE in PDmorphineA and se in [12,13,14,15]:
                 PDmorphine_matrix[ix][6].append(mssave2[SE,se])
                 
-            if SE in PDmorphineB and se in [5,6]:
+            if SE in PDmorphineB and se in [4,5]:
                 PDmorphine_matrix[ix][1].append(mssave2[SE,se])
             if SE in PDmorphineB and se in [6,7,8,9]:
                 PDmorphine_matrix[ix][2].append(mssave2[SE,se])
@@ -952,7 +952,7 @@ def msplot_PD(mssave2):
             if SE in PDmorphineB and se in [20,21]:
                 PDmorphine_matrix[ix][8].append(mssave2[SE,se])
                 
-            if SE in PDmorphineC and se in [5,6]:
+            if SE in PDmorphineC and se in [4,5]:
                 PDmorphine_matrix[ix][1].append(mssave2[SE,se])
             if SE in PDmorphineC and se in [6,7,8,9]:
                 PDmorphine_matrix[ix][2].append(mssave2[SE,se])
@@ -969,7 +969,7 @@ def msplot_PD(mssave2):
             if SE in PDmorphineC and se in [20,21]:
                 PDmorphine_matrix[ix][6].append(mssave2[SE,se])
                 
-            if SE in PDmorphineD and se in [5,6]:
+            if SE in PDmorphineD and se in [4,5]:
                 PDmorphine_matrix[ix][1].append(mssave2[SE,se])
             if SE in PDmorphineD and se in [6,7]:
                 PDmorphine_matrix[ix][3].append(mssave2[SE,se])
@@ -985,6 +985,29 @@ def msplot_PD(mssave2):
                 PDmorphine_matrix[ix][7].append(mssave2[SE,se])
             if SE in PDmorphineD and se in [20,21]:
                 PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+                
+            if SE in [339] and se in [4,5]:
+                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+            if SE in [339] and se in [6,7]:
+                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
+            if SE in [339] and se in [8,9]:
+                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
+            if SE in [339] and se in [10,11]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in [339] and se in [12,13,14,15]:
+                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
+                
+            if SE in [340, 341] and se in [4,5]:
+                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
+            if SE in [340, 341] and se in [6,7,8,9]:
+                PDmorphine_matrix[ix][2].append(mssave2[SE,se])
+            if SE in [340, 341] and se in [10,11]:
+                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
+            if SE in [340, 341] and se in [12,13]:
+                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
+            if SE in [340, 341] and se in [14,15]:
+                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
+                
 
     PDmorphine_matrix2 = np.zeros((len(PDmorphine), visse)) * np.nan
     for ix in range(len(PDmorphine)):
@@ -998,7 +1021,6 @@ def msplot_PD(mssave2):
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
     
-    
     plt.figure()
     msplot = mssave2[PDpain,:]
     msplot_mean = np.nanmean(msplot, axis=0)
@@ -1011,6 +1033,25 @@ def msplot_PD(mssave2):
     plt.plot(msplot_mean, c='b')
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+    
+    #
+    
+    same_days = [[2,3], [4,5], [6,7], [8,9]]
+    mssave3 = np.zeros((N, len(same_days))) * np.nan
+    for i in range(len(same_days)):
+        mssave3[:,i] = np.nanmean(mssave2[:,:,1][:, same_days[i]], axis=1)
+   
+    plt.plot()
+    msplot = mssave3[PDpain,:]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+    
+    msplot = mssave3[PDnonpain,:]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
 
 #%% total tr
 X = np.array(X)
@@ -1083,15 +1124,15 @@ if False:
             tmp = np.nanmean(mssave_total[row][col], axis=0)
             if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp[:2]
             
-    ms_report(mssave2[:,:,1])     
-    msplot = mssave2[:,:,1][PSLgroup_khu,:3]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='orange')
+    # ms_report(mssave2[:,:,1])     
+    # msplot = mssave2[:,:,1][PSLgroup_khu,:3]
+    # msplot_mean = np.nanmean(msplot, axis=0)
+    # e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    # plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='orange')
     
     # ms_report_cfa(mssave2[:,:,1])
     # ms_report_khu_magnolin(mssave2[:,:,1])
-    # msplot_PD(mssave2[:,:,1])
+    msplot_PD(mssave2[:,:,1])
     
 
     savepath = RESULT_SAVE_PATH + 'eix.pickle'
@@ -1307,11 +1348,11 @@ mssave = np.nanmean(np.array(repeat_save), axis=0)
 #%%
 
 # morphine
-ms_report(mssave[:,:,1])
-msplot = mssave[:,:,1][PSLgroup_khu,2:6]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='orange')
+# ms_report(mssave[:,:,1])
+# msplot = mssave[:,:,1][PSLgroup_khu,2:6]
+# msplot_mean = np.nanmean(msplot, axis=0)
+# e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+# plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='orange')
 
 
 # ms_report_2d(mssave, morphineGroup + KHUsham + PSLgroup_khu)
@@ -1320,7 +1361,7 @@ plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='
 # ms_report_cfa(mssave[:,:,1])
 
 # PD
-# msplot_PD(mssave[:,:,1])
+msplot_PD(mssave[:,:,1])
 
 #%% total acc
 msacc = []
