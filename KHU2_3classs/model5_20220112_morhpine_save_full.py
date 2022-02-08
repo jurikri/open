@@ -272,21 +272,21 @@ for SE in range(N):
                     painc.append(SE in [340, 341] and se in [6,7,8,9])
                                        
                     
-            if False: # keto analgesic effects
+            if True: # keto analgesic effects
                 drugc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
                 drugc.append(SE in KHU_CFA[7:] and se in [6,7]) # keto 50 mg/kg
                 pass
                 
-            if False: # morhpine analgesic effects
-                drugc.append(SE in morphineGroup and se in [10,11,12]) # morphine
-                drugc.append(SE in KHUsham and se in range(10,13)) # morphine
+            if True: # morhpine analgesic effects
+                nonpainc.append(SE in morphineGroup and se in [10,11,12]) # morphine
+                nonpainc.append(SE in KHUsham and se in range(10,13)) # morphine
                 pass
             
             if False:  # KHU_PSL_magnolin analgesic effects
                 drugc.append(SE in KHU_PSL_magnolin and se in [8,9,10,11,12,13]) # morphine
                 pass
             
-            if True:  # PDmorphine analgesic effects
+            if False:  # PDmorphine analgesic effects
                 drugc.append(SE in [325, 326] and se in [6,7,8,9])
                 drugc.append(SE in [327, 328] and se in [12,13,14,15])
                 drugc.append(SE in [329, 330] and se in [12,13,14,15,18,19,20,21])
@@ -422,14 +422,14 @@ print(model.summary())
 
 #%% pathset
 
-settingID = 'model5_20220207_PD'
+settingID = 'model5_20220207_keto'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
 KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
 KHU_pdpain = KHU_CFA + morphineGroup + KHUsham 
-
-wantedlist = PDpain + PDnonpain + PDmorphine
+# PDpain + PDnonpain + PDmorphine
+wantedlist = KHU_CFA
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
@@ -604,6 +604,14 @@ for f in range(X.shape[1]):
     # plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
 #%% 검증
+
+def msbarplot(array2d): # 2d arrary (sample x group)
+    x = np.arange(array2d.shape[1])
+    fig, ax = plt.subplots()
+    y = np.nanmean(array2d, axis=0)
+    e = scipy.stats.sem(array2d, axis=0, nan_policy='omit')
+    plt.bar(x, y, yerr=e, align='center', alpha=0.5, ecolor='black', capsize=10)
+
 def ms_report(mssave):
     plt.figure()
     msplot = mssave[morphineGroup,2:]
@@ -818,7 +826,6 @@ def ms_report_cfa(mssave):
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
     
-    
     target_group = list(KHU_CFA_100)
 
     plt.figure()
@@ -826,6 +833,19 @@ def ms_report_cfa(mssave):
     msplot_mean = np.nanmean(msplot, axis=0)
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
+    
+    # savefig
+    same_days = [[0,1,2,3], [4,5], [6,7], [8,9],[10,11],[12,13]]
+    mssave3 = np.zeros((N, len(same_days))) * np.nan
+    for i in range(len(same_days)):
+        mssave3[KHU_CFA_50,i] = np.nanmean(mssave[KHU_CFA_50,:][:, same_days[i]], axis=1)
+    msbarplot(mssave3)
+    
+    same_days = [[0,1,2,3], [4,5], [6,7], [8,9,10]]
+    mssave3 = np.zeros((N, len(same_days))) * np.nan
+    for i in range(len(same_days)):
+        mssave3[KHU_CFA_100,i] = np.nanmean(mssave[KHU_CFA_100,:][:, same_days[i]], axis=1)
+    msbarplot(mssave3)
     
 def ms_report_snu_chronic(mssave):
     msplot = mssave[shamGroup,1:3]
@@ -1130,9 +1150,9 @@ if False:
     # e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     # plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='orange')
     
-    # ms_report_cfa(mssave2[:,:,1])
+    ms_report_cfa(mssave2[:,:,1])
     # ms_report_khu_magnolin(mssave2[:,:,1])
-    msplot_PD(mssave2[:,:,1])
+    # msplot_PD(mssave2[:,:,1])
     
 
     savepath = RESULT_SAVE_PATH + 'eix.pickle'
@@ -1262,7 +1282,7 @@ model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
 print(model.summary())
 overwrite = False
 repeat_save = []
-for repeat in range(2): #, 100):
+for repeat in range(10): #, 100):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
@@ -1358,10 +1378,10 @@ mssave = np.nanmean(np.array(repeat_save), axis=0)
 # ms_report_2d(mssave, morphineGroup + KHUsham + PSLgroup_khu)
 
 # cfa
-# ms_report_cfa(mssave[:,:,1])
+ms_report_cfa(mssave[:,:,1])
 
 # PD
-msplot_PD(mssave[:,:,1])
+# msplot_PD(mssave[:,:,1])
 
 #%% total acc
 msacc = []
