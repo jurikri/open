@@ -161,7 +161,7 @@ for SE in range(N):
                 # GB/VX
                 nonpainc.append(SE in GBVX and se in [0,1])
                 
-                if True: # GBVXsw
+                if False: # GBVXsw
                     drugc.append(SE in [164,166] and se in [2,3,4,5])
                     drugc.append(SE in [165] and se in [2,3])
                     drugc.append(SE in [167] and se in [4,5,6,7])
@@ -200,15 +200,6 @@ for SE in range(N):
                     # oxali
                     painc.append(SE in oxaliGroup and se in [2,3])
                     painc.append(SE in [192, 194, 196, 202, 220, 198] and se in [4,5])
-                    
-            if False: # GBVX analgesic effect
-                # nonpainc.append(SE in [164, 166] and se in [2,3,4,5]) # GBVX
-                # nonpainc.append(SE in [167] and se in [4,5,6,7]) # GBVX
-                # nonpainc.append(SE in [172] and se in [4,5,7,8]) # GBVX
-                # nonpainc.append(SE in [174] and se in [4,5]) # GBVX
-                # nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11]) # GBVX
-                pass
-                    
 
             if khu_base:  
                 # khu formalin
@@ -277,7 +268,7 @@ for SE in range(N):
                 drugc.append(SE in KHU_CFA[7:] and se in [6,7]) # keto 50 mg/kg
                 pass
                 
-            if False: # morhpine analgesic effects
+            if True: # morhpine analgesic effects
                 drugc.append(SE in morphineGroup and se in [10,11,12]) # morphine
                 drugc.append(SE in KHUsham and se in range(10,13)) # morphine
                 pass
@@ -422,14 +413,14 @@ print(model.summary())
 
 #%% pathset
 
-settingID = 'model5_20220208_GBVX'
+settingID = 'model5_20220208_oxaliplatin'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
 KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
 KHU_pdpain = KHU_CFA + morphineGroup + KHUsham 
 # PDpain + PDnonpain + PDmorphine
-wantedlist = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup
+wantedlist = oxaliGroup + glucoseGroup
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
@@ -465,7 +456,7 @@ for SE in range(N):
     if SE in KHU_CFA + PDmorphine + KHU_PSL_magnolin: selist = [0,1,2,3]
     
     if SE in [144, 145, 150, 152] + [146, 158] + [151,153,161,162]: selist = [0,1] # PSL + i.p. saline
-    if SE in glucoseGroup: selist = [0,1]
+    if SE in oxaliGroup + glucoseGroup: selist = [0,1]
     
     if SE in list(range(247, 273)): selist = [0,1]
 
@@ -603,501 +594,6 @@ for f in range(X.shape[1]):
     # e = [np.std(X[nonpain,f]), np.std(X[pain,f])]
     # plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
-#%% 검증
-
-def msbarplot(array2d): # 2d arrary (sample x group)
-    x = np.arange(array2d.shape[1])
-    fig, ax = plt.subplots()
-    y = np.nanmean(array2d, axis=0)
-    e = scipy.stats.sem(array2d, axis=0, nan_policy='omit')
-    plt.bar(x, y, yerr=e, align='center', alpha=0.5, ecolor='black', capsize=10)
-
-def ms_report(mssave):
-    mssave_p = np.array(mssave)
-    plt.figure()
-    msplot = mssave_p[morphineGroup,2:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-    
-    msplot = mssave_p[KHUsham,2:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-    
-    msplot = mssave_p[PSLgroup_khu,2:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='orange')
-    
-    #SS
-    same_days = [[2,3,4,5],[6,7,8,9],[10,11,12]]
-    target = morphineGroup
-    mssave3 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave3[target,i] = np.nanmean(mssave_p[target,:][:, same_days[i]], axis=1)
-    msbarplot(mssave3)
-    prismout = pd.DataFrame(mssave3[target])
-    
-    
-    same_days = [[2,3,4,5],[6,7,8,9],[10,11,12]]
-    target = KHUsham
-    mssave3 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave3[target,i] = np.nanmean(mssave_p[target,:][:, same_days[i]], axis=1)
-    msbarplot(mssave3)
-    prismout = pd.concat((prismout, pd.DataFrame(mssave3[target])), axis=1, ignore_index=True)
-    
-    same_days = [[2,3],[4,5]]
-    target = PSLgroup_khu
-    mssave3 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave3[target,i] = np.nanmean(mssave_p[target,:][:, same_days[i]], axis=1)
-    msbarplot(mssave3)
-    prismout = pd.concat((prismout, pd.DataFrame(mssave3[target])), axis=0, ignore_index=True)
-    return prismout
-    
-def ms_report_2d(mssave, target):
-    def ms_2dscatter(x,y,c):
-        plt.scatter(np.nanmean(x), np.nanmean(y), c=c)
-        plt.errorbar(np.nanmean(x), np.nanmean(y), yerr=scipy.stats.sem(x, nan_policy='omit'), fmt="o", c=c)
-        plt.errorbar(np.nanmean(x), np.nanmean(y), xerr=scipy.stats.sem(y, nan_policy='omit'), fmt="o", c=c)
-
-    
-    plt.figure()
-    x_pain, x_nonpain, x_drug = [], [], []
-    y_pain, y_nonpain, y_drug = [], [], []
-    for SE in target:
-        for se in range(MAXSE):
-            if [SE, se] in group_pain_training: 
-                y_pain.append(mssave[SE,se,:][0])
-                x_pain.append(mssave[SE,se,:][1])
-                
-            if [SE, se] in group_nonpain_training: 
-                y_nonpain.append(mssave[SE,se,:][0])
-                x_nonpain.append(mssave[SE,se,:][1])
-                
-            if [SE, se] in group_drug_training: 
-                y_drug.append(mssave[SE,se,:][0])
-                x_drug.append(mssave[SE,se,:][1])
-                
-    x = list(x_pain)
-    y = list(y_pain)
-    c = 'r'
-    ms_2dscatter(x,y,c)
-    
-    x = list(x_nonpain)
-    y = list(y_nonpain)
-    c = 'b'
-    ms_2dscatter(x,y,c)
-    
-    x = list(x_drug)
-    y = list(y_drug)
-    c = 'g'
-    ms_2dscatter(x,y,c)
-    
-def ms_report_2d_mice(mssave, target):
-
-    plt.figure()
-    xydata = np.zeros((2,3,N,MAXSE)) * np.nan
-    for SE in target:
-        for se in range(MAXSE):
-            if [SE, se] in group_pain_training: 
-                xydata[1,0,SE,se] = mssave[SE,se,:][0]
-                xydata[0,0,SE,se] = mssave[SE,se,:][1]
-                
-            if [SE, se] in group_nonpain_training: 
-                xydata[1,1,SE,se] = mssave[SE,se,:][0]
-                xydata[0,1,SE,se] = mssave[SE,se,:][1]
-                
-            if [SE, se] in group_drug_training: 
-                xydata[1,2,SE,se] = mssave[SE,se,:][0]
-                xydata[0,2,SE,se] = mssave[SE,se,:][1]
-    
-    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
-    plt.scatter(x, y, c='r')
-    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
-    plt.scatter(x, y, c='b')
-    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
-    plt.scatter(x, y, c='g')
- 
-def ms_report_magnolin(mssave, target):
-    plt.figure()
-    xydata = np.zeros((2,5,N,MAXSE)) * np.nan
-    for SE in target:
-        for se in range(MAXSE):
-            if se in [0,1,2,3]:
-                xydata[1,0,SE,se] = mssave[SE,se,:][0]
-                xydata[0,0,SE,se] = mssave[SE,se,:][1]
-                
-            if se in [4,5,6,7]:
-                xydata[1,1,SE,se] = mssave[SE,se,:][0]
-                xydata[0,1,SE,se] = mssave[SE,se,:][1]
-                
-            if se in [8,9]:
-                xydata[1,2,SE,se] = mssave[SE,se,:][0]
-                xydata[0,2,SE,se] = mssave[SE,se,:][1]
-                
-            if se in [10,11]:
-                xydata[1,3,SE,se] = mssave[SE,se,:][0]
-                xydata[0,3,SE,se] = mssave[SE,se,:][1]
-                
-            if se in [12,13]:
-                xydata[1,4,SE,se] = mssave[SE,se,:][0]
-                xydata[0,4,SE,se] = mssave[SE,se,:][1]
-    
-    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='b')
-    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='r')
-    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='g')
-    x = msFunction.nanex(np.nanmean(xydata[0,3,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,3,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='k')
-    x = msFunction.nanex(np.nanmean(xydata[0,4,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,4,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='y')
-    
-def ms_report_morphine(mssave):
-    plt.figure()
-    xydata = np.zeros((2,5,N,MAXSE)) * np.nan
-    for SE in range(N):
-        for se in range(MAXSE):
-            if SE in KHUsham and se in [2,3,4,5]:
-                xydata[1,0,SE,se] = mssave[SE,se,:][0]
-                xydata[0,0,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in KHUsham and se in [6,7,8,9]:
-                xydata[1,1,SE,se] = mssave[SE,se,:][0]
-                xydata[0,1,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in morphineGroup and se in [2,3,4,5]:
-                xydata[1,2,SE,se] = mssave[SE,se,:][0]
-                xydata[0,2,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in morphineGroup and se in [6,7,8,9]:
-                xydata[1,3,SE,se] = mssave[SE,se,:][0]
-                xydata[0,3,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in morphineGroup and se in [10,11,12]:
-                xydata[1,4,SE,se] = mssave[SE,se,:][0]
-                xydata[0,4,SE,se] = mssave[SE,se,:][1]
-    
-    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='b')
-    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='r')
-    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='g')
-    x = msFunction.nanex(np.nanmean(xydata[0,3,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,3,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='k')
-    x = msFunction.nanex(np.nanmean(xydata[0,4,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,4,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='y')
-
-def ms_report_morphine(mssave):
-    plt.figure()
-    xydata = np.zeros((2,5,N,MAXSE)) * np.nan
-    for SE in range(N):
-        for se in range(MAXSE):
-            if SE in KHUsham and se in [2,3,4,5]:
-                xydata[1,0,SE,se] = mssave[SE,se,:][0]
-                xydata[0,0,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in KHUsham and se in [6,7,8,9]:
-                xydata[1,1,SE,se] = mssave[SE,se,:][0]
-                xydata[0,1,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in morphineGroup and se in [2,3,4,5]:
-                xydata[1,2,SE,se] = mssave[SE,se,:][0]
-                xydata[0,2,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in morphineGroup and se in [6,7,8,9]:
-                xydata[1,3,SE,se] = mssave[SE,se,:][0]
-                xydata[0,3,SE,se] = mssave[SE,se,:][1]
-                
-            if SE in morphineGroup and se in [10,11,12]:
-                xydata[1,4,SE,se] = mssave[SE,se,:][0]
-                xydata[0,4,SE,se] = mssave[SE,se,:][1]
-    
-    x = msFunction.nanex(np.nanmean(xydata[0,0,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,0,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='b')
-    x = msFunction.nanex(np.nanmean(xydata[0,1,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,1,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='r')
-    x = msFunction.nanex(np.nanmean(xydata[0,2,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,2,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='g')
-    x = msFunction.nanex(np.nanmean(xydata[0,3,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,3,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='k')
-    x = msFunction.nanex(np.nanmean(xydata[0,4,:,:], axis=1))
-    y = msFunction.nanex(np.nanmean(xydata[1,4,:,:], axis=1))
-    plt.scatter(np.mean(x), np.mean(y), c='y')  
-
-def ms_report_cfa(mssave):
-    KHU_CFA_100 = KHU_CFA[:7]
-    KHU_CFA_50 = KHU_CFA[7:]
-
-    target_group = list(KHU_CFA_50)
-
-    plt.figure()
-    msplot = mssave[target_group,0:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-    
-    target_group = list(KHU_CFA_100)
-
-    plt.figure()
-    msplot = mssave[target_group,0:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-    
-    # savefig
-    same_days = [[0,1,2,3], [4,5], [6,7], [8,9],[10,11],[12,13]]
-    mssave3 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave3[KHU_CFA_50,i] = np.nanmean(mssave[KHU_CFA_50,:][:, same_days[i]], axis=1)
-    msbarplot(mssave3)
-    
-    same_days = [[0,1,2,3], [4,5], [6,7], [8,9,10]]
-    mssave3 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave3[KHU_CFA_100,i] = np.nanmean(mssave[KHU_CFA_100,:][:, same_days[i]], axis=1)
-    msbarplot(mssave3)
-    
-def ms_report_snu_chronic(mssave):
-    msplot = mssave[shamGroup,1:3]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-    msplot = mssave[pslGroup,1:3]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-    msplot = mssave[ipsaline_pslGroup + ipclonidineGroup,:][:,[1,3]]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
-
-
-    GBVX_nonpain_d3, GBVX_nonpain_d10 = [], []
-    for SE in [164, 166, 167, 172, 174, 177, 179, 181]:
-        d3c, d10c = [], []
-        for se in range(12):
-            d10c.append(SE in [164, 165, 166] and se in [2,3])
-            
-            d3c.append(SE in [167] and se in [4,5])
-            d10c.append(SE in [167] and se in [6,7])
-            
-            d3c.append(SE in [172] and se in [4,5])
-            d10c.append(SE in [172] and se in [8,9])
-            
-            d3c.append(SE in [174] and se in [4,5])
-            
-            d3c.append(SE in [177,179,181] and se in [2,3])
-            d10c.append(SE in [177,179] and se in [6,7])
-
-            if np.sum(np.array(d3c)) > 0: GBVX_nonpain_d3.append(mssave[SE,se])
-            if np.sum(np.array(d10c)) > 0: GBVX_nonpain_d10.append(mssave[SE,se])
-            
-        
-    GBVX_nonpain_d3 = msFunction.nanex(GBVX_nonpain_d3)
-    GBVX_nonpain_d10 = msFunction.nanex(GBVX_nonpain_d10)
-
-    msplot = np.zeros((50, 2)) * np.nan
-    msplot[:len(GBVX_nonpain_d3),0] = GBVX_nonpain_d3
-    msplot[:len(GBVX_nonpain_d10),1] = GBVX_nonpain_d10
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
-
-    #%SNU oxaliplatin
-    plt.figure()
-    msplot = mssave[oxaliGroup,1:3]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-    msplot = mssave[glucoseGroup,1:3]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-    
-def ms_report_khu_magnolin(mssave):    
-    plt.figure()
-    msplot = mssave[KHU_PSL_magnolin,:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-    
-    #
-    same_days = [[0,1,2,3],[4,5,6,7],[8,9],[10,11],[12,13]]
-    target = KHU_PSL_magnolin
-    mssave3 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave3[target,i] = np.nanmean(mssave[target,:][:, same_days[i]], axis=1)
-    msbarplot(mssave3)
-
-def msplot_PD(mssave2):
-    PDmorphineA = [325, 326]
-    PDmorphineB = [327, 328]
-    PDmorphineC = [329, 330]
-    PDmorphineD = [331]
-    
-    visse = 9
-    PDmorphine_matrix = msFunction.msarray([len(PDmorphine), visse])
-    
-    for ix, SE in enumerate(PDmorphine):
-        for se in range(MAXSE):
-            if SE in PDmorphine and se in [0,1,2,3]:
-                PDmorphine_matrix[ix][0].append(mssave2[SE,se])
-            
-            if SE in PDmorphineA and se in [4,5]:
-                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-            if SE in PDmorphineA and se in [6,7]:
-                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
-            if SE in PDmorphineA and se in [8,9]:
-                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
-            if SE in PDmorphineA and se in [10,11]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in PDmorphineA and se in [12,13,14,15]:
-                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-                
-            if SE in PDmorphineB and se in [4,5]:
-                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-            if SE in PDmorphineB and se in [6,7,8,9]:
-                PDmorphine_matrix[ix][2].append(mssave2[SE,se])
-            if SE in PDmorphineB and se in [10,11]:
-                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-            if SE in PDmorphineB and se in [12,13]:
-                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
-            if SE in PDmorphineB and se in [14,15]:
-                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
-            if SE in PDmorphineB and se in [16,17]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in PDmorphineB and se in [18,19]:
-                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
-            if SE in PDmorphineB and se in [20,21]:
-                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
-                
-            if SE in PDmorphineC and se in [4,5]:
-                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-            if SE in PDmorphineC and se in [6,7,8,9]:
-                PDmorphine_matrix[ix][2].append(mssave2[SE,se])
-            if SE in PDmorphineC and se in [10,11]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in PDmorphineC and se in [12,13]:
-                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
-            if SE in PDmorphineC and se in [14,15]:
-                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
-            if SE in PDmorphineC and se in [16,17]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in PDmorphineC and se in [18,19]:
-                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-            if SE in PDmorphineC and se in [20,21]:
-                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-                
-            if SE in PDmorphineD and se in [4,5]:
-                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-            if SE in PDmorphineD and se in [6,7]:
-                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
-            if SE in PDmorphineD and se in [8,9]:
-                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
-            if SE in PDmorphineD and se in [10,11]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in PDmorphineD and se in [12,13,14,15]:
-                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-            if SE in PDmorphineD and se in [16,17]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in PDmorphineD and se in [18,19]:
-                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
-            if SE in PDmorphineD and se in [20,21]:
-                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
-                
-            if SE in [339] and se in [4,5]:
-                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-            if SE in [339] and se in [6,7]:
-                PDmorphine_matrix[ix][3].append(mssave2[SE,se])
-            if SE in [339] and se in [8,9]:
-                PDmorphine_matrix[ix][4].append(mssave2[SE,se])
-            if SE in [339] and se in [10,11]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in [339] and se in [12,13,14,15]:
-                PDmorphine_matrix[ix][6].append(mssave2[SE,se])
-                
-            if SE in [340, 341] and se in [4,5]:
-                PDmorphine_matrix[ix][1].append(mssave2[SE,se])
-            if SE in [340, 341] and se in [6,7,8,9]:
-                PDmorphine_matrix[ix][2].append(mssave2[SE,se])
-            if SE in [340, 341] and se in [10,11]:
-                PDmorphine_matrix[ix][5].append(mssave2[SE,se])
-            if SE in [340, 341] and se in [12,13]:
-                PDmorphine_matrix[ix][7].append(mssave2[SE,se])
-            if SE in [340, 341] and se in [14,15]:
-                PDmorphine_matrix[ix][8].append(mssave2[SE,se])
-                
-
-    PDmorphine_matrix2 = np.zeros((len(PDmorphine), visse)) * np.nan
-    for ix in range(len(PDmorphine)):
-        for se in range(visse):
-            PDmorphine_matrix2[ix,se] = np.mean(PDmorphine_matrix[ix][se])
-    
-    plt.figure()
-    plt.plot(np.nanmean(PDmorphine_matrix2, axis=0))
-    msplot = PDmorphine_matrix2
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-    
-    plt.figure()
-    msplot = mssave2[PDpain,:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    plt.plot(msplot_mean, c='r')
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-    
-    msplot = mssave2[PDnonpain,:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    plt.plot(msplot_mean, c='b')
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-    
-    #
-    
-    same_days = [[2,3], [4,5], [6,7], [8,9]]
-    mssave3 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave3[:,i] = np.nanmean(mssave2[:,:,1][:, same_days[i]], axis=1)
-   
-    plt.plot()
-    msplot = mssave3[PDpain,:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-    
-    msplot = mssave3[PDnonpain,:]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-
 #%% total tr
 X = np.array(X)
 Y = np.array(Y)
@@ -1169,12 +665,11 @@ if False:
             tmp = np.nanmean(mssave_total[row][col], axis=0)
             if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp[:2]
             
-    ms_report(mssave2[:,:,1])     
-    # ms_report_cfa(mssave2[:,:,1])
-    # ms_report_khu_magnolin(mssave2[:,:,1])
-    # msplot_PD(mssave2[:,:,1])
-    
+    #
+    import twophoton_pain_visualization as vis
+    vis.msreport_SNU_oxaliplatin(mssave2[:,:,1])
 
+    #
     savepath = RESULT_SAVE_PATH + 'eix.pickle'
     with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
         pickle.dump(eix, f, pickle.HIGHEST_PROTOCOL)
@@ -1386,10 +881,15 @@ mssave = np.nanmean(np.array(repeat_save), axis=0)
 
 
 #%%
+msresult = mssave[:,:,1]
+
+
+
+vis.msreport_SNU_oxaliplatin(mssave[:,:,1])
 
 # morphine
-Aprism = ms_report(mssave[:,:,2])
-
+# Aprism = ms_report(mssave[:,:,2])
+msreport_SNU_pslGBVX(mssave2[:,:,1])
 # ms_report_2d(mssave, morphineGroup + KHUsham + PSLgroup_khu)
 
 # cfa
