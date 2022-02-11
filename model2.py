@@ -330,35 +330,7 @@ if False:
     model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
     hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
 
-    if True:
-        xhat = model.predict(X_total)[:,1]
-        painset = np.where(Y_total[:,1]==1)[0]
-        
-        # 10%로 최적화
-        ms_thr = 0.6
-        ms_thrsave = []
-        for ms_thr in np.arange(0.4,0.7,0.01):
-            badlabel = np.where(np.logical_and(xhat<ms_thr, Y_total[:,1]==1))[0]
-            ms_ratio = len(badlabel) / len(Y_total)
-            ms_thrsave.append([ms_thr, ms_ratio])
-        ms_thrsave = np.array(ms_thrsave)   
-        
-        mix = np.argmin(np.abs(ms_thrsave[:,1] - 0.1))
-        realpain = np.where(xhat>ms_thrsave[mix,0])[0]
-        eix = list(set(list(painset)) - set(list(realpain)))
-        Y_total[eix,1] = 0
-        vix = np.sum(Y_total, axis=1)>0
-        X_total = X_total[vix]; Y_total = Y_total[vix]; Z_total = Z_total[vix]
-
-        print(len(Y_total), np.mean(Y_total, axis=0))
-        X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total, verbose=0)
-        print(len(Y_total), np.mean(Y_total, axis=0))
-                 
-        model = keras_setup(lr=lr, seed=0, add_fn=X_total.shape[1], layer_1=layer_1, \
-                            batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
-        hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
-        
-    X2 = pca.transform(X)
+    X2 = X
     xhat = model.predict(X2)
     mssave_total = msFunction.msarray([N,MAXSE])
     for i in range(len(Z)):
@@ -370,10 +342,8 @@ if False:
     for row in range(N):
         for col in range(MAXSE):
             tmp = np.nanmean(mssave_total[row][col], axis=0)
-            if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp[:2]
+            if not(np.isnan(np.mean(tmp))): mssave2[row, col] = tmp[1]
             
-    #
-   
     plt.figure()
     msplot = mssave2[:,:,1][highGroup + midleGroup + highGroup2,:4]
     msplot_mean = np.nanmean(msplot, axis=0)
@@ -389,20 +359,7 @@ if False:
     msplot_mean = np.nanmean(msplot, axis=0)
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
-    
-    #
-    savepath = RESULT_SAVE_PATH + 'eix.pickle'
-    with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(eix, f, pickle.HIGHEST_PROTOCOL)
-        print(savepath, '저장되었습니다.')
-    import sys; sys.exit()   
-    
-else:
-    #% dataload
-    savepath = RESULT_SAVE_PATH + 'eix.pickle'
-    with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
-        eix = pickle.load(f)
-        
+
 #%% cv 생성
 X = np.array(X); # X_nonlabel = np.array(X_nonlabel)
 Y = np.array(Y)
@@ -427,15 +384,6 @@ def SEse_find(Z=None, Y=None, SE=None, se=None):
         else: return []
     else: return []
 
-#%% intra subject
-if False:
-    cvlist = []
-    for SE in wantedlist:
-        for se in range(MAXSE):
-            i = SEse_find(Z=Z_vix, SE=SE, se=se)
-            if len(i) > 0: cvlist.append(i)
-    print('len(cvlist)', len(cvlist))
-#%% between subject
 if True:
     cvlist = []
     for SE in wantedlist:
@@ -446,69 +394,6 @@ if True:
         cvlist.append([cvlist_tmp, SE])
     print('len(cvlist)', len(cvlist))
 cvlist = np.array(cvlist)
-#%% intra-subejct - day cv
-if False:
-    cvlist = []
-    for SE in range(N):
-        if (SE < 247 or SE in PSLgroup_khu) and not(SE in GBVX):
-            for se in range(len(signalss_raw[SE])):
-                i = SEse_find(Z=Z_vix, SE=SE, se=se)
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in GBVX: # nonpain만 사용하는경우 - baseline data가 안나오므로 무효할듯?
-            i0 = SEse_find(Z=Z_vix, SE=SE, se=0)
-            i1 = SEse_find(Z=Z_vix, SE=SE, se=1)
-            i = i0+i1
-            if len(i) > 0: 
-                import sys; sys.exit()
-                cvlist.append(i)
-                
-        elif SE >= 247 and SE < 273:
-            for se in range(3):
-                i = SEse_find(Z=Z_vix, SE=SE, se=se)
-                if len(i) > 0: cvlist.append(i)
-            
-            i0 = SEse_find(Z=Z_vix, SE=SE, se=3)
-            i1 = SEse_find(Z=Z_vix, SE=SE, se=4)
-            i = i0+i1
-            if len(i) > 0: cvlist.append(i)
-            
-        elif SE in PDpain + PDnonpain + KHU_CFA:
-            for se in list(range(0,len(signalss_raw[SE]),2)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i = i0+i1
-                if SE in [312, 313] and se == 8:
-                    i0 = SEse_find(Z=Z_vix, SE=SE, se=8)
-                    i1 = SEse_find(Z=Z_vix, SE=SE, se=9)
-                    i2 = SEse_find(Z=Z_vix, SE=SE, se=10)
-                    i = i0+i1+i2
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in morphineGroup + KHUsham:
-            for se in list(range(2,len(signalss_raw[SE]),4)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i2 = SEse_find(Z=Z_vix, SE=SE, se=se+2)
-                i3 = SEse_find(Z=Z_vix, SE=SE, se=se+3)
-                i = i0+i1+i2+i3
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in PDmorphine: # nonpain만 사용하는경우
-            for se in list(range(0, 4, 2)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i = i0+i1
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in KHU_PSL_magnolin: # nonpain만 사용하는경우
-            for se in list(range(0, 8, 2)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i = i0+i1
-                if len(i) > 0: cvlist.append(i)
-                
-        else: print(SE, 'is not allocated')
 
 #%% cv training
 tr_graph_save = msFunction.msarray([len(cvlist), 4])
