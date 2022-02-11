@@ -126,30 +126,30 @@ for SE in range(N):
             # snu
             GBVX = [164, 165, 166, 167, 172, 174, 177, 179, 181]
 
-            nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
-            nonpainc.append(SE in capsaicinGroup + CFAgroup and se in [0])
+            nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 + lidocaineGroup and se in [0,2])
+            # nonpainc.append(SE in capsaicinGroup + CFAgroup and se in [0])
             nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
             
-            nonpainc.append(SE in pslGroup and se in [0])
-            nonpainc.append(SE in shamGroup and se in [0,1,2])
+            # nonpainc.append(SE in pslGroup and se in [0])
+            # nonpainc.append(SE in shamGroup and se in [0,1,2])
             
-            nonpainc.append(SE in [141, 142, 143] and se in [0]) # PSL + i.p. saline - group1
-            nonpainc.append(SE in [144, 145, 150, 152] and se in [0,1]) # PSL + i.p. saline - group2
-            nonpainc.append(SE in [146, 158] and se in [0,1]) # PSL + i.p. saline - group2
-            nonpainc.append(SE in [151,153,161,162] and se in [0,1]) # PSL + i.p. clonidine
+            # nonpainc.append(SE in [141, 142, 143] and se in [0]) # PSL + i.p. saline - group1
+            # nonpainc.append(SE in [144, 145, 150, 152] and se in [0,1]) # PSL + i.p. saline - group2
+            # nonpainc.append(SE in [146, 158] and se in [0,1]) # PSL + i.p. saline - group2
+            # nonpainc.append(SE in [151,153,161,162] and se in [0,1]) # PSL + i.p. clonidine
             
-            # oxali
-            nonpainc.append(SE in oxaliGroup and se in [0, 1])
-            nonpainc.append(SE in [188, 200] and se in [4, 5])
-            nonpainc.append(SE in [192, 194, 196, 202, 220] and se in [6, 7])
+            # # oxali
+            # nonpainc.append(SE in oxaliGroup and se in [0, 1])
+            # nonpainc.append(SE in [188, 200] and se in [4, 5])
+            # nonpainc.append(SE in [192, 194, 196, 202, 220] and se in [6, 7])
             
-            # glucose
-            nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4,5,6,7])
+            # # glucose
+            # nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4,5,6,7])
             
             # GB/VX
-            nonpainc.append(SE in GBVX and se in [0,1])
+            # nonpainc.append(SE in GBVX and se in [0,1])
 
-            painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [3])
+            painc.append(SE in highGroup + midleGroup + highGroup2 and se in [3])
             
             drugc.append(SE in ketoGroup + lidocaineGroup and se in [3])
             
@@ -191,17 +191,19 @@ def keras_setup(lr=1e-3, xin=None, seed=0, l2_rate=0, layer_1=10, n_hidden=10, d
     
     input1 = tf.keras.layers.Input(shape=(xin.shape)) # 각 병렬 layer shape에 따라 input 받음
     input2 = Bidirectional(LSTM(n_hidden))(input1) # biRNN -> 시계열에서 단일 value로 나감
+    input2 = BatchNormalization()(input2)
+
     input2 = Dense(layer_1, kernel_initializer = init, activation='relu')(input2) # fully conneted layers, relu
+    input2 = BatchNormalization()(input2)
     input2 = Dropout(dropout_rate1)(input2) # dropout
     
     added = input2
 
     merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(added) # fully conneted layers, relu
+    merge_1 = BatchNormalization()(merge_1)
     merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
-    merge_2 = Dense(2, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
-    # merge_3 = Dense(2, input_dim=2)(merge_2) # regularization 삭제
-    # merge_4 = Activation('softmax')(merge_3) # activation as softmax function
-    
+    merge_2 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
+    merge_2 = BatchNormalization()(merge_2)
     merge_4 = Dense(2, kernel_initializer = init, activation='softmax')(merge_2)
     
     model = tf.keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
@@ -249,8 +251,6 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, verbose=0):
             print('data set num #', len(Y), np.mean(np.array(Y), axis=0))
     return X, Y, Z
 
-model = keras_setup(lr=lr, seed=0, add_fn=2, layer_1=layer_1, layer_2=layer_1)
-print(model.summary())
 
 #%% pathset
 
@@ -316,49 +316,48 @@ X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
 X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
 print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
 
-
-
-epochs = 3000 # 30
-layer_1 = 10; 
-n_hidden = 10
+epochs = 1500 # 30
+layer_1 = 5; 
+n_hidden = 5
 dropout_rate1 = 0.1
 dropout_rate2 = 0
 l2_rate = 0
-#%% overfit
-if False:
     
-    model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
-    hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
+model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
+print(model.summary())
+#%%
 
-    X2 = X
-    xhat = model.predict(X2)
-    mssave_total = msFunction.msarray([N,MAXSE])
-    for i in range(len(Z)):
-        teSE = Z[i][0]
-        tese = Z[i][1]
-        mssave_total[teSE][tese].append(xhat[i])
-    
-    mssave2 = np.zeros((N,MAXSE,2)) * np.nan
-    for row in range(N):
-        for col in range(MAXSE):
-            tmp = np.nanmean(mssave_total[row][col], axis=0)
-            if not(np.isnan(np.mean(tmp))): mssave2[row, col] = tmp[1]
-            
-    plt.figure()
-    msplot = mssave2[:,:,1][highGroup + midleGroup + highGroup2,:4]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-    
-    msplot = mssave2[:,:,1][ketoGroup,:4]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
-    
-    msplot = mssave2[:,:,1][lidocaineGroup,:4]
-    msplot_mean = np.nanmean(msplot, axis=0)
-    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
+hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
+
+X2 = X
+xhat = model.predict(X2)
+mssave_total = msFunction.msarray([N,MAXSE])
+for i in range(len(Z)):
+    teSE = Z[i][0]
+    tese = Z[i][1]
+    mssave_total[teSE][tese].append(xhat[i])
+
+mssave2 = np.zeros((N,MAXSE,2)) * np.nan
+for row in range(N):
+    for col in range(MAXSE):
+        tmp = np.nanmean(mssave_total[row][col], axis=0)
+        if not(np.isnan(np.mean(tmp))): mssave2[row, col] = tmp[1]
+        
+plt.figure()
+msplot = mssave2[:,:,1][highGroup + midleGroup + highGroup2,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+
+msplot = mssave2[:,:,1][ketoGroup,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
+
+# msplot = mssave2[:,:,1][lidocaineGroup,:5]
+# msplot_mean = np.nanmean(msplot, axis=0)
+# e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+# plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
 
 #%% cv 생성
 X = np.array(X); # X_nonlabel = np.array(X_nonlabel)
@@ -371,10 +370,10 @@ X_vix = np.array(X[vix]); Y_vix = np.array(Y[vix]); Z_vix = np.array(Z[vix])
 X_vix, Y_vix, Z_vix = upsampling(X_vix, Y_vix, Z_vix, verbose=0)
 tnum = len(Y_vix)
 
-Y_vix[eix,1] = 0
-vix = np.sum(Y_vix, axis=1)>0
-X_vix = X_vix[vix]; Y_vix = Y_vix[vix]; Z_vix = Z_vix[vix]
-print('excluded ratio', 1 - (len(Y_vix)/tnum))
+# Y_vix[eix,1] = 0
+# vix = np.sum(Y_vix, axis=1)>0
+# X_vix = X_vix[vix]; Y_vix = Y_vix[vix]; Z_vix = Z_vix[vix]
+# print('excluded ratio', 1 - (len(Y_vix)/tnum))
 
 def SEse_find(Z=None, Y=None, SE=None, se=None):
     if SE in wantedlist:
@@ -399,13 +398,12 @@ cvlist = np.array(cvlist)
 tr_graph_save = msFunction.msarray([len(cvlist), 4])
 
 # X2 = pca.transform(X)
-model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
-                    batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
+model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
     
 print(model.summary())
-overwrite = True
+overwrite = False
 repeat_save = []
-for repeat in range(10): #, 100):
+for repeat in range(1): #, 100):
     ### outsample test
     print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
     mssave = msFunction.msarray([N,MAXSE])
@@ -419,12 +417,7 @@ for repeat in range(10): #, 100):
             X_tr = X_vix[trlist]; X_te = X_vix[telist]
             Y_tr = Y_vix[trlist]; Y_te = Y_vix[telist]
             Z_tr = Z_vix[trlist]; Z_te = Z_vix[telist]
-            
-            pca = PCA(n_components=pca_nc)
-            pca.fit(X_tr)
-            X_tr = pca.transform(X_tr)
-            X_te = pca.transform(X_te)
-            
+
             # X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
             final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(telist[0]) + '_final.h5'
             if not(os.path.isfile(final_weightsave)) or overwrite:
@@ -433,39 +426,24 @@ for repeat in range(10): #, 100):
                     print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
                     print('te distribution', np.mean(Y_te, axis=0))
 
-                model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
-                                    batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
+                model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
                 verbose = 0
                 if cv == 0: verbose = 1
                 hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
                 model.save_weights(final_weightsave)
                 
             # test
+            
+            tix = np.where(np.array(Z[:,0], dtype=float) == wantedlist[cv])[0] 
+            X_te = X[tix]
+            Z_te = Z[tix]
             model.load_weights(final_weightsave)
             yhat = model.predict(X_te)
             
             for n in range(len(yhat)):
                 teSE = Z_te[n][0]; tese = Z_te[n][1]
-                mssave[teSE][tese].append(yhat[n])
+                mssave[teSE][tese].append(yhat[n][1])
 
-            # outsample
-            X2 = pca.transform(X)
-            outlist = np.where(np.sum(Y, axis=1)==0)[0]
-            yhat_out = model.predict(X2[outlist])
-            for out_SE in wantedlist:
-                for n in np.where(Z[outlist][:,0]==out_SE)[0]:
-                    teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
-                    mssave[teSE][tese].append(yhat_out[n])
-                    
-            # excludedsample
-            vix = np.where(np.sum(Y, axis=1)>0)[0]
-            X_ex = X2[vix][eix]; 
-            Z_ex = Z[vix][eix]; 
-            
-            for n in np.where(Z_ex[:,0]==cvlist[cv, 1])[0]:
-                teSE = Z_ex[n][0]; tese = Z_ex[n][1]
-                yhat_ex = model.predict(np.array([X_ex[n]]))
-                mssave[teSE][tese].append(yhat_ex[0])
 
     mssave2 = np.zeros((N,MAXSE,3)) * np.nan
     for row in range(N):
@@ -490,15 +468,15 @@ mssave = np.nanmean(np.array(repeat_save), axis=0)
 
 #%%
 plt.figure()
-msplot = mssave[:,:,1][highGroup + midleGroup + highGroup2,:4]
+msplot = mssave[:,:,1][highGroup + midleGroup + highGroup2,:5]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
 
-msplot = mssave[:,:,1][ketoGroup,:4]
+msplot = mssave[:,:,1][ketoGroup,:5]
 msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
 
 
 
