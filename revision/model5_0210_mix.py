@@ -461,7 +461,14 @@ for i in range(len(X)):
         import sys; sys.exit()
     X[i] = X[i] + [inter_corr[SE,se]]
         
-                                                    
+# mix를 위한 pickle save
+msdict = {'X':X, 'Y':Y, 'Z':Z}
+savepath = 'C:\\mass_save\\20220102\\' + 'shallow_featrues.pickle'
+with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+    pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
+    print(savepath, '저장되었습니다.')
+
+
 #%%
 X = np.array(X)
 Y = np.array(Y)
