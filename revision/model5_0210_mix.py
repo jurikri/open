@@ -126,7 +126,7 @@ for SE in range(N):
             # snu
             GBVX = [164, 165, 166, 167, 172, 174, 177, 179, 181]
 
-            nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0])
+            nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [0, 2])
             nonpainc.append(SE in capsaicinGroup + CFAgroup and se in [0])
             nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
             
@@ -149,10 +149,10 @@ for SE in range(N):
             # GB/VX
             nonpainc.append(SE in GBVX and se in [0,1])
 
-            painc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 and se in [1, 3])
+            painc.append(SE in highGroup + midleGroup + highGroup2 and se in [3])
             # painc.append(SE in capsaicinGroup and se in [1])
             
-            drugc.append(SE in ketoGroup + lidocaineGroup and se in [1, 3])
+            drugc.append(SE in ketoGroup + lidocaineGroup and se in [3])
             
             if False: # KHU
                 nonpainc.append(SE in list(range(230, 239)) and se in [0])
