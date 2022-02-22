@@ -283,15 +283,15 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, verbose=0):
             print('data set num #', len(Y), np.mean(np.array(Y), axis=0))
     return X, Y, Z
 
-model = keras_setup(lr=lr, add_fn=2, seed=0, l2=l2, layer_1=layer_1, \
-                n_hidden=layer_1, batchnmr=batchnmr, dropout_rate1=dropout_rate1)
+model = keras_setup(lr=lr, add_fn=2, seed=0, l2=l2_rate, layer_1=layer_1, \
+                n_hidden=layer_1, batchnmr=True, dropout_rate1=dropout_rate1)
 print(model.summary())
-
 
 
 #%% pathset
 
-settingID = 'test0218'
+# settingID = 'test0218'
+settingID = 'test0221_2'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
@@ -487,7 +487,7 @@ for f in range(X.shape[1]):
 
 #%% total tr
 lv = 0
-for lv in range(1):
+for lv in range(4, 5):
     X = np.array(X)
     Y = np.array(Y)
     Z = np.array(Z)
@@ -497,71 +497,47 @@ for lv in range(1):
     # X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
     print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
     
-    layer_1 = 5; epochs = 3000 # 30
+    layer_1 = 5; epochs = 2000 # 30
     # 20...이엇나?
     
-    from sklearn.decomposition import PCA
-    pca_nc = 6
-    pca = PCA(n_components=pca_nc)
-    pca.fit(X_total)
-    X_total = pca.transform(X_total)
+    # from sklearn.decomposition import PCA
+    # pca_nc = 6
+    # pca = PCA(n_components=pca_nc)
+    # pca.fit(X_total)
+    # X_total = pca.transform(X_total)
     
     dropout_rate1 = 0.1
     l2 = 0.1
     batchnmr = True
     
-    model = keras_setup(lr=lr, add_fn=X_total.shape[1], seed=0, l2=l2, layer_1=layer_1, \
-                    n_hidden=layer_1, batchnmr=batchnmr, dropout_rate1=dropout_rate1)
-         
-    print(model.summary())
-    
-    #% overfit
-    print(len(Y_total), np.mean(Y_total, axis=0))
-    hist = model.fit([X_rnn_total, X_total], Y_total, batch_size=2**11, epochs=epochs, verbose=1)
-    
-    # if True:
-    #     xhat = model.predict(X_total)[:,1]
-    #     painset = np.where(Y_total[:,1]==1)[0]
+    if False:
+        model = keras_setup(lr=lr, add_fn=X_total.shape[1], seed=0, l2=l2, layer_1=layer_1, \
+                        n_hidden=layer_1, batchnmr=batchnmr, dropout_rate1=dropout_rate1)
+             
+        print(model.summary())
         
-    #     # 10%로 최적화
-    #     ms_thr = 0.6
-    #     ms_thrsave = []
-    #     for ms_thr in np.arange(0.4,0.7,0.01):
-    #         badlabel = np.where(np.logical_and(xhat<ms_thr, Y_total[:,1]==1))[0]
-    #         ms_ratio = len(badlabel) / len(Y_total)
-    #         ms_thrsave.append([ms_thr, ms_ratio])
-    #     ms_thrsave = np.array(ms_thrsave)   
+        #% overfit
+        print(len(Y_total), np.mean(Y_total, axis=0))
+        hist = model.fit([X_rnn_total, X_total], Y_total, batch_size=2**11, epochs=epochs, verbose=1)
         
-    #     mix = np.argmin(np.abs(ms_thrsave[:,1] - 0.1))
-    #     realpain = np.where(xhat>ms_thrsave[mix,0])[0]
-    #     eix = list(set(list(painset)) - set(list(realpain)))
-    #     Y_total[eix,1] = 0
-    #     vix = np.sum(Y_total, axis=1)>0
-    #     X_total = X_total[vix]; Y_total = Y_total[vix]; Z_total = Z_total[vix]
+        # X2 = pca.transform(X)
+        X2 = X
+        xhat = model.predict([X_rnn, X2])
+        mssave_total = msFunction.msarray([N,MAXSE])
+        for i in range(len(Z)):
+            teSE = Z[i][0]
+            tese = Z[i][1]
+            mssave_total[teSE][tese].append(xhat[i])
         
-    #     print(len(Y_total), np.mean(Y_total, axis=0))
-                 
-    #     model = keras_setup(lr=lr, seed=0, add_fn=X_total.shape[1], layer_1=layer_1, \
-    #                         batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
-    #     hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
-        
-    X2 = pca.transform(X)
-    xhat = model.predict([X_rnn, X2])
-    mssave_total = msFunction.msarray([N,MAXSE])
-    for i in range(len(Z)):
-        teSE = Z[i][0]
-        tese = Z[i][1]
-        mssave_total[teSE][tese].append(xhat[i])
-    
-    mssave2 = np.zeros((N,MAXSE,2)) * np.nan
-    for row in range(N):
-        for col in range(MAXSE):
-            tmp = np.nanmean(mssave_total[row][col], axis=0)
-            if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp[:2]
+        mssave_total2 = np.zeros((N,MAXSE,2)) * np.nan
+        for row in range(N):
+            for col in range(MAXSE):
+                tmp = np.nanmean(mssave_total[row][col], axis=0)
+                if not(np.isnan(np.mean(tmp))): mssave_total2[row, col, :] = tmp[:2]
             
     if False:
         plt.figure()
-        target = mssave2
+        target = mssave_total2
         msplot = target[:,:,1][highGroup + midleGroup + highGroup2,:4]
         msplot_mean = np.nanmean(msplot, axis=0)
         e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
@@ -572,11 +548,11 @@ for lv in range(1):
         e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
         plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g') 
     
-    savepath = RESULT_SAVE_PATH + str(lv) +'_eix.pickle'
-    with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(eix, f, pickle.HIGHEST_PROTOCOL)
-        print(savepath, '저장되었습니다.')
-            
+    # savepath = RESULT_SAVE_PATH + str(lv) +'_eix.pickle'
+    # with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+    #     pickle.dump(eix, f, pickle.HIGHEST_PROTOCOL)
+    #     print(savepath, '저장되었습니다.')
+            #%
     #% cv 생성
     X = np.array(X); # X_nonlabel = np.array(X_nonlabel)
     Y = np.array(Y)
@@ -638,10 +614,10 @@ for lv in range(1):
                 
                 X_tr_rnn = X_rnn_total[trlist]; X_te_rnn = X_rnn_total[telist]
 
-                pca = PCA(n_components=pca_nc)
-                pca.fit(X_tr)
-                X_tr = pca.transform(X_tr)
-                X_te = pca.transform(X_te)
+                # pca = PCA(n_components=pca_nc)
+                # pca.fit(X_tr)
+                # X_tr = pca.transform(X_tr)
+                # X_te = pca.transform(X_te)
                 
                 # X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
                 final_weightsave = RESULT_SAVE_PATH + str(lv)+'_'+str(repeat)+'_'+ str(telist[0]) + '_final.h5'
@@ -667,7 +643,8 @@ for lv in range(1):
                     mssave[teSE][tese].append(yhat[n])
     
                 # outsample
-                X2 = pca.transform(X)
+                # X2 = pca.transform(X)
+                X2 = X
                 outlist = np.where(np.sum(Y, axis=1)==0)[0]
                 yhat_out = model.predict([X_rnn[outlist], X2[outlist]])
                 for out_SE in wantedlist:
@@ -711,11 +688,19 @@ for lv in range(10):
 mssave = np.array(mssave)
 print(mssave.shape)
 mssave = np.nanmean(mssave, axis=0)
-    
-import twophoton_pain_visualization as vis
-# vis.msplot_PD(mssave[:,:,0])
-vis.ms_report(mssave[:,:,1])
 
+if False:  
+    plt.figure()
+    target = mssave
+    msplot = target[:,:,1][highGroup + midleGroup + highGroup2,:4]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+    
+    msplot = target[:,:,1][ketoGroup,:4]
+    msplot_mean = np.nanmean(msplot, axis=0)
+    e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+    plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
 
 
 
