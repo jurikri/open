@@ -114,52 +114,193 @@ for SE in range(N):
 group_pain_training = []
 group_nonpain_training = []
 group_drug_training = []
-group_pain_test = []
-group_nonpain_test = []
+group_outsamples = []
 
 SE = 0; se = 0
 for SE in range(N):
     if not SE in [179, 181]: # ROI 매칭안되므로 임시 제거
         for se in range(MAXSE):
-            painc, nonpainc, drugc = [], [], []
+            painc, nonpainc, drugc, outsamplec = [], [], [], []
+
+            snu_base = True
+            snu_acute = True
+            snu_chronic = False
+            
+            khu_base = True
+            khu_acute = True
+            khu_chronic = False
+            
+            CFAsw = True
+            PSLsw = True
+            Oxalisw = True
 
             # snu
             GBVX = [164, 165, 166, 167, 172, 174, 177, 179, 181]
+            if snu_base:
+                nonpainc.append(SE in highGroup + highGroup2 + midleGroup + \
+                                lidocaineGroup + ketoGroup + yohimbineGroup and se in [0])
+                nonpainc.append(SE in capsaicinGroup + CFAgroup and se in [0])
+                nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
+                
+                nonpainc.append(SE in pslGroup and se in [0])
+                nonpainc.append(SE in shamGroup and se in [0,1,2])
+                
+                nonpainc.append(SE in [141, 142, 143] and se in [0]) # PSL + i.p. saline - group1
+                nonpainc.append(SE in [144, 145, 150, 152] and se in [0,1]) # PSL + i.p. saline - group2
+                nonpainc.append(SE in [146, 158] and se in [0,1]) # PSL + i.p. saline - group2
+                nonpainc.append(SE in [151,153,161,162] and se in [0,1]) # PSL + i.p. clonidine
+                
+                # oxali
+                nonpainc.append(SE in oxaliGroup and se in [0, 1])
+                nonpainc.append(SE in [188, 200] and se in [4, 5])
+                nonpainc.append(SE in [192, 194, 196, 202, 220] and se in [6, 7])
+                
+                # glucose
+                nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4,5,6,7])
+                
+                # GB/VX
+                nonpainc.append(SE in GBVX and se in [0,1])
+                
+                if True: # GBVXsw
+                    drugc.append(SE in [164,166] and se in [2,3,4,5])
+                    drugc.append(SE in [165] and se in [2,3])
+                    drugc.append(SE in [167] and se in [4,5,6,7])
+                    drugc.append(SE in [172] and se in [4,5,8,9])
+                    drugc.append(SE in [174] and se in [4,5])
+                    drugc.append(SE in [177] and se in [2,3,4,5,6,7])
+                    drugc.append(SE in [179] and se in [2,3,4,5,6,7,10,11])
+                    drugc.append(SE in [181] and se in [2,3,6,7])
+ 
+            if snu_acute:
+                painc.append(SE in highGroup + highGroup2 + midleGroup + yohimbineGroup and se in [1])
+                painc.append(SE in yohimbineGroup and se in [3])
+                # painc.append(SE in capsaicinGroup and se in [1])
+                
+                drugc.append(SE in ketoGroup + lidocaineGroup and se in [1])
+                
+            if snu_chronic:
+                if CFAsw:
+                    painc.append(SE in CFAgroup and se in [1,2])
+                
+                if PSLsw:
+                    painc.append(SE in pslGroup and se in [1,2])
+                    painc.append(SE in [70,71,75,76,79] and se in [3,4])
+                    
+                    # painc.append(SE in ipsaline_pslGroup and se in [1,3])
+                    if True:
+                        outsamplec.append(SE in [141, 142, 143] and se in [1,2]) # PSL + i.p. saline - group1
+                        outsamplec.append(SE in [144, 145, 150, 152] and se in [2,3,6,7]) # PSL + i.p. saline - group2 (PSL)
+                        outsamplec.append(SE in [144, 145, 150, 152] and se in [4,5,8,9]) # PSL + i.p. saline - group2 (PSL + saline)
+                        outsamplec.append(SE in [146, 158] and se in [2,3]) # PSL + i.p. saline - group2 (PSL)
+                        outsamplec.append(SE in [146, 158] and se in [4,5]) # PSL + i.p. saline - group2 (PSL + saline)
+                        
+                        outsamplec.append(SE in [151,153,161,162] and se in [2,3,6,7]) # PSL + i.p. clonidine (PSL)
+                        # painc.append(SE in [151,153,161,162]and se in [4,5,8,9]) # PSL + i.p. clonidine (PSL + clonidine)
+    
+                        outsamplec.append(SE in [179] and se in [8,9]) # GBVX group내의 pain
+                        outsamplec.append(SE in [181] and se in [4,5]) # GBVX group내의 pain
+                
+                if Oxalisw:
+                    # oxali
+                    painc.append(SE in oxaliGroup and se in [2,3])
+                    painc.append(SE in [192, 194, 196, 202, 220, 198] and se in [4,5])
 
-            nonpainc.append(SE in highGroup + midleGroup + ketoGroup + highGroup2 + lidocaineGroup and se in [0,2])
-            # nonpainc.append(SE in capsaicinGroup + CFAgroup and se in [0])
-            nonpainc.append(SE in salineGroup and se in [0,1,2,3,4])
-            
-            # nonpainc.append(SE in pslGroup and se in [0])
-            # nonpainc.append(SE in shamGroup and se in [0,1,2])
-            
-            # nonpainc.append(SE in [141, 142, 143] and se in [0]) # PSL + i.p. saline - group1
-            # nonpainc.append(SE in [144, 145, 150, 152] and se in [0,1]) # PSL + i.p. saline - group2
-            # nonpainc.append(SE in [146, 158] and se in [0,1]) # PSL + i.p. saline - group2
-            # nonpainc.append(SE in [151,153,161,162] and se in [0,1]) # PSL + i.p. clonidine
-            
-            # # oxali
-            # nonpainc.append(SE in oxaliGroup and se in [0, 1])
-            # nonpainc.append(SE in [188, 200] and se in [4, 5])
-            # nonpainc.append(SE in [192, 194, 196, 202, 220] and se in [6, 7])
-            
-            # # glucose
-            # nonpainc.append(SE in glucoseGroup and se in [0,1,2,3,4,5,6,7])
-            
-            # GB/VX
-            # nonpainc.append(SE in GBVX and se in [0,1])
+            if khu_base:  
+                # khu formalin
+                nonpainc.append(SE in list(range(230, 239)) and se in [0])
+                nonpainc.append(SE in list(range(247, 253)) + list(range(253,273)) and se in [0, 1])
+                nonpainc.append(SE in list(range(247, 252)) + [255,257, 258, 259, 262, 263, 264] + [268, 270, 271] and se in [2])
+                nonpainc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [3,4])
+                nonpainc.append(SE in KHU_CFA and se in [0,1,2,3])
+                nonpainc.append(SE in PSLgroup_khu and se in [0])
+                nonpainc.append(SE in morphineGroup and se in [0,1]) 
+                nonpainc.append(SE in KHU_saline and se in [0,1,2])
+                
+                mslist = [2,3,6,7] # ove rfit check 용
+                mslist_test = [4,5,8,9]
+                nonpainc.append(SE in KHUsham and se in [2,3,4,5,6,7,8,9])
+                # painc.append(SE in KHUsham and se in mslist_test)
+                
+                nonpainc.append(SE in PDnonpain and se in list(range(2,10)))
+                nonpainc.append(SE in PDnonpain and se in list(range(0,2)))
+                nonpainc.append(SE in PDpain and se in list(range(0,2)))
+                nonpainc.append(SE in PDmorphine and se in [0,1,2,3])
+                nonpainc.append(SE in KHU_PSL_magnolin and se in [0,1,2,3])
+                
+            if khu_acute:  
+                painc.append(SE in list(range(230, 239)) and se in [1])
+                painc.append(SE in [247,248,250,251] + [257, 258, 259, 262] and se in [5])
+                painc.append(SE in [252]  + [253, 254, 256, 260, 261, 265, 266, 267] + [269, 272] and se in [2])
 
-            painc.append(SE in highGroup + midleGroup + highGroup2 and se in [3])
             
-            drugc.append(SE in ketoGroup + lidocaineGroup and se in [3])
+            if khu_chronic:
+                if CFAsw:
+                    painc.append(SE in KHU_CFA and se in [4,5,8,9])
+                    # painc.append(SE in KHU_CFA[7:] and se in [4,5])
+                    painc.append(SE in KHU_CFA[:7] and se in [10])
+                    painc.append(SE in KHU_CFA[7:] and se in [10,11,12,13])
+                    
+                if PSLsw:
+                    painc.append(SE in morphineGroup and se in mslist)
+                    painc.append(SE in morphineGroup and se in mslist_test)
+                    
+                    painc.append(SE in PSLgroup_khu and se in [1,2])
+                    painc.append(SE in KHU_PSL_magnolin and se in [4,5,6,7])
+                
+                if True: # PD pain
+                    painc.append(SE in PDpain and se in list(range(2,10))) 
+
+                    painc.append(SE in PDmorphine and se in [4,5])
+                    painc.append(SE in [325, 326] and se in [10,11])
+                    painc.append(SE in [327, 328] and se in [10,11,16,17])
+                    painc.append(SE in [329, 330] and se in [10,11,16,17])
+                    painc.append(SE in [331] and se in [10,11,16,17])
+                    painc.append(SE in [339] and se in [10,11])
+                    painc.append(SE in [340, 341] and se in [10,11])
+                    
+                    # i.p. saline
+                    painc.append(SE in [325, 326] and se in [12,13,14,15])
+                    painc.append(SE in [327, 328] and se in [6,7,8,9])
+                    painc.append(SE in [329, 330] and se in [6,7,8,9,18,19,20,21])
+                    painc.append(SE in [331] and se in [12,13,14,15])
+                    painc.append(SE in [339] and se in [12,13,14,15])
+                    painc.append(SE in [340, 341] and se in [6,7,8,9])
+                                       
+                    
+            if False: # keto analgesic effects
+                drugc.append(SE in KHU_CFA[:7] and se in [6,7]) # keto 100 mg/kg
+                drugc.append(SE in KHU_CFA[7:] and se in [6,7]) # keto 50 mg/kg
+                pass
+                
+            if False: # morhpine analgesic effects
+                drugc.append(SE in morphineGroup and se in [10,11,12]) # morphine
+                drugc.append(SE in KHUsham and se in range(10,13)) # morphine
+                pass
+            
+            if False:  # KHU_PSL_magnolin analgesic effects
+                drugc.append(SE in KHU_PSL_magnolin and se in [8,9,10,11,12,13]) # morphine
+                pass
+            
+            if False:  # PDmorphine analgesic effects
+                drugc.append(SE in [325, 326] and se in [6,7,8,9])
+                drugc.append(SE in [327, 328] and se in [12,13,14,15])
+                drugc.append(SE in [329, 330] and se in [12,13,14,15,18,19,20,21])
+                drugc.append(SE in [331] and se in [6,7,8,9,18,19,20,21])
+                drugc.append(SE in [339] and se in [6,7,8,9])
+                drugc.append(SE in [340, 341] and se in [12,13,14,15])
+                
+                pass
             
             if [SE, se] in [[285, 4],[290, 5]]: continue # 시간짧음, movement 불일치
+            
             if np.sum(np.array(painc)) > 0: group_pain_training.append([SE, se])   
             if np.sum(np.array(nonpainc)) > 0: group_nonpain_training.append([SE, se])
             if np.sum(np.array(drugc)) > 0: group_drug_training.append([SE, se])
-          
+            if np.sum(np.array(outsamplec)) > 0: group_outsamples.append([SE, se])
+
 total_list = list(set(list(np.array(group_pain_training)[:,0]) + list(np.array(group_nonpain_training)[:,0]) \
                   + list(np.array(group_drug_training)[:,0])))
+total_list = list(set(total_list))
 
 #%% keras setup
 
@@ -191,19 +332,19 @@ def keras_setup(lr=1e-3, xin=None, seed=0, l2_rate=0, layer_1=10, n_hidden=10, d
     
     input1 = tf.keras.layers.Input(shape=(xin.shape)) # 각 병렬 layer shape에 따라 input 받음
     input2 = Bidirectional(LSTM(n_hidden))(input1) # biRNN -> 시계열에서 단일 value로 나감
-    input2 = BatchNormalization()(input2)
+    # input2 = BatchNormalization()(input2)
 
     input2 = Dense(layer_1, kernel_initializer = init, activation='relu')(input2) # fully conneted layers, relu
-    input2 = BatchNormalization()(input2)
-    input2 = Dropout(dropout_rate1)(input2) # dropout
+    # input2 = BatchNormalization()(input2)
+    # input2 = Dropout(dropout_rate1)(input2) # dropout
     
-    added = input2
+    # added = input2
 
-    merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(added) # fully conneted layers, relu
-    merge_1 = BatchNormalization()(merge_1)
-    merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
-    merge_2 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(merge_2) # fully conneted layers, sigmoid
-    merge_2 = BatchNormalization()(merge_2)
+    # merge_1 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='relu')(added) # fully conneted layers, relu
+    # merge_1 = BatchNormalization()(merge_1)
+    # merge_2 = Dropout(dropout_rate2)(merge_1) # dropout
+    merge_2 = Dense(layer_1, kernel_initializer = init, kernel_regularizer=regularizers.l2(l2_rate), activation='sigmoid')(input2) # fully conneted layers, sigmoid
+    # merge_2 = BatchNormalization()(merge_2)
     merge_4 = Dense(2, kernel_initializer = init, activation='softmax')(merge_2)
     
     model = tf.keras.models.Model(inputs=input1, outputs=merge_4) # input output 선언
@@ -254,14 +395,11 @@ def upsampling(X_tmp, Y_tmp, Z_tmp, verbose=0):
 
 #%% pathset
 
-settingID = 'AIBRNN-latelabel'
+settingID = 'AIBRNN_20220307_early_late'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
-SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
-KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
-KHU_pdpain = KHU_CFA + morphineGroup + KHUsham 
-# PDpain + PDnonpain + PDmorphine
-wantedlist = highGroup + midleGroup + ketoGroup + highGroup2
+wantedlist = highGroup + highGroup2 + midleGroup + yohimbineGroup + \
+    ketoGroup + lidocaineGroup
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
@@ -316,14 +454,16 @@ X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
 X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
 print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
 
-epochs = 1000 # 30
-layer_1 = 2; 
-n_hidden = 2
+epochs = 200 # 30
+layer_1 = 4; 
+n_hidden = 4
 dropout_rate1 = 0.1
-dropout_rate2 = 0
-l2_rate = 0.01
+dropout_rate2 = 0.1
+l2_rate = 0.3
     
-model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
+model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, \
+                    layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, \
+                        dropout_rate2=dropout_rate2)
 print(model.summary())
 #%%
 
@@ -354,10 +494,15 @@ msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
 
-# msplot = mssave2[:,:,1][lidocaineGroup,:5]
-# msplot_mean = np.nanmean(msplot, axis=0)
-# e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-# plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
+msplot = mssave2[lidocaineGroup,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
+
+msplot = mssave2[yohimbineGroup,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
 #%% cv 생성
 X = np.array(X); # X_nonlabel = np.array(X_nonlabel)
@@ -370,11 +515,6 @@ X_vix = np.array(X[vix]); Y_vix = np.array(Y[vix]); Z_vix = np.array(Z[vix])
 X_vix, Y_vix, Z_vix = upsampling(X_vix, Y_vix, Z_vix, verbose=0)
 tnum = len(Y_vix)
 
-# Y_vix[eix,1] = 0
-# vix = np.sum(Y_vix, axis=1)>0
-# X_vix = X_vix[vix]; Y_vix = Y_vix[vix]; Z_vix = Z_vix[vix]
-# print('excluded ratio', 1 - (len(Y_vix)/tnum))
-
 def SEse_find(Z=None, Y=None, SE=None, se=None):
     if SE in wantedlist:
         Z = np.array(Z)
@@ -382,23 +522,23 @@ def SEse_find(Z=None, Y=None, SE=None, se=None):
         if len(vix) > 0: return list(vix)
         else: return []
     else: return []
-
-if True:
-    cvlist = []
-    for SE in wantedlist:
-        cvlist_tmp = []
-        for se in range(MAXSE):
-            i = SEse_find(Z=Z_vix, SE=SE, se=se)
-            if len(i) > 0: cvlist_tmp = cvlist_tmp + i
-        cvlist.append([cvlist_tmp, SE])
-    print('len(cvlist)', len(cvlist))
+    
+cvlist = []
+for SE in wantedlist:
+    cvlist_tmp = []
+    for se in range(MAXSE):
+        i = SEse_find(Z=Z_vix, SE=SE, se=se)
+        if len(i) > 0: cvlist_tmp = cvlist_tmp + i
+    cvlist.append([cvlist_tmp, SE])
+print('len(cvlist)', len(cvlist))
 cvlist = np.array(cvlist)
 
 #%% cv training
 tr_graph_save = msFunction.msarray([len(cvlist), 4])
 
-# X2 = pca.transform(X)
-model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
+model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, \
+                    layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, \
+                        dropout_rate2=dropout_rate2)
     
 print(model.summary())
 overwrite = True
@@ -421,28 +561,41 @@ for repeat in range(1): #, 100):
             # X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
             final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(telist[0]) + '_final.h5'
             if not(os.path.isfile(final_weightsave)) or overwrite:
-                if True:
-                    print(repeat, 'learning', cv, '/', len(cvlist))
-                    print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
-                    print('te distribution', np.mean(Y_te, axis=0))
+                print(repeat, 'learning', cv, '/', len(cvlist))
+                print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
+                print('te distribution', np.mean(Y_te, axis=0))
 
-                model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, dropout_rate2=dropout_rate2)
+                model = keras_setup(lr=1e-3, xin=X_total[0], seed=0, l2_rate=l2_rate, \
+                                    layer_1=layer_1, n_hidden=n_hidden, dropout_rate1=dropout_rate1, \
+                                        dropout_rate2=dropout_rate2)
+                    
                 verbose = 0
                 if cv == 0: verbose = 1
                 hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
                 model.save_weights(final_weightsave)
                 
-            # test
-            
-            tix = np.where(np.array(Z[:,0], dtype=float) == wantedlist[cv])[0] 
-            X_te = X[tix]
-            Z_te = Z[tix]
+            # test - AA
             model.load_weights(final_weightsave)
-            yhat = model.predict(X_te)
-            
-            for n in range(len(yhat)):
-                teSE = Z_te[n][0]; tese = Z_te[n][1]
-                mssave[teSE][tese].append(yhat[n][1])
+            if True:
+                tix = np.where(np.array(Z[:,0], dtype=float) == wantedlist[cv])[0] 
+                X_te = X[tix]
+                Z_te = Z[tix]
+                yhat = model.predict(X_te)
+                
+                for n in range(len(yhat)):
+                    teSE = Z_te[n][0]; tese = Z_te[n][1]
+                    mssave[teSE][tese].append(yhat[n][1])
+                
+            # test - AI
+            else:
+                tix = np.where(np.array(Zte[:,0], dtype=float) == wantedlist[cv])[0] 
+                X_te = Xte[tix]
+                Z_te = Zte[tix]
+                yhat = model.predict(X_te)
+                
+                for n in range(len(yhat)):
+                    teSE = Z_te[n][0]; tese = Z_te[n][1]
+                    mssave[teSE][tese].append(yhat[n][1])
 
     mssave2 = np.zeros((N,MAXSE)) * np.nan
     for row in range(N):
@@ -451,7 +604,8 @@ for repeat in range(1): #, 100):
             if not(np.isnan(np.mean(tmp))): mssave2[row, col] = tmp
             
     repeat_save.append(mssave2)
-    
+
+print(1)    
 savepath = RESULT_SAVE_PATH + 'repeat_save.pickle'
 with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
     pickle.dump(repeat_save, f, pickle.HIGHEST_PROTOCOL)
@@ -466,6 +620,8 @@ mssave = np.nanmean(np.array(repeat_save), axis=0)
 
 
 #%%
+mssave2 = []
+
 plt.figure()
 msplot = mssave[highGroup + midleGroup + highGroup2,:5]
 msplot_mean = np.nanmean(msplot, axis=0)
@@ -477,9 +633,15 @@ msplot_mean = np.nanmean(msplot, axis=0)
 e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
 
+# msplot = mssave[lidocaineGroup,:5]
+# msplot_mean = np.nanmean(msplot, axis=0)
+# e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+# plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
 
-
-
+msplot = mssave[yohimbineGroup,:5]
+msplot_mean = np.nanmean(msplot, axis=0)
+e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
+plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
 
 
