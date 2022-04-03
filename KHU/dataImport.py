@@ -9,7 +9,7 @@ Created on Thu May 30 10:15:05 2019
 N값, Group 수정
 N값 자동화함. Group 지정만, 
 """
-
+MAXSE = 40
 # In[] Group 지정
 highGroup =         [0,2,3,4,5,6,8,9,10,11,59] # 5%                 
 # 1추가 제거
@@ -21,7 +21,7 @@ ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
 capsaicinGroup =    [60,61,62,64,65,82,83,104,105]
 yohimbineGroup =    [63,66,67,68,69,74] 
-pslGroup =          [70,71,72,73,75,76,77,78,79,80,84,85,86,87,88,93,94] 
+pslGroup =          [70,71, 73,75,76,77,78,79,80, 87 ,93,94] 
 shamGroup =         [81,89,90,91,92,97]
 adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
 CFAgroup =          [106,107,108,109,116,117]
@@ -29,24 +29,31 @@ highGroup2 =        [95,96]  # base / ealry / inter
 chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
 itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
-ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159]
-ipclonidineGroup =  [151,153,154,157,160,161,162,163]
+ipsaline_pslGroup = [141,142,143,144,145,146, 150,152, 158 ]
+ipclonidineGroup =  [151,153, 161,162]
 gabapentinGroup =   [164,165,166,167,168,170,171,172,173,174,175,176,177, \
-                     178,179,180,181,182,183,184,185,186, 226, 227, 228, 229]
+                     178,179,180,181,182,183,184,185,186, 226 ]
 beevenomGroup =     [187]
-oxaliGroup =        [188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,220,221]
-glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
+oxaliGroup =        [188, 190, 192, 194, 196, 198, 200, 202, 220]
+glucoseGroup =      [204, 206, 208, 210, 212, 214, 222]
 PSLscsaline =       [216,217,218,219,224,225]
 
 # highGroup3 =        list(range(230,239)) + list(range(247,273))
-highGroup3 =        list(range(247,268)); highGroup3.remove(259)
+highGroup3 =        list(range(247,268)) + [269, 272]; highGroup3.remove(259)
+KHU_saline =        [249,255,263,264,268,270,271]
 
-PSLgroup_khu =      [239, 240, 241, 242, 243, 244, 245, 246]
+PSLgroup_khu =      [239, 241, 243, 245]
 morphineGroup =     [273, 274, 275, 276, 277, 294, 295, 296, 297, 298, 299, 300, 301]
 KHUsham =           list(range(302, 312))
+KHU_CFA =           list(range(312, 325))
+KHU_PSL_magnolin =  list(range(332,339))
 
 PDpain =            list(range(278, 286))
 PDnonpain =         list(range(286, 294))
+PDmorphine =        list(range(325,332)) + [339,340,341]
+
+highGroup3_late = list(range(342, 351))
+
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
@@ -87,18 +94,24 @@ msGroup['beevenomGroup'] = beevenomGroup
 msGroup['oxaliGroup'] = oxaliGroup
 msGroup['glucoseGroup'] = glucoseGroup
 msGroup['PSLscsaline'] = PSLscsaline
+
 msGroup['highGroup3'] = highGroup3
+msGroup['highGroup3_late'] = highGroup3_late
+msGroup['KHU_saline'] = KHU_saline
+
 msGroup['PSLgroup_khu'] = PSLgroup_khu
 msGroup['morphineGroup'] = morphineGroup
 msGroup['KHUsham'] = KHUsham
-
+msGroup['KHU_CFA'] = KHU_CFA
 
 msGroup['PDpain'] = PDpain
 msGroup['PDnonpain'] = PDnonpain
+msGroup['PDmorphine'] = PDmorphine
+
+msGroup['KHU_PSL_magnolin'] = KHU_PSL_magnolin
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
-
 
 import numpy as np
 import pandas as pd
@@ -113,6 +126,8 @@ try: import pickle5 as pickle
 except: import pickle
 import hdf5storage
 import matplotlib.pyplot as plt 
+from tqdm import tqdm
+import scipy
 
 endsw=False; cnt=-1
 while not(endsw):
@@ -150,7 +165,7 @@ def errorCorrection(msraw): # turboreg로 발생하는 에러값을 수정함.
                             
     return msraw, sw
 
-def smoothListGaussian(array1,window):  
+def smoothListGaussian(array1, window):  
      window = round(window)
      degree = (window+1)/2
      weight=np.array([1.0]*window)  
@@ -194,6 +209,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
     for SE in list1:
         print('signal preprosessing...', SE)
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+        if path is None: print(SE, '삭제된 SE, skip'); continue
         savepath = path + '\\singalss_behavss_withrow.pickle'
   
         if not(os.path.exists(savepath) and skipsw): 
@@ -301,10 +317,11 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 se = 0
                 for se in range(k):
                     ROInum = array0[se].shape[1]
+                    print(ROInum)
                     for col in range(ROInum):
                         if np.isnan(array0[se][0,col]):
                             ROInum = col-1
-                            print(SE, 'NaN value로 인하여 ROInum수정합니다.')
+                            print(SE, se, col, 'NaN value로 인하여 ROInum수정합니다.')
                             break
                     
                     timeend = array0[se].shape[0]
@@ -424,6 +441,7 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                         msmatrix = msdict['msmatrix']
                         thr = msdict['thr']
                         df3 = [msmatrix, thr]
+                        # print(SE, se, 'movement data 없음')
                     
                     signals.append(np.array(df2))
                     behavs.append(df3)
@@ -431,10 +449,11 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                     
                 except:
                     print('없애는중')
-                    print(SE, se, 'session 없습니다. 예외 group으로 판단, 이전 session을 복사하여 채웁니다.')
-                    signals.append(np.array(df2))
-                    behavs.append(np.array(df3))
-                    signals_raw.append(np.array(df4))
+                    print(SE, se, 'session 없습니다.')
+                    import sys; sys.exit()
+                    signals.append([])
+                    behavs.append([])
+                    signals_raw.append([])
                     
             # QC (in SE for)
             dfthr = 10 # df limit
@@ -466,7 +485,12 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                         print('ROI 에서 제거후 진행')
                         tmp = list(roi_del_ix) + [ROI]
                         roi_del_ix = tmp
-                 
+                        
+            roisave = []
+            for msse in range(len(signals_raw)):
+                roisave.append(signals_raw[msse].shape[1])
+            if len(list(set(roisave))) > 1: print('roi matching error', SE, se); print(roisave); import sys; sys.exit()
+                    
             msdict = {'signals': signals, 'behavs': behavs, 'signals_raw': signals_raw, 'roi_del_ix': roi_del_ix}
             with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
@@ -483,6 +507,8 @@ def mssignal_save_merge():
     for SE in range(N):
         print(SE)
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+        if path is None: continue
+    
         savepath = path + '\\singalss_behavss_withrow.pickle'
         
         with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
@@ -498,7 +524,7 @@ def mssignal_save_merge():
         roi_del_ix_save[SE] = roi_del_ix
 
     # roidel 적용
-    for SE in range(N):
+    # for SE in range(N):
         mssignal = np.array(signalss[SE][0])
         roilist = list(range(mssignal.shape[1]))
         vlist = list(set(roilist) - set(roi_del_ix_save[SE]))
@@ -519,8 +545,10 @@ def msMovementExtraction(list1, skipsw=False):
 #    movement_thr_save = np.zeros((N2,5))
     for SE in list1:
         path, behav_data, raw_filepath, _ = msfilepath.msfilepath1(SE)
+        if path is None: continue
 
         for i in range(len(behav_data)):
+            se = i
             savename = path + '\\' + 'MS_' + behav_data[i]  + '.pickle'
             if behav_data[i] == 'empty':
                 # print('empty', behav_data[i], i)
@@ -626,10 +654,38 @@ def msMovementExtraction(list1, skipsw=False):
                 if N == 224 and i in [2]:
                     thr = 1.3
                        
-                if N == 223 and i in [3]: msmatrix[:5000] = 0
+                if SE == 222 and i in [5,6]: msmatrix[:5000] = 0
                 if SE >= 239: thr = 0.15
                 if SE >= 298 and i >= 6: thr = 0.8
                 if SE >= 302: thr = 0.7
+                if SE == 317: thr = 0.65
+                if SE >= 318: thr = 0.6
+                
+                if [SE, i] in [[322, 8], [322, 8], [322, 9], [322, 10], [322, 11]]: thr = 0.9
+                if [SE, i] in [[321, 9], [323, 8], [323, 9], [323, 10], [323, 11], [324, 10], [324, 11]]: thr = 0.7
+                if [SE, i] in [[319, 8], [319, 9], [319, 10], [319, 11], [320, 11], [321, 8], [321, 9], [321, 10], [321, 11]]: thr = 0.8
+                if [SE, i] in [[320, 8], [320, 9]]: thr = 0.65
+                if [SE, i] in [[324, 2], [324, 3], [324, 5], [324, 6]]: thr = 0.5
+                if SE in [328] and se in [4,5,6,7,8]: thr = 0.55
+                if [SE, se] in [[329, 11], [330, 5], [330, 8]]: thr = 0.55
+                if SE in [331] and se in [4,5,6,7,8,9,10,11,12]: thr = 0.51
+                if SE in [340] and se in [1,2,3]: thr = 0.5
+                if SE in [340] and se in [10,11,12,13]: thr = 0.45
+                if SE in [341] and se in [0,1,2,3]: thr = 0.5
+                if SE in [340] and se in [14]: thr = 0.47
+                
+                if SE in [153] and se in [7]: thr = 1.0
+                if SE in [146] and se in [1]: thr = 0.9
+                if SE in [162] and se in [3]: thr = 1.2
+                if SE in [204] and se in [3]: thr = 0.85
+                
+                if SE > 341:
+                    mix = np.argsort(msmatrix)[:int(len(msmatrix)*0.05)]
+                    thr = np.median(msmatrix[mix]) * 1.05
+                    if False:
+                        plt.plot(msmatrix)
+                        plt.plot(np.ones(len(msmatrix))*thr)
+                    
                 
                 # if [SE, i] in [[222, 3], [223, 2], [189, 0]]:
                 #     msmatrix, thr = [], []
@@ -643,209 +699,270 @@ def msMovementExtraction(list1, skipsw=False):
                 # msout.to_csv(savename, index=False, header=False)
     return None
 #%%
-from scipy.stats.stats import pearsonr 
-def msbehav_syn(behav, signal): # behav syn 맞추기 
-    behav = np.array(behav)
-    signal = np.array(signal)
-    
-    behav_syn = np.zeros(signal.shape[0])
-    syn = signal.shape[0]/behav.shape[0]
-    for behavframe in range(behav.shape[0]):
-        imagingframe = int(round(behavframe*syn))
-    
-        if behav[behavframe] > 0 and not imagingframe == signal.shape[0]:
-            behav_syn[imagingframe] += 1
-            
-    return behav_syn  
 
-def downsampling(msssignal, wanted_size):
-    downratio = msssignal.shape[0]/wanted_size
-    downsignal = np.zeros(wanted_size)
-    downsignal[:] = np.nan
-    for frame in range(wanted_size):
-        s = int(round(frame*downratio))
-        e = int(round(frame*downratio+downratio))
-        downsignal[frame] = np.mean(msssignal[s:e])
+
+# def downsampling(msssignal, wanted_size):
+#     downratio = msssignal.shape[0]/wanted_size
+#     downsignal = np.zeros(wanted_size)
+#     downsignal[:] = np.nan
+#     for frame in range(wanted_size):
+#         s = int(round(frame*downratio))
+#         e = int(round(frame*downratio+downratio))
+#         downsignal[frame] = np.mean(msssignal[s:e])
         
-    return np.array(downsignal)
+#     return np.array(downsignal)
 
 #%% syn를 위한 상수 계산
-def behavss2_calc(signalss, behavss):
-    synsave = msFunction.msarray([N])
-    SE = 6; se = 1    
-    for SE in range(N):
-        signals = signalss[SE]
-        behavs = behavss[SE] 
-        for se in range(len(signals)):
-            signal = np.array(signals[se])
-            meansignal = np.mean(signal,1) 
-            
-            behav = np.array(behavs[se][0])
-            if len(behav) > 0:
-                behav_syn = msbehav_syn(behav, signal)
-                        
-                xaxis = list(); yaxis = list()
-                if np.mean(behav) > 0.01 or (SE == 36 and se == 3):
-                    synlist = np.arange(-300,300,1)
-                    
-                    if (SE == 36 and se == 3) or (SE == 1 and se == 2) or (SE == 38 and se == 2) or (SE == 42 and se == 1): # 예외처리
-                         synlist = np.arange(-50,50,1)
-                        
-                    for syn in synlist:
-                        syn = int(round(syn))
-                           
-                        if syn >= 0:
-                            singal_syn = meansignal[syn:]
-                            sz = singal_syn.shape[0]
-                            behav_syn2 = behav_syn[:sz]
-                            
-                        elif syn <0:
-                            singal_syn = meansignal[:syn]
-                            behav_syn2 = behav_syn[-syn:]
-                            
-                        msexcept = not((SE == 40 and se == 1) or (SE == 6 and se == 1) or (SE == 8 and se == 3) \
-                                       or (SE == 10 and se == 1) or (SE == 10 and se == 3) or (SE == 11 and se == 1) \
-                                       or (SE == 15 and se == 2) or (SE == 19 and se == 4) or (SE == 21 and se == 1) \
-                                       or (SE == 22 and se == 0) or (SE == 32 and se == 4) or (SE == 34 and se == 0) \
-                                       or (SE == 35 and se == 1) or (SE == 36 and se == 0) or (SE == 37 and se == 0) \
-                                       or (SE == 37 and se == 1) or (SE == 37 and se == 4) or (SE == 38 and se == 2) \
-                                       or (SE == 39 and se == 4) or (SE == 40 and se == 4) or (SE == 41 and se == 1) \
-                                       or (SE == 42 and se == 0) or (SE == 41 and se == 1) or (SE == 42 and se == 0) \
-                                       or (SE == 42 and se == 1) or (SE == 220 and se == 2))
-                        
-                        if np.sum(behav_syn2) < np.sum(behav_syn) and msexcept: continue
-         
-                        if not np.sum(behav_syn2) == 0:
-                            r = pearsonr(singal_syn, behav_syn2)[0]
-                        elif np.sum(behav_syn2) == 0:
-                            r = 0
-                            
-    #                    print(syn, r)
-                        xaxis.append(syn)
-                        yaxis.append(r)
-                        
-                        if np.sum(np.isnan(yaxis)) < 0:
-                            print(SE,se, 'nan 있어요')
-                    
-        #            plt.plot(xaxis,yaxis)
-                    maxsyn = xaxis[np.argmax(yaxis)]
-                else: maxsyn = 0
-            else: maxsyn = 0
-            synsave[SE].append(maxsyn)
-            
-    # 예외처리
-    synsave[12][4] = 0
-    synsave[18][4] = 0
-    synsave[43][3] = 0 
-    synsave[43][4] = 0
-    #synsave[39,3] = 0
-    #SE = 1; se = 1
-    #SE = 8; se = 4
+def behavior_synfix(signals=None, behavs=None, SE=None, se=None, behavss=None):
+    from scipy.stats.stats import pearsonr 
+    fixlist = [[1,1],[8,4],[220,4],[220,5],[220,6],[220,7]]
+    if [SE, se] in fixlist:
+        print('fix sync', SE, se)
+        
+        if len(behavs) > 0:
+            meansignal = np.mean(signals, axis=1)
+            xaxis = []; yaxis = []
+            behavior_binary = behavs > behavss[SE][se][1]
     
-    fixlist = [[1,1],[8,4],[220,2],[220,3]]
-    print('다음 session은 syn가 안맞으므로 수정합니다.')
-    print(fixlist)
-
-#%
-    behavss2 = list()
-    for SE in range(N):
-        behavss2.append([])
-        for se in range(len(signalss[SE])):
-            msbehav = np.array(behavss[SE][se][0])
-            behav_syn = downsampling(msbehav, signalss[SE][se].shape[0])
+            if np.mean(behavior_binary) > 0.01 or (SE == 36 and se == 3):
+                synlist = np.arange(-300,300,1)
+                
+                if (SE == 36 and se == 3) or (SE == 1 and se == 2) or (SE == 38 and se == 2) or (SE == 42 and se == 1): # 예외처리
+                     synlist = np.arange(-50,50,1)
+                    
+                for syn in synlist:
+                    syn = int(round(syn))
+                       
+                    if syn >= 0:
+                        singal_syn = meansignal[syn:]
+                        sz = singal_syn.shape[0]
+                        behav_syn2 = behavs[:sz]
+                        
+                    elif syn <0:
+                        singal_syn = meansignal[:syn]
+                        behav_syn2 = behavs[-syn:]
+                        
+                    msexcept = not((SE == 40 and se == 1) or (SE == 6 and se == 1) or (SE == 8 and se == 3) \
+                                   or (SE == 10 and se == 1) or (SE == 10 and se == 3) or (SE == 11 and se == 1) \
+                                   or (SE == 15 and se == 2) or (SE == 19 and se == 4) or (SE == 21 and se == 1) \
+                                   or (SE == 22 and se == 0) or (SE == 32 and se == 4) or (SE == 34 and se == 0) \
+                                   or (SE == 35 and se == 1) or (SE == 36 and se == 0) or (SE == 37 and se == 0) \
+                                   or (SE == 37 and se == 1) or (SE == 37 and se == 4) or (SE == 38 and se == 2) \
+                                   or (SE == 39 and se == 4) or (SE == 40 and se == 4) or (SE == 41 and se == 1) \
+                                   or (SE == 42 and se == 0) or (SE == 41 and se == 1) or (SE == 42 and se == 0) \
+                                   or (SE == 42 and se == 1) or (SE == 220 and se == 2))
+                    
+                    # if np.sum(behav_syn2) < np.sum(behavs) and msexcept: continue
+     
+                    if not np.sum(behav_syn2) == 0:
+                        r = pearsonr(singal_syn, behav_syn2)[0]
+                    elif np.sum(behav_syn2) == 0:
+                        r = 0
+                        
+    #                    print(syn, r)
+                    xaxis.append(syn)
+                    yaxis.append(r)
+                    
+                    if np.sum(np.isnan(yaxis)) < 0:
+                        print(SE,se, 'nan 있어요')
+                
+    #            plt.plot(xaxis,yaxis)
+                maxsyn = xaxis[np.argmax(yaxis)]
+            else: maxsyn = 0
+        else: maxsyn = 0
+    
+        # 예외처리
+        if SE == 12 and se == 4: maxsyn = 0
+        if SE == 18 and se == 4: maxsyn = 0
+        if SE == 43 and se == 3: maxsyn = 0
+        if SE == 43 and se == 4: maxsyn = 0
             
-            if [SE, se] in fixlist:
-                fix = np.zeros(behav_syn.shape[0])
-                s = int(synsave[SE][se])
-                if s > 0:
-                    fix[s:] = behav_syn[:-s]
-                elif s < 0:
-                    s = -s
-                    fix[:-s] = behav_syn[s:]
-                
-                plt.figure()
-                plt.title('synfix ' + str(SE) + '_' + str(se))
-                plt.plot(np.mean(signalss[SE][se], axis=1))
-                plt.plot(fix)
-                
-            else: fix = behav_syn
-            behavss2[SE].append([fix, behavss[SE][se][1]])
-    return behavss2
+        fix = np.zeros(behavs.shape[0])
+        s = int(maxsyn)
+        if s > 0:
+            fix[s:] = behavs[:-s]
+        elif s < 0:
+            s = -s
+            fix[:-s] = behavs[s:]
+        
+        if True:
+            plt.figure()
+            plt.title('synfix ' + str(SE) + '_' + str(se))
+            plt.plot(np.mean(signals, axis=1))
+            plt.plot(fix)
+        behavs = fix
+        
+    return behavs
     #%%
-def visualizaiton_save(runlist, signalss=None, behavss2=None, dpi=100):
+def visualizaiton_save(runlist, signalss=None, movement_syn=None, behavss=None, dpi=100):
     savepath = 'D:\\mscore\\syncbackup\\paindecoder\\save\\msplot\\0709'
     print('signal, movement 시각화는', savepath, '에 저장됩니다.')
     os.chdir(savepath)
     
     for SE in runlist:
         print('save msplot', SE)
-        signals = signalss[SE]
-        behavs = behavss2[SE]
-        for se in range(len(signals)):
-            behav = np.array(behavs[se][0])
-            signal = np.array(signals[se])
-    
-            plt.figure(SE, figsize=(18, 9))
-    
-            plt.subplot(411)
-            for n in range(signal.shape[1]):
-                msplot = signal[:,n]
-                plt.plot(msplot)
-                
-            mstitle = 'msplot_' + str(SE) + '_' + str(se) + '.png'
-            plt.title(mstitle)
-                
-            scalebar = np.ones(int(round(signal.shape[0]/FPS)))
-            plt.subplot(412)
-    #        plt.plot(scalebar)
-            plt.xticks(np.arange(0, scalebar.shape[0]+1, 5.0))
-                
-            plt.subplot(413)
-            msplot = np.mean(signal,1)
-            plt.plot(msplot)
-            # plt.plot(np.zeros(msplot.shape[0]))
-            plt.xticks(np.arange(0, msplot.shape[0]+1, 50.0))
-            
-            if not(len(behav) == 0 or np.isnan(np.mean(behav))):
-                plt.subplot(414)
-                msplot = np.mean(signal,1)
-                plt.plot(behav)
-                plt.plot(np.ones(len(behav))*behavss2[SE][se][1])
-                plt.xticks(np.arange(0, behav.shape[0]+1, 500.0))        
 
-            #       
-            plt.savefig(mstitle, dpi=dpi)
-            plt.close(SE)
+        for se in range(MAXSE):
+            if len(signalss[SE][se]) > 0:
+                behav = np.array(movement_syn[SE][se])
+                signal = np.array(signalss[SE][se])
+        
+                plt.figure(SE, figsize=(18, 9))
+        
+                plt.subplot(411)
+                for n in range(signal.shape[1]):
+                    msplot = signal[:,n]
+                    plt.plot(msplot)
+                    
+                mstitle = 'msplot_' + str(SE) + '_' + str(se) + '.png'
+                plt.title(mstitle)
+                    
+                scalebar = np.ones(int(round(signal.shape[0]/FPS)))
+                plt.subplot(412)
+        #        plt.plot(scalebar)
+                plt.xticks(np.arange(0, scalebar.shape[0]+1, 5.0))
+                    
+                plt.subplot(413)
+                msplot = np.mean(signal,1)
+                plt.plot(msplot)
+                # plt.plot(np.zeros(msplot.shape[0]))
+                plt.xticks(np.arange(0, msplot.shape[0]+1, 50.0))
+                
+                if not(len(behav) == 0 or np.isnan(np.mean(behav))):
+                    plt.subplot(414)
+                    msplot = np.mean(signal,1)
+                    plt.plot(behav)
+                    plt.plot(np.ones(len(behav))*behavss[SE][se][1])
+                    plt.xticks(np.arange(0, behav.shape[0]+1, 500.0))        
+    
+                #       
+                plt.savefig(mstitle, dpi=dpi)
+                plt.close(SE)
 
 #%%
-# import sys; sys.exit()
-runlist = range(302, N)
-msMovementExtraction(runlist, skipsw=False)
-mssignal_save(list1=runlist, gfiltersw=True, skipsw=False, khuoffset=0)
 
-runlist = range(N)
+import sys; sys.exit()
+#%%
+
+wantedlist = list(range(342, 351))
+wantedlist = [347]
+
+elist = []
+for run in wantedlist:
+    try:
+        runlist = [run]
+        msMovementExtraction(runlist, skipsw=False)
+        mssignal_save(list1=runlist, gfiltersw=True, skipsw=False, khuoffset=0)
+    except:
+        elist.append(run)
+print()        
+print(elist)
+
+#%%
+
 signalss, behavss, signalss_raw, roi_del_ix_save = mssignal_save_merge()
 
-# behavss[223][2]
-# behavss[222][3]
+#%
+from sklearn.linear_model import LinearRegression
+baseratio = 0.3
+signalss2 = msFunction.msarray([N,MAXSE])
+for SE in range(N):
+    msplot = []
+    for se in range(len(signalss_raw[SE])):
+        tmp = np.array(signalss_raw[SE][se])
+        allo = np.zeros(tmp.shape) * np.nan
+        for ROI in range(tmp.shape[1]):
+            vix = np.argsort(tmp[:,ROI])[:int(round(len(tmp[:,ROI])*baseratio))]
+            base = tmp[:,ROI][vix]
+            m = np.median(base)
+            s = np.std(base)
+            
+            allo[:, ROI] = (tmp[:,ROI] - m) / s
+            
+            df = np.mean(allo[:, ROI])
+            raw = np.mean(tmp[:,ROI])
+            msplot.append([raw, df])     
+        signalss2[SE][se] = allo
+        
+        if np.inf == np.mean([df, raw]): import sys;sys.exit()
+        
+        if False:
+            msplot = np.array(msplot)
+            line_fitter = LinearRegression()
+            X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
+            line_fitter.fit(X, msplot[:,1])
+            m = line_fitter.coef_
+            b = line_fitter.intercept_
+    
+            plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.5)
+            xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
+            plt.plot(xaxis, xaxis*m + b, c='orange')
+            print('slope', m)
+ 
+msplot = []
+for SE in range(N):
+    for se in range(len(signalss_raw[SE])):
+        if SE == 328 and se == 18: continue
+        raw = np.mean(signalss_raw[SE][se])
+        df = np.nanstd(signalss2[SE][se])
+        msplot.append([raw, df])
+        if np.mean([df, raw]) == np.inf: print(SE, se ); import sys;sys.exit()
+        if np.isnan(np.mean([df, raw])): print(SE, se ); import sys;sys.exit()
+            
+msplot = np.array(msplot)
+line_fitter = LinearRegression()
+X = msplot[:,0]; X = np.reshape(X, (X.shape[0], 1))
+line_fitter.fit(X, msplot[:,1])
+m = line_fitter.coef_
+b = line_fitter.intercept_
 
-behavss2 = behavss2_calc(signalss, behavss) # signal과 함께 syn 맞춤
+plt.scatter(msplot[:,0], msplot[:,1], alpha = 0.2)
+xaxis = np.linspace(np.min(msplot[:,0]),np.max(msplot[:,0]),10)
+plt.plot(xaxis, xaxis*m + b, c='orange')
+print('slope', m)
 
-# import sys; sys.exit()
+# print('PD move skip 중. check')
+movement_syn = msFunction.msarray([N,MAXSE])
+for SE in range(N):
+    for se in range(len(signalss_raw[SE])):
+        behav_tmp = behavss[SE][se][0]
+        if len(behav_tmp) > 0:
+            mov_tmp = msFunction.downsampling(behav_tmp, signalss2[SE][se].shape[0])[0,:]
+            signals=signalss_raw[SE][se]; behavs=mov_tmp
+            movement_syn[SE][se] = behavior_synfix(signals=signals, behavs=behavs, SE=SE, se=se, behavss=behavss)
+            if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
 
-visualizaiton_save(runlist = KHUsham, signalss=signalss, behavss2=behavss2)
-savepath = 'C:\\mass_save\\PSLpain\\mspickle.pickle';
+
+visualizaiton_save(runlist = wantedlist, signalss=signalss2, movement_syn=movement_syn, behavss=behavss)
+
+#%% corr matrix
+
+if True:
+    inter_corr = np.zeros((N, MAXSE)) * np.nan
+    for SE in tqdm(range(N)):
+        for se in range(len(signalss_raw[SE])):
+            xdata = np.array(signalss2[SE][se])
+            roiNum = xdata.shape[1]
+            rmatrix = np.zeros((roiNum,roiNum)) * np.nan
+            for ROI in range(roiNum):
+                for ROI2 in range(ROI+1, roiNum):
+                    rmatrix[ROI,ROI2] = scipy.stats.pearsonr(xdata[:,ROI], xdata[:,ROI2])[0]
+            inter_corr[SE,se] = np.nanmean(rmatrix)
+
+savepath = 'C:\\SynologyDrive\\2p_data\\' + 'mspickle.pickle'
 def dict_save(savepath):
     msdata = {
             'FPS' : FPS,
             'N' : N,
-            # 'bahavss' : behavss, # behavior 원본 b'a'havss 오탈자인데 그대로 유지하겠음
-            'behavss2' : behavss2, # behavior frame fix
+            'behavss' : behavss, # behavior 원본 b'a'havss 오탈자인데 그대로 유지하겠음
+            'movement_syn' : movement_syn, # behavior frame fix
             'msGroup' : msGroup,
             'msdir' : msdir,
             'signalss' : signalss,
+            'signalss2' : signalss2,
             'signalss_raw' : signalss_raw,
             'roi_del_ix_save' : roi_del_ix_save,
+            'inter_corr' : inter_corr,
             # 'nmr_value' : nmr_value
             }
     
@@ -854,11 +971,24 @@ def dict_save(savepath):
         print(savepath, '저장되었습니다.')
 dict_save(savepath)
 
-import sys; sys.exit()
-plt.plot(behavss[299][0][0])
-behavss2[299][0][1]
+#%%
 
 #%%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
