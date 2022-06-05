@@ -434,7 +434,7 @@ def msplot_PD(mssave2):
     for ix in range(len(PDmorphine)):
         for se in range(visse):
             PDmorphine_matrix2[ix,se] = np.mean(PDmorphine_matrix[ix][se])
-
+            
     plt.figure()
     msplot = mssave2[PDpain,:]
     msplot_mean = np.nanmean(msplot, axis=0)
@@ -447,9 +447,10 @@ def msplot_PD(mssave2):
     plt.plot(msplot_mean, c='b')
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+    plt.title('PDpain_dataset1')
+    
     
     #
-    
     same_days = [[2,3], [4,5], [6,7], [8,9]]
     mssave3 = np.zeros((N, len(same_days))) * np.nan
     for i in range(len(same_days)):
@@ -466,6 +467,7 @@ def msplot_PD(mssave2):
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
 
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+    plt.title('PDpain_dataset1_day_mean')
     
     prismout = pd.DataFrame([])
     prismout = pd.concat((prismout, pd.DataFrame(mssave3[PDpain,:])), axis=0, ignore_index=True)
@@ -479,6 +481,7 @@ def msplot_PD(mssave2):
     msplot_mean = np.nanmean(msplot, axis=0)
     e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
     plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
+    plt.title('PDpain_dataset2')
     
     # same_days = [[0], [1,2], [3,4], [5,6], [7,8]]
     # mssave3 = np.zeros((PDmorphine_matrix2.shape[0], len(same_days))) * np.nan
@@ -493,21 +496,30 @@ def msplot_PD(mssave2):
 
     return prismout, PDmorphine_matrix2
 
-
-def ROC_merge(merge_dict):
+# ROC_merge([msdict1, msdict2, msdict3], ms_cmap=['red', 'green', 'royalblue'])
+def ROC_merge(merge_dict, ms_cmap=None):
     sz = 1
-    lw = 2
+    lw = 4
     fig = plt.figure(1, figsize=(7*sz, 5*sz))
     for i in range(len(merge_dict)):
         fpr = merge_dict[i]['fpr']
         tpr = merge_dict[i]['tpr']
         roc_auc = merge_dict[i]['roc_auc']
-        plt.plot(fpr, tpr, lw=lw, label= str(i) + ' (area = %0.2f)' % roc_auc) 
+        
+        if ms_cmap is None: plt.plot(fpr, tpr, lw=lw, label= str(i) + ' (area = %0.2f)' % roc_auc)
+        else: plt.plot(fpr, tpr, lw=lw, label= str(i) + ' (area = %0.2f)' % roc_auc, color=ms_cmap[i])
+        
+        
         plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
+        fs = 20
+        plt.xlabel('False Positive Rate', fontsize=fs, fontweight='bold')
+        plt.ylabel('True Positive Rate', fontsize=fs, fontweight='bold')
+        plt.xticks(fontsize=fs)
+        plt.yticks(fontsize=fs)
+        plt.grid(True)
+        
         # plt.legend(loc="lower right")
 
 def msreport_SNU_pslGBVX(mssave_p):
@@ -754,7 +766,7 @@ if False:
     drug = Aprism_50[:,2]
     _,_,_, msdict3 = msFunction.msROC(drug, pain, figsw=True)
     
-    ROC_merge([msdict1, msdict2, msdict3])
+    ROC_merge([msdict1, msdict2, msdict3], ms_cmap=['red', 'green', 'royalblue'])
     
     # oxaliplatin
     filepath = 'C:\\SynologyDrive\\2p_data\\'
