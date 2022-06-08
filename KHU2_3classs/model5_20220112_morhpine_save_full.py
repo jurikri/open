@@ -200,6 +200,15 @@ for SE in range(N):
                     # oxali
                     painc.append(SE in oxaliGroup and se in [2,3])
                     painc.append(SE in [192, 194, 196, 202, 220, 198] and se in [4,5])
+                    
+            if False: # GBVX analgesic effect
+                # nonpainc.append(SE in [164, 166] and se in [2,3,4,5]) # GBVX
+                # nonpainc.append(SE in [167] and se in [4,5,6,7]) # GBVX
+                # nonpainc.append(SE in [172] and se in [4,5,7,8]) # GBVX
+                # nonpainc.append(SE in [174] and se in [4,5]) # GBVX
+                # nonpainc.append(SE in [177,179,181] and se in [2,3,6,7,10,11]) # GBVX
+                pass
+                    
 
             if khu_base:  
                 # khu formalin
@@ -413,14 +422,14 @@ print(model.summary())
 
 #%% pathset
 
-settingID = 'model5_20220208_oxaliplatin'
+settingID = 'model5_20220218_morphine'
 # settingID = 'model4.1.1_20211130_1_snuonly' 
 
 SNU_chronicpain = pslGroup + shamGroup + ipsaline_pslGroup + ipclonidineGroup + gabapentinGroup + oxaliGroup + glucoseGroup
 KHU_chronicpain = KHU_CFA + morphineGroup + KHUsham + KHU_PSL_magnolin
 KHU_pdpain = KHU_CFA + morphineGroup + KHUsham 
 # PDpain + PDnonpain + PDmorphine
-wantedlist = oxaliGroup + glucoseGroup
+wantedlist = morphineGroup + KHUsham + PSLgroup_khu
 
 # RESULT_SAVE_PATH = 'D:\\2p_pain\\weight_saves\\211129\\' + settingID + '\\'
 RESULT_SAVE_PATH = 'C:\\mass_save\\20220102\\' + settingID + '\\'
@@ -456,7 +465,7 @@ for SE in range(N):
     if SE in KHU_CFA + PDmorphine + KHU_PSL_magnolin: selist = [0,1,2,3]
     
     if SE in [144, 145, 150, 152] + [146, 158] + [151,153,161,162]: selist = [0,1] # PSL + i.p. saline
-    if SE in oxaliGroup + glucoseGroup: selist = [0,1]
+    if SE in glucoseGroup: selist = [0,1]
     
     if SE in list(range(247, 273)): selist = [0,1]
 
@@ -595,688 +604,223 @@ for f in range(X.shape[1]):
     # plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
 
 #%% total tr
-X = np.array(X)
-Y = np.array(Y)
-Z = np.array(Z)
-vix = np.sum(Y, axis=1)>0
-X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
-# X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
-print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
 
-layer_1 = 20; epochs = 3000 # 30
-# 20...이엇나?
-
-from sklearn.decomposition import PCA
-pca_nc = 6
-pca = PCA(n_components=pca_nc)
-pca.fit(X_total)
-X_total = pca.transform(X_total)
-
-dropout_rate1 = 0.1
-l2 = 0.1
-batchnmr = True
-
-model = keras_setup(lr=lr, seed=0, add_fn=X_total.shape[1], layer_1=layer_1, \
-                    batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
-print(model.summary())
-
-#%% overfit
-if False:
-    print(len(Y_total), np.mean(Y_total, axis=0))
-    hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
+for lv in range(10):
+    X = np.array(X)
+    Y = np.array(Y)
+    Z = np.array(Z)
+    vix = np.sum(Y, axis=1)>0
+    X_total = X[vix]; Y_total = Y[vix]; Z_total = Z[vix]
+    # X_total, Y_total, Z_total = upsampling(X_total, Y_total, Z_total)       
+    print(np.mean(Y_total, axis=0), np.sum(Y_total, axis=0))
     
+    layer_1 = 20; epochs = 3000 # 30
+    # 20...이엇나?
+    
+    from sklearn.decomposition import PCA
+    pca_nc = 6
+    pca = PCA(n_components=pca_nc)
+    pca.fit(X_total)
+    X_total = pca.transform(X_total)
+    
+    dropout_rate1 = 0.1
+    l2 = 0.1
+    batchnmr = True
+    
+    model = keras_setup(lr=lr, seed=0, add_fn=X_total.shape[1], layer_1=layer_1, \
+                        batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
+    print(model.summary())
+    
+    #% overfit
     if True:
-        xhat = model.predict(X_total)[:,1]
-        painset = np.where(Y_total[:,1]==1)[0]
-        
-        # 10%로 최적화
-        ms_thr = 0.6
-        ms_thrsave = []
-        for ms_thr in np.arange(0.4,0.7,0.01):
-            badlabel = np.where(np.logical_and(xhat<ms_thr, Y_total[:,1]==1))[0]
-            ms_ratio = len(badlabel) / len(Y_total)
-            ms_thrsave.append([ms_thr, ms_ratio])
-        ms_thrsave = np.array(ms_thrsave)   
-        
-        mix = np.argmin(np.abs(ms_thrsave[:,1] - 0.1))
-        realpain = np.where(xhat>ms_thrsave[mix,0])[0]
-        eix = list(set(list(painset)) - set(list(realpain)))
-        Y_total[eix,1] = 0
-        vix = np.sum(Y_total, axis=1)>0
-        X_total = X_total[vix]; Y_total = Y_total[vix]; Z_total = Z_total[vix]
-        
         print(len(Y_total), np.mean(Y_total, axis=0))
-                 
-        model = keras_setup(lr=lr, seed=0, add_fn=X_total.shape[1], layer_1=layer_1, \
-                            batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
         hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
         
-    X2 = pca.transform(X)
-    xhat = model.predict(X2)
-    mssave_total = msFunction.msarray([N,MAXSE])
-    for i in range(len(Z)):
-        teSE = Z[i][0]
-        tese = Z[i][1]
-        mssave_total[teSE][tese].append(xhat[i])
-    
-    mssave2 = np.zeros((N,MAXSE,2)) * np.nan
-    for row in range(N):
-        for col in range(MAXSE):
-            tmp = np.nanmean(mssave_total[row][col], axis=0)
-            if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp[:2]
+        if True:
+            xhat = model.predict(X_total)[:,1]
+            painset = np.where(Y_total[:,1]==1)[0]
             
-    #
-    import twophoton_pain_visualization as vis
-    vis.msreport_SNU_oxaliplatin(mssave2[:,:,1])
-
-    #
-    savepath = RESULT_SAVE_PATH + 'eix.pickle'
-    with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-        pickle.dump(eix, f, pickle.HIGHEST_PROTOCOL)
-        print(savepath, '저장되었습니다.')
-    import sys; sys.exit()   
-    
-else:
-    #% dataload
-    savepath = RESULT_SAVE_PATH + 'eix.pickle'
-    with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
-        eix = pickle.load(f)
+            # 10%로 최적화
+            ms_thr = 0.6
+            ms_thrsave = []
+            for ms_thr in np.arange(0.4,0.7,0.01):
+                badlabel = np.where(np.logical_and(xhat<ms_thr, Y_total[:,1]==1))[0]
+                ms_ratio = len(badlabel) / len(Y_total)
+                ms_thrsave.append([ms_thr, ms_ratio])
+            ms_thrsave = np.array(ms_thrsave)   
+            
+            mix = np.argmin(np.abs(ms_thrsave[:,1] - 0.1))
+            realpain = np.where(xhat>ms_thrsave[mix,0])[0]
+            eix = list(set(list(painset)) - set(list(realpain)))
+            Y_total[eix,1] = 0
+            vix = np.sum(Y_total, axis=1)>0
+            X_total = X_total[vix]; Y_total = Y_total[vix]; Z_total = Z_total[vix]
+            
+            print(len(Y_total), np.mean(Y_total, axis=0))
+                     
+            model = keras_setup(lr=lr, seed=0, add_fn=X_total.shape[1], layer_1=layer_1, \
+                                batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
+            hist = model.fit(X_total, Y_total, batch_size=2**11, epochs=epochs, verbose=1)
+            
+        X2 = pca.transform(X)
+        xhat = model.predict(X2)
+        mssave_total = msFunction.msarray([N,MAXSE])
+        for i in range(len(Z)):
+            teSE = Z[i][0]
+            tese = Z[i][1]
+            mssave_total[teSE][tese].append(xhat[i])
         
-#%% cv 생성
-X = np.array(X); # X_nonlabel = np.array(X_nonlabel)
-Y = np.array(Y)
-Z = np.array(Z); # Z_nonlabel = np.array(Z_nonlabel)
-
-vix = np.where(np.sum(Y, axis=1)>0)[0]
-X_vix = np.array(X[vix]); Y_vix = np.array(Y[vix]); Z_vix = np.array(Z[vix])
-tnum = len(Y_vix)
-
-Y_vix[eix,1] = 0
-vix = np.sum(Y_vix, axis=1)>0
-X_vix = X_vix[vix]; Y_vix = Y_vix[vix]; Z_vix = Z_vix[vix]
-print('excluded ratio', 1 - (len(Y_vix)/tnum))
-
-def SEse_find(Z=None, Y=None, SE=None, se=None):
-    if SE in wantedlist:
-        Z = np.array(Z)
-        vix = np.where(np.logical_and(Z[:,0]==SE, Z[:,1]==se))[0]
-        if len(vix) > 0: return list(vix)
+        mssave2 = np.zeros((N,MAXSE,2)) * np.nan
+        for row in range(N):
+            for col in range(MAXSE):
+                tmp = np.nanmean(mssave_total[row][col], axis=0)
+                if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp[:2]
+                
+        if False:
+            import twophoton_pain_visualization as vis
+            vis.msplot_PD(mssave2[:,:,1])     
+        
+        savepath = RESULT_SAVE_PATH + str(lv) +'_eix.pickle'
+        with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+            pickle.dump(eix, f, pickle.HIGHEST_PROTOCOL)
+            print(savepath, '저장되었습니다.')
+            
+    #% cv 생성
+    X = np.array(X); # X_nonlabel = np.array(X_nonlabel)
+    Y = np.array(Y)
+    Z = np.array(Z); # Z_nonlabel = np.array(Z_nonlabel)
+    
+    vix = np.where(np.sum(Y, axis=1)>0)[0]
+    X_vix = np.array(X[vix]); Y_vix = np.array(Y[vix]); Z_vix = np.array(Z[vix])
+    tnum = len(Y_vix)
+    
+    Y_vix[eix,1] = 0
+    vix = np.sum(Y_vix, axis=1)>0
+    X_vix = X_vix[vix]; Y_vix = Y_vix[vix]; Z_vix = Z_vix[vix]
+    print('excluded ratio', 1 - (len(Y_vix)/tnum))
+    
+    def SEse_find(Z=None, Y=None, SE=None, se=None):
+        if SE in wantedlist:
+            Z = np.array(Z)
+            vix = np.where(np.logical_and(Z[:,0]==SE, Z[:,1]==se))[0]
+            if len(vix) > 0: return list(vix)
+            else: return []
         else: return []
-    else: return []
-
-#%% intra subject
-if False:
-    cvlist = []
-    for SE in wantedlist:
-        for se in range(MAXSE):
-            i = SEse_find(Z=Z_vix, SE=SE, se=se)
-            if len(i) > 0: cvlist.append(i)
-    print('len(cvlist)', len(cvlist))
-#%% between subject
-if True:
-    cvlist = []
-    for SE in wantedlist:
-        cvlist_tmp = []
-        for se in range(MAXSE):
-            i = SEse_find(Z=Z_vix, SE=SE, se=se)
-            if len(i) > 0: cvlist_tmp = cvlist_tmp + i
-        cvlist.append([cvlist_tmp, SE])
-    print('len(cvlist)', len(cvlist))
-cvlist = np.array(cvlist)
-#%% intra-subejct - day cv
-if False:
-    cvlist = []
-    for SE in range(N):
-        if (SE < 247 or SE in PSLgroup_khu) and not(SE in GBVX):
-            for se in range(len(signalss_raw[SE])):
+    
+    #% between subject
+    if True:
+        cvlist = []
+        for SE in wantedlist:
+            cvlist_tmp = []
+            for se in range(MAXSE):
                 i = SEse_find(Z=Z_vix, SE=SE, se=se)
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in GBVX: # nonpain만 사용하는경우 - baseline data가 안나오므로 무효할듯?
-            i0 = SEse_find(Z=Z_vix, SE=SE, se=0)
-            i1 = SEse_find(Z=Z_vix, SE=SE, se=1)
-            i = i0+i1
-            if len(i) > 0: 
-                import sys; sys.exit()
-                cvlist.append(i)
-                
-        elif SE >= 247 and SE < 273:
-            for se in range(3):
-                i = SEse_find(Z=Z_vix, SE=SE, se=se)
-                if len(i) > 0: cvlist.append(i)
-            
-            i0 = SEse_find(Z=Z_vix, SE=SE, se=3)
-            i1 = SEse_find(Z=Z_vix, SE=SE, se=4)
-            i = i0+i1
-            if len(i) > 0: cvlist.append(i)
-            
-        elif SE in PDpain + PDnonpain + KHU_CFA:
-            for se in list(range(0,len(signalss_raw[SE]),2)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i = i0+i1
-                if SE in [312, 313] and se == 8:
-                    i0 = SEse_find(Z=Z_vix, SE=SE, se=8)
-                    i1 = SEse_find(Z=Z_vix, SE=SE, se=9)
-                    i2 = SEse_find(Z=Z_vix, SE=SE, se=10)
-                    i = i0+i1+i2
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in morphineGroup + KHUsham:
-            for se in list(range(2,len(signalss_raw[SE]),4)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i2 = SEse_find(Z=Z_vix, SE=SE, se=se+2)
-                i3 = SEse_find(Z=Z_vix, SE=SE, se=se+3)
-                i = i0+i1+i2+i3
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in PDmorphine: # nonpain만 사용하는경우
-            for se in list(range(0, 4, 2)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i = i0+i1
-                if len(i) > 0: cvlist.append(i)
-                
-        elif SE in KHU_PSL_magnolin: # nonpain만 사용하는경우
-            for se in list(range(0, 8, 2)):
-                i0 = SEse_find(Z=Z_vix, SE=SE, se=se)
-                i1 = SEse_find(Z=Z_vix, SE=SE, se=se+1)
-                i = i0+i1
-                if len(i) > 0: cvlist.append(i)
-                
-        else: print(SE, 'is not allocated')
-
-#%% cv training
-tr_graph_save = msFunction.msarray([len(cvlist), 4])
-
-# X2 = pca.transform(X)
-model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
-                    batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
-    
-print(model.summary())
-overwrite = False
-repeat_save = []
-for repeat in range(10): #, 100):
-    ### outsample test
-    print('repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
-    mssave = msFunction.msarray([N,MAXSE])
-    
-    totallist = list(range(len(Y_vix)))
-    for cv in range(0, len(cvlist)):
-        telist = cvlist[cv, 0]
-        if len(telist) > 0:
-            trlist = list(set(totallist)-set(telist))
-            # print(len(totallist), len(trlist), len(telist))
-            X_tr = X_vix[trlist]; X_te = X_vix[telist]
-            Y_tr = Y_vix[trlist]; Y_te = Y_vix[telist]
-            Z_tr = Z_vix[trlist]; Z_te = Z_vix[telist]
-            
-            pca = PCA(n_components=pca_nc)
-            pca.fit(X_tr)
-            X_tr = pca.transform(X_tr)
-            X_te = pca.transform(X_te)
-            
-            # X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
-            final_weightsave = RESULT_SAVE_PATH + str(repeat) + '_' + str(telist[0]) + '_final.h5'
-            if not(os.path.isfile(final_weightsave)) or overwrite:
-                if True:
-                    print(repeat, 'learning', cv, '/', len(cvlist))
-                    print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
-                    print('te distribution', np.mean(Y_te, axis=0))
-
-                model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
-                                    batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
-                verbose = 0
-                if cv == 0: verbose = 1
-                hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
-                model.save_weights(final_weightsave)
-                
-            # test
-            model.load_weights(final_weightsave)
-            yhat = model.predict(X_te)
-            
-            for n in range(len(yhat)):
-                teSE = Z_te[n][0]; tese = Z_te[n][1]
-                mssave[teSE][tese].append(yhat[n])
-
-            # outsample
-            X2 = pca.transform(X)
-            outlist = np.where(np.sum(Y, axis=1)==0)[0]
-            yhat_out = model.predict(X2[outlist])
-            for out_SE in wantedlist:
-                for n in np.where(Z[outlist][:,0]==out_SE)[0]:
-                    teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
-                    mssave[teSE][tese].append(yhat_out[n])
-                    
-            # excludedsample
-            vix = np.where(np.sum(Y, axis=1)>0)[0]
-            X_ex = X2[vix][eix]; 
-            Z_ex = Z[vix][eix]; 
-            
-            for n in np.where(Z_ex[:,0]==cvlist[cv, 1])[0]:
-                teSE = Z_ex[n][0]; tese = Z_ex[n][1]
-                yhat_ex = model.predict(np.array([X_ex[n]]))
-                mssave[teSE][tese].append(yhat_ex[0])
-
-    mssave2 = np.zeros((N,MAXSE,3)) * np.nan
-    for row in range(N):
-        for col in range(MAXSE):
-            tmp = np.nanmean(mssave[row][col], axis=0)
-            if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp
-            
-    repeat_save.append(mssave2)
-    
-savepath = RESULT_SAVE_PATH + 'repeat_save.pickle'
-with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
-    pickle.dump(repeat_save, f, pickle.HIGHEST_PROTOCOL)
-    print(savepath, '저장되었습니다.')
-
-#% dataload
-savepath = RESULT_SAVE_PATH + 'repeat_save.pickle'
-with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
-    repeat_save = pickle.load(f)
-    
-mssave = np.nanmean(np.array(repeat_save), axis=0)
-
-
-#%%
-msresult = mssave[:,:,1]
-
-
-
-vis.msreport_SNU_oxaliplatin(mssave[:,:,1])
-
-# morphine
-# Aprism = ms_report(mssave[:,:,2])
-msreport_SNU_pslGBVX(mssave2[:,:,1])
-# ms_report_2d(mssave, morphineGroup + KHUsham + PSLgroup_khu)
-
-# cfa
-# ms_report_cfa(mssave[:,:,1])
-
-# PD
-# msplot_PD(mssave[:,:,1])
-
-# magnolin
-# ms_report_khu_magnolin(mssave2[:,:,1])
-
-#%% total acc
-msacc = []
-for i in range(len(Z_vix)):
-    SE = Z_vix[i][0]; se = Z_vix[i][1]
-    if not np.isnan(mssave[SE,se]):
-        msacc.append(Y_vix[i][1] == mssave[SE,se] > 0.5)
-print('accuracy', np.mean(msacc))
-    
-
-#%%
-
-# mssave10 = []
-# for i in range(len(repeat_save)):
-#     for j in range(i+1, len(repeat_save)):
-#         mssave10.append(np.nanmean(np.abs((np.nanmean((repeat_save[j] - 0.5)/(repeat_save[i] - 0.5))-1)*100)))
-
-# i = 1
-# mssave = np.nanmean(np.array(repeat_save[i:i+1]), axis=0)
-# ms_report(mssave) 
-#%% KHUPSL
-
-plt.figure()
-msplot = mssave[morphineGroup,2:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-msplot = mssave[KHUsham,2:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-import sys; sys.exit()
-
-psl_d3 = mssave[morphineGroup,2:6].flatten()
-psl_d10 = mssave[morphineGroup,6:10].flatten()
-sham_d3 = mssave[KHUsham,2:6].flatten()
-sham_d10 = mssave[KHUsham,6:10].flatten()
-
-msFunction.msROC(sham_d3, psl_d3)
-msFunction.msROC(sham_d10, psl_d10)
-
-#%% 평가2 - day간 mean or max
-
-same_days = [[2,3], [4,5], [6,7], [8,9], [10,11,12]]
-mssave2 = np.zeros((N, len(same_days))) * np.nan
-for i in range(len(same_days)):
-    mssave2[:,i] = np.nanmean(mssave[:,:,1][:, same_days[i]], axis=1)
-    
-plt.figure()
-plt.plot(np.nanmean(mssave2[morphineGroup,:], axis=0), c='r')
-plt.plot(np.nanmean(mssave2[KHUsham,:], axis=0), c='b')
-
-msplot = mssave2[morphineGroup,:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-msplot = mssave2[KHUsham,:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-#%% 평가2 - all day mean or max
-
-same_days = [[2,3,4,5], [6,7,8,9], [10,11,12]]
-mssave2 = np.zeros((N, len(same_days))) * np.nan
-for i in range(len(same_days)):
-    mssave2[morphineGroup+KHUsham,i] = np.nanmean(mssave[morphineGroup+KHUsham,:,1][:, same_days[i]], axis=1)
-
-same_days = [[2,3], [4,5]]
-for i in range(len(same_days)):
-    mssave2[PSLgroup_khu,i] = np.nanmean(mssave[PSLgroup_khu,:,1][:, same_days[i]], axis=1)
-
-plt.figure()
-msplot = mssave2[morphineGroup+PSLgroup_khu,:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-msplot = mssave2[KHUsham,:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-nonpain = mssave2[KHUsham,:2]
-pain = mssave2[morphineGroup+PSLgroup_khu,:2]
-print(msFunction.msROC(nonpain, pain))
-
-
-
-
-nonpain = pd.DataFrame(mssave2[KHUsham,:])
-pain = pd.DataFrame(mssave2[morphineGroup+PSLgroup_khu,:])
-Aprism = pd.concat((nonpain.iloc[:,0], pain.iloc[:,0], nonpain.iloc[:,1], pain.iloc[:,1], nonpain.iloc[:,2], pain.iloc[:,2]), axis=1, ignore_index=True)
-
-
-Aprism2 = np.zeros((3,6)) * np.nan
-Aprism2[:,0] = np.nanmean(np.array(nonpain), axis=0)
-Aprism2[:,1] = scipy.stats.sem(np.array(nonpain), axis=0, nan_policy='omit').data
-Aprism2[:,2] = np.sum(np.isnan(np.array(nonpain))==0, axis=0)
-Aprism2[:,3] = np.nanmean(np.array(pain), axis=0)
-Aprism2[:,4] = scipy.stats.sem(np.array(pain), axis=0, nan_policy='omit').data
-Aprism2[:,5] = np.sum(np.isnan(np.array(pain))==0, axis=0)
-
-#%%
-
-msplot = mssave[:,:,1][PSLgroup_khu,:3]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-
-#%% KHU_CFA
-
-KHU_CFA_100 = KHU_CFA[:7]
-KHU_CFA_50 = KHU_CFA[7:]
-
-##
-target_group = list(KHU_CFA_50)
-# plt.figure()
-# plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
-
-plt.figure()
-msplot = mssave[target_group,0:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-
-target_group = list(KHU_CFA_100)
-# plt.figure()
-# plt.plot(np.nanmean(mssave[target_group,:], axis=0), c='r')
-
-plt.figure()
-msplot = mssave[target_group,0:]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
- 
-if False:
-    filepath = 'C:\\mass_save\\model3\\fig\\'
-    plt.savefig(filepath + 'KHU_PSL_session.png', dpi=1000)
-    
-    class0 = mssave[morphineGroup,2:10]
-    class1 = mssave[KHUsham,2:10]
-    accuracy, roc_auc, _ = msFunction.msROC(class1, class0); print(accuracy, roc_auc)
-    
-    plt.plot(np.nanmean(mssave[PSLgroup_khu, :], axis=0))
-    
-    #% KHU_CFA day merge
-    same_days = [[0,1], [2,3], [4,5], [6,7], [8,9], [10,11], [12,13]]
-    mssave2 = np.zeros((N, len(same_days))) * np.nan
-    for i in range(len(same_days)):
-        mssave2[:,i] = np.nanmean(mssave[:, same_days[i]], axis=1)
-        
-    Aprism = mssave2[target_group,:]
-    plt.plot(np.nanmean(mssave2[target_group,:], axis=0))
-    
-    mssave_basenmr = mssave2[target_group,:] + 0.52
-    for i in range(len(mssave_basenmr)):
-        mssave_basenmr[i,:] = mssave_basenmr[i,:] / mssave_basenmr[i,2]
-    
-    
-    Aprism_mssave3 = mssave_basenmr
-
-
-
-#%%
-
-psl_d3 = mssave2[morphineGroup,0]
-psl_d10 = mssave2[morphineGroup,1]
-psl_d10_morphine = mssave2[morphineGroup,2]
-sham_d3 = mssave2[KHUsham,0]
-sham_d10 = mssave2[KHUsham,1]
-sham_d10_morphine = mssave2[KHUsham,2]
-
-Aprism2 = pd.DataFrame(sham_d3)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d3)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(sham_d10)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d10)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(sham_d10_morphine)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d10_morphine)), ignore_index=True, axis=1)
-
-
-Aprism = msFunction.msarray([6])
-Aprism[0] += list(msFunction.nanex(sham_d3))
-Aprism[1] += list(msFunction.nanex(sham_d10))
-Aprism[2] += list(msFunction.nanex(sham_d10_morphine))
-Aprism[3] += list(msFunction.nanex(psl_d3))
-Aprism[4] += list(msFunction.nanex(psl_d10))
-Aprism[5] += list(msFunction.nanex(psl_d10_morphine))
-
-Aprism_info = np.zeros((len(Aprism),3))
-for i in range(len(Aprism)):
-    Aprism_info[i, :] = np.nanmean(Aprism[i]), scipy.stats.sem(Aprism[i], nan_policy='omit'), len(Aprism[i])
-
-nonpain = list(sham_d3) + list(sham_d10)
-pain = list(psl_d3) + list(psl_d10)
-msFunction.msROC(sham_d10, psl_d10)
-#%% SNU PSL / GBVX
-
-mssave = np.array(list(mssave_total))
-
-msplot = mssave[shamGroup,1:3]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-msplot = mssave[pslGroup,1:3]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-msplot = mssave[ipsaline_pslGroup + ipclonidineGroup,:][:,[1,3]]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='g')
-
-
-GBVX_nonpain_d3, GBVX_nonpain_d10 = [], []
-GBVX = [164, 166, 167, 172, 174, 177, 179, 181]
-for SE in [164, 166, 167, 172, 174, 177, 179, 181]:
-    d3c, d10c = [], []
-    for se in range(12):
-        d10c.append(SE in [164, 166] and se in [2,3])
-        
-        d3c.append(SE in [167] and se in [4,5])
-        d10c.append(SE in [167] and se in [6,7])
-        
-        d3c.append(SE in [172] and se in [4,5])
-        d10c.append(SE in [172] and se in [8,9])
-        
-        d3c.append(SE in [174] and se in [4,5])
-        
-        d3c.append(SE in [177,179,181] and se in [2,3])
-        d10c.append(SE in [177,179] and se in [6,7])
-
-        if np.sum(np.array(d3c)) > 0: GBVX_nonpain_d3.append(mssave[SE,se])
-        if np.sum(np.array(d10c)) > 0: GBVX_nonpain_d10.append(mssave[SE,se])
-        
-    
-GBVX_nonpain_d3 = msFunction.nanex(GBVX_nonpain_d3)
-GBVX_nonpain_d10 = msFunction.nanex(GBVX_nonpain_d10)
-
-msplot = np.zeros((50, 2)) * np.nan
-msplot[:len(GBVX_nonpain_d3),0] = GBVX_nonpain_d3
-msplot[:len(GBVX_nonpain_d10),1] = GBVX_nonpain_d10
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='k')
-
-#%% SNU oxaliplatin
-
-msplot = mssave[oxaliGroup,1:3]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='b')
-
-msplot = mssave[glucoseGroup,1:3]
-msplot_mean = np.nanmean(msplot, axis=0)
-e = scipy.stats.sem(msplot, axis=0, nan_policy='omit')
-plt.errorbar(range(len(msplot_mean)), msplot_mean, e, linestyle='None', marker='o', c='r')
-
-#%%
-
-# Aprism = msFunction.msarray([6])
-# Aprism[0] += list(msFunction.nanex()
-# Aprism[1] += list(msFunction.nanex()
-# Aprism[1] += list(msFunction.nanex())
-# Aprism[2] += list(msFunction.nanex())
-
-# Aprism[3] += list(msFunction.nanex())
-# Aprism[4] += list(msFunction.nanex())
-# Aprism[4] += list(msFunction.nanex())
-# Aprism[5] += list(msFunction.nanex())
-
-# Aprism2 = np.zeros((len(Aprism), 100)) * np.nan
-# for i in range(len(Aprism)):
-#     Aprism2[i,:len(Aprism[i])] = Aprism[i]
-
-# Aprism3 = np.zeros((len(Aprism), 3)) * np.nan
-# Aprism3[:,0] = np.nanmean(Aprism2, axis=1)
-# Aprism3[:,1] = scipy.stats.sem(Aprism2, axis=1, nan_policy='omit').data
-# Aprism3[:,2] = np.nansum(np.isnan(Aprism2)==0, axis=1)
-
-psl_d3 = list(mssave[pslGroup,1]) + list(mssave[ipsaline_pslGroup + ipclonidineGroup,1])
-psl_d10 = list(mssave[pslGroup,2]) + list(mssave[ipsaline_pslGroup + ipclonidineGroup,3])
-psl_d3_GBVX = list(GBVX_nonpain_d3)
-psl_d10_GBVX = list(GBVX_nonpain_d10)
-sham_d3 = list(mssave[shamGroup,1])
-sham_d10 = list(mssave[shamGroup,2])
-
-
-Aprism2 = pd.DataFrame(sham_d3)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d3)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d3_GBVX)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(sham_d10)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d10)), ignore_index=True, axis=1)
-Aprism2 = pd.concat((Aprism2, pd.DataFrame(psl_d10_GBVX)), ignore_index=True, axis=1)
-
-Aprism = msFunction.msarray([6])
-Aprism[0] += list(msFunction.nanex(sham_d3))
-Aprism[1] += list(msFunction.nanex(sham_d10))
-Aprism[2] += list(msFunction.nanex(psl_d3_GBVX))
-Aprism[3] += list(msFunction.nanex(psl_d3))
-Aprism[4] += list(msFunction.nanex(psl_d10))
-Aprism[5] += list(msFunction.nanex(psl_d10_GBVX))
-
-Aprism_info = np.zeros((len(Aprism),3))
-for i in range(len(Aprism)):
-    Aprism_info[i, :] = np.nanmean(Aprism[i]), scipy.stats.sem(Aprism[i], nan_policy='omit'), len(Aprism[i])
-
-nonpain = list(sham_d3) + list(sham_d10)
-pain = list(psl_d3) + list(psl_d10)
-msFunction.msROC(sham_d10, psl_d10)
-    
-
-#%% KHU formalin
-
-highGroup3_1 = [247, 248, 250, 251, 257, 258, 259, 262]
-highGroup3_2 = [252, 253, 256, 260, 261, 265, 266, 267, 269, 272]
-highGroup3_3= [249, 255, 263, 264, 268, 270, 271]
-
-plt.figure()
-plt.plot(np.nanmean(mssave[highGroup3_1,:], axis=0))
-
-np.nanmean(mssave[highGroup3_2,2])
-np.nanmean(mssave[highGroup3_3,2])
-
-# plt.plot(np.nanmean(mssave[highGroup3_2,:], axis=0))
-# plt.plot(np.nanmean(mssave[highGroup3_3,:], axis=0))
-
-Aprism_highgroup3_1 = mssave[highGroup3_1,:]
-Aprism_highgroup3_2 = mssave[highGroup3_2,:]
-Aprism_highgroup3_3 = mssave[highGroup3_3,:]
-
-#%%
-
-
-
-plt.figure()
-plt.plot(np.nanmean(mssave[PDpain,:], axis=0))
-plt.plot(np.nanmean(mssave[PDnonpain,:], axis=0))
-
-plt.plot(np.nanmean(mssave[pdmorphine,:], axis=0))
-
-
-# PD evaluation
-meanmatrix = np.zeros((N,5))
-for i in range(0, 5):
-    for SE in PDpain + PDnonpain:
-        meanmatrix[SE,i] = np.nanmean(mssave[SE,i*2:(i+1)*2])
-        
-AA_PDpain = meanmatrix[PDpain,:]
-AA_PDnonpain = meanmatrix[PDnonpain,:]
-
-plt.plot(np.nanmean(AA_PDpain, axis=0))
-plt.plot(np.nanmean(AA_PDnonpain, axis=0))
-
-
-
-
-#%%
-
+                if len(i) > 0: cvlist_tmp = cvlist_tmp + i
+            cvlist.append([cvlist_tmp, SE])
+        print('len(cvlist)', len(cvlist))
+    cvlist = np.array(cvlist)
    
-mssave2 =  mssave2[:,:,1]
-#%%
+    #% cv training
+    tr_graph_save = msFunction.msarray([len(cvlist), 4])
+    
+    # X2 = pca.transform(X)
+    model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
+                        batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
+        
+    print(model.summary())
+    overwrite = False
+    repeat_save = []
+    for repeat in range(5): #, 100):
+        ### outsample test
+        print(str(lv) + '_repeat', repeat, 'data num', len(Y_vix), 'Y2 dis', np.mean(Y_vix, axis=0))
+        mssave = msFunction.msarray([N,MAXSE])
+        
+        totallist = list(range(len(Y_vix)))
+        for cv in range(0, len(cvlist)):
+            telist = cvlist[cv, 0]
+            if len(telist) > 0:
+                trlist = list(set(totallist)-set(telist))
+                # print(len(totallist), len(trlist), len(telist))
+                X_tr = X_vix[trlist]; X_te = X_vix[telist]
+                Y_tr = Y_vix[trlist]; Y_te = Y_vix[telist]
+                Z_tr = Z_vix[trlist]; Z_te = Z_vix[telist]
+                
+                pca = PCA(n_components=pca_nc)
+                pca.fit(X_tr)
+                X_tr = pca.transform(X_tr)
+                X_te = pca.transform(X_te)
+                
+                # X_tr, Y_tr, Z_tr = upsampling(X_tr, Y_tr, Z_tr)        
+                final_weightsave = RESULT_SAVE_PATH + str(lv)+'_'+str(repeat)+'_'+ str(telist[0]) + '_final.h5'
+                if not(os.path.isfile(final_weightsave)) or overwrite:
+                    if True:
+                        print(repeat, 'learning', cv, '/', len(cvlist))
+                        print('tr distribution', np.mean(Y_tr, axis=0), np.sum(Y_tr, axis=0))
+                        print('te distribution', np.mean(Y_te, axis=0))
+    
+                    model = keras_setup(lr=lr, seed=0, add_fn=pca_nc, layer_1=layer_1, \
+                                        batchnmr=batchnmr, dropout_rate1=dropout_rate1, l2=l2)
+                    verbose = 0
+                    if cv == 0: verbose = 1
+                    hist = model.fit(X_tr, Y_tr, batch_size=2**11, epochs=epochs, verbose=verbose)
+                    model.save_weights(final_weightsave)
+                    
+                # test
+                model.load_weights(final_weightsave)
+                yhat = model.predict(X_te)
+                
+                for n in range(len(yhat)):
+                    teSE = Z_te[n][0]; tese = Z_te[n][1]
+                    mssave[teSE][tese].append(yhat[n])
+    
+                # outsample
+                X2 = pca.transform(X)
+                outlist = np.where(np.sum(Y, axis=1)==0)[0]
+                yhat_out = model.predict(X2[outlist])
+                for out_SE in wantedlist:
+                    for n in np.where(Z[outlist][:,0]==out_SE)[0]:
+                        teSE = Z[outlist][n][0]; tese = Z[outlist][n][1]
+                        mssave[teSE][tese].append(yhat_out[n])
+                        
+                # excludedsample
+                vix = np.where(np.sum(Y, axis=1)>0)[0]
+                X_ex = X2[vix][eix]; 
+                Z_ex = Z[vix][eix]; 
+                
+                for n in np.where(Z_ex[:,0]==cvlist[cv, 1])[0]:
+                    teSE = Z_ex[n][0]; tese = Z_ex[n][1]
+                    yhat_ex = model.predict(np.array([X_ex[n]]))
+                    mssave[teSE][tese].append(yhat_ex[0])
+    
+        mssave2 = np.zeros((N,MAXSE,3)) * np.nan
+        for row in range(N):
+            for col in range(MAXSE):
+                tmp = np.nanmean(mssave[row][col], axis=0)
+                if not(np.isnan(np.mean(tmp))): mssave2[row, col, :] = tmp
+                
+        repeat_save.append(mssave2)
+        
+    savepath = RESULT_SAVE_PATH + str(lv) + '_repeat_save.pickle'
+    with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
+        pickle.dump(repeat_save, f, pickle.HIGHEST_PROTOCOL)
+        print(savepath, '저장되었습니다.')
 
-
-
-        #%%
-for ix in range(len(PDmorphine)):
-    PDmorphine_matrix2[ix,:] = PDmorphine_matrix2[ix,:] / PDmorphine_matrix2[ix,0]
-
-#%%
+#%% vis
+#% dataload
+mssave = []
+for lv in range(10):
+    savepath = RESULT_SAVE_PATH + str(lv) + '_repeat_save.pickle'
+    if os.path.isfile(savepath):
+        with open(savepath, 'rb') as f:  # Python 3: open(..., 'rb')
+            repeat_save = pickle.load(f)
+        tmp = np.nanmean(np.array(repeat_save), axis=0)
+        mssave.append(tmp)       
+mssave = np.array(mssave)
+print(mssave.shape)
+mssave = np.nanmean(mssave, axis=0)
+    
+import twophoton_pain_visualization as vis
+# vis.msplot_PD(mssave[:,:,0])
+vis.ms_report(mssave[:,:,1])
 
 
 
