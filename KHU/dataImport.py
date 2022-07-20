@@ -51,6 +51,8 @@ KHU_PSL_magnolin =  list(range(332,339))
 PDpain =            list(range(278, 286))
 PDnonpain =         list(range(286, 294))
 PDmorphine =        list(range(325,332)) + [339,340,341]
+PD_ldopa =          list(range(351,358))
+
 
 highGroup3_late = list(range(342, 351))
 
@@ -107,6 +109,9 @@ msGroup['KHU_CFA'] = KHU_CFA
 msGroup['PDpain'] = PDpain
 msGroup['PDnonpain'] = PDnonpain
 msGroup['PDmorphine'] = PDmorphine
+msGroup['PD_ldopa'] = PD_ldopa
+
+
 
 msGroup['KHU_PSL_magnolin'] = KHU_PSL_magnolin
 
@@ -844,8 +849,8 @@ def visualizaiton_save(runlist, signalss=None, movement_syn=None, behavss=None, 
 import sys; sys.exit()
 #%%
 
-wantedlist = list(range(342, 351))
-wantedlist = [347]
+wantedlist = list(range(351, 357))
+# wantedlist = [347]
 
 elist = []
 for run in wantedlist:
@@ -932,8 +937,8 @@ for SE in range(N):
             movement_syn[SE][se] = behavior_synfix(signals=signals, behavs=behavs, SE=SE, se=se, behavss=behavss)
             if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
 
-
 visualizaiton_save(runlist = wantedlist, signalss=signalss2, movement_syn=movement_syn, behavss=behavss)
+
 
 #%% corr matrix
 
