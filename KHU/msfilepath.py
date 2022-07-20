@@ -3215,7 +3215,59 @@ def msfilepath1(session):
         for se in range(8):
             behav_data.append(filename + '_' + str(se) + '.avi.mat')
             
-     
+    elif session == 351: 
+        filename = 's220321_L-dopa'
+        path = mainpath + filename
+        raw_filepath = filename + '.xlsx'
+        behav_data = []
+        for se in range(10):
+            behav_data.append(filename + '_' + str(se) + '.mat')
+            
+    elif session == 352: 
+        filename = 's220324_L-dopa'
+        path = mainpath + filename
+        raw_filepath = filename + '.xlsx'
+        behav_data = []
+        for se in range(10):
+            behav_data.append(filename + '_' + str(se) + '.mat')
+            
+    elif session == 353: 
+        filename = 's220325_L-dopa'
+        path = mainpath + filename
+        raw_filepath = filename + '.xlsx'
+        behav_data = []
+        for se in range(10):
+            behav_data.append(filename + '_' + str(se) + '.mat')
+            
+    elif session == 354: 
+        filename = 's220329_1_L-dopa'
+        path = mainpath + filename
+        raw_filepath = filename + '.xlsx'
+        behav_data = []
+        for se in range(10):
+            behav_data.append(filename + '_' + str(se) + '.mat')
+            
+    elif session == 355: 
+        filename = 's220329_2_L-dopa'
+        path = mainpath + filename
+        raw_filepath = filename + '.xlsx'
+        behav_data = []
+        for se in range(10):
+            behav_data.append(filename + '_' + str(se) + '.mat')
+            
+    elif session == 356: 
+        filename = 's220330_1_L-dopa'
+        path = mainpath + filename
+        raw_filepath = filename + '.xlsx'
+        behav_data = []
+        for se in range(10):
+            behav_data.append(filename + '_' + str(se) + '.mat')
+            
+   
+                
+                
+    
+ 
     else:
         path = None; behav_data = None; raw_filepath = None
         endsw = True
