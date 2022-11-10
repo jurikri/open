@@ -202,9 +202,11 @@ print(model.summary())
 
 hist = model.fit([X0, X1], Y, batch_size=2**7, epochs=10, verbose=1)
 
+vix = [0,10,30, 100, 500]
+yhat = model.predict([X0[vix], X1[vix]])
 
+print(yhat, Y[vix])
 
-X0, X1, Y, Z
 
 
 
