@@ -21,7 +21,7 @@ ketoGroup =         [39,40,41,42,46,49,50]
 lidocaineGroup =    [51,54,55]
 capsaicinGroup =    [60,61,62,64,65,82,83,104,105]
 yohimbineGroup =    [63,66,67,68,69,74] 
-pslGroup =          [70,71,72,73,75,76,77,78,79,80,84,85,86,87,88,93,94] 
+pslGroup =          [70,71, 73,75,76,77,78,79,80, 87 ,93,94] 
 shamGroup =         [81,89,90,91,92,97]
 adenosineGroup =    [98,99,100,101,102,103,110,111,112,113,114,115]
 CFAgroup =          [106,107,108,109,116,117]
@@ -29,13 +29,13 @@ highGroup2 =        [95,96]  # base / ealry / inter
 chloroquineGroup =  [118,119,120,121,122,123,124,125,126,127]
 itSalineGroup =     [128,129,130,134,135,138,139,140]
 itClonidineGroup =  [131,132,133,136,137] # 132 3일차는 it saline으로 분류되어야함.
-ipsaline_pslGroup = [141,142,143,144,145,146,147,148,149,150,152,155,156,158,159]
-ipclonidineGroup =  [151,153,154,157,160,161,162,163]
+ipsaline_pslGroup = [141,142,143,144,145,146, 150,152, 158 ]
+ipclonidineGroup =  [151,153, 161,162]
 gabapentinGroup =   [164,165,166,167,168,170,171,172,173,174,175,176,177, \
-                     178,179,180,181,182,183,184,185,186, 226, 227, 228, 229]
+                     178,179,180,181,182,183,184,185,186, 226 ]
 beevenomGroup =     [187]
 oxaliGroup =        [188, 190, 192, 194, 196, 198, 200, 202, 220]
-glucoseGroup =      [204,205,206,207,208,209,210,211,212,213,214,215,222,223]
+glucoseGroup =      [204, 206, 208, 210, 212, 214, 222]
 PSLscsaline =       [216,217,218,219,224,225]
 
 # highGroup3 =        list(range(230,239)) + list(range(247,273))
@@ -50,7 +50,15 @@ KHU_PSL_magnolin =  list(range(332,339))
 
 PDpain =            list(range(278, 286))
 PDnonpain =         list(range(286, 294))
-PDmorphine =        list(range(325,332))
+PDmorphine =        list(range(325,332)) + [339,340,341]
+
+PD_ldopa =          list(range(351,358))
+highGroup3_late =   list(range(342, 351))
+
+oxali_BV =          [358, 359, 363, 364, 365, 370]
+oxali_sal =         [360, 361, 362, 366, 367, 368, 369]
+
+
 
 msset = [[70,72],[71,84],[75,85],[76,86],[79,88],[78,93],[80,94]]
 msset2 = [[98,110],[99,111],[100,112],[101,113],[102,114],[103,115], \
@@ -91,7 +99,9 @@ msGroup['beevenomGroup'] = beevenomGroup
 msGroup['oxaliGroup'] = oxaliGroup
 msGroup['glucoseGroup'] = glucoseGroup
 msGroup['PSLscsaline'] = PSLscsaline
+
 msGroup['highGroup3'] = highGroup3
+msGroup['highGroup3_late'] = highGroup3_late
 msGroup['KHU_saline'] = KHU_saline
 
 msGroup['PSLgroup_khu'] = PSLgroup_khu
@@ -103,7 +113,11 @@ msGroup['PDpain'] = PDpain
 msGroup['PDnonpain'] = PDnonpain
 msGroup['PDmorphine'] = PDmorphine
 
+msGroup['PD_ldopa'] = PD_ldopa
 msGroup['KHU_PSL_magnolin'] = KHU_PSL_magnolin
+
+msGroup['oxali_BV'] = oxali_BV
+msGroup['oxali_sal'] = oxali_sal
 
 msGroup['msset'] = msset
 msGroup['msset2'] = msset2
@@ -121,6 +135,8 @@ try: import pickle5 as pickle
 except: import pickle
 import hdf5storage
 import matplotlib.pyplot as plt 
+from tqdm import tqdm
+import scipy
 
 endsw=False; cnt=-1
 while not(endsw):
@@ -158,7 +174,7 @@ def errorCorrection(msraw): # turboreg로 발생하는 에러값을 수정함.
                             
     return msraw, sw
 
-def smoothListGaussian(array1,window):  
+def smoothListGaussian(array1, window):  
      window = round(window)
      degree = (window+1)/2
      weight=np.array([1.0]*window)  
@@ -364,12 +380,12 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                 
             # In F zero 계산
             if dfsw:
-                array4 = list(); se = 0; n = 0
+                array4 = []; se = 0; n = 0
                 for se in range(len(array3)):
                     matrix = np.array(array3[se])
                     matrix = np.array(list(matrix[:,:]), dtype=np.float)
-                    
-                    f0_vector = list()
+
+                    f0_vector = []
                     for n in range(matrix.shape[1]):
                         
                         msmatrix = np.array(matrix[:,n])
@@ -478,7 +494,12 @@ def mssignal_save(list1=None, gfiltersw=True, skipsw = False, dfsw=True, khuoffs
                         print('ROI 에서 제거후 진행')
                         tmp = list(roi_del_ix) + [ROI]
                         roi_del_ix = tmp
-                 
+                        
+            roisave = []
+            for msse in range(len(signals_raw)):
+                roisave.append(signals_raw[msse].shape[1])
+            if len(list(set(roisave))) > 1: print('roi matching error', SE, se); print(roisave); import sys; sys.exit()
+                    
             msdict = {'signals': signals, 'behavs': behavs, 'signals_raw': signals_raw, 'roi_del_ix': roi_del_ix}
             with open(savepath, 'wb') as f:  # Python 3: open(..., 'wb')
                 pickle.dump(msdict, f, pickle.HIGHEST_PROTOCOL)
@@ -567,6 +588,15 @@ def msMovementExtraction(list1, skipsw=False):
                 c2 = (msmatrix < (msmin + diff * (savemax+1)))
                 mscut = np.mean(msmatrix[(c1 * c2)])
                 thr = mscut + 0.15
+                
+                # 20221102 THR 계산방식 변경
+                if SE > 357:
+                    vix = np.argsort(msmatrix)[:int(len(msmatrix)*0.1)]
+                    baseline = np.median(msmatrix[vix])
+                    std = np.std(msmatrix[vix])
+                    # thr = baseline + (std * 5)
+                    thr = baseline + 0.1
+
                 # 예외 규정 
                 N = SE
                 if N == 10 and i == 0:
@@ -642,12 +672,12 @@ def msMovementExtraction(list1, skipsw=False):
                 if N == 224 and i in [2]:
                     thr = 1.3
                        
-                if N == 223 and i in [3]: msmatrix[:5000] = 0
-                if SE >= 239: thr = 0.15
+                if SE == 222 and i in [5,6]: msmatrix[:5000] = 0
+                if SE >= 239 and SE < 298: thr = 0.15
                 if SE >= 298 and i >= 6: thr = 0.8
-                if SE >= 302: thr = 0.7
+                if SE >= 302 and SE < 317: thr = 0.7
                 if SE == 317: thr = 0.65
-                if SE >= 318: thr = 0.6
+                if SE >= 318 and SE < 358: thr = 0.6
                 
                 if [SE, i] in [[322, 8], [322, 8], [322, 9], [322, 10], [322, 11]]: thr = 0.9
                 if [SE, i] in [[321, 9], [323, 8], [323, 9], [323, 10], [323, 11], [324, 10], [324, 11]]: thr = 0.7
@@ -657,6 +687,45 @@ def msMovementExtraction(list1, skipsw=False):
                 if SE in [328] and se in [4,5,6,7,8]: thr = 0.55
                 if [SE, se] in [[329, 11], [330, 5], [330, 8]]: thr = 0.55
                 if SE in [331] and se in [4,5,6,7,8,9,10,11,12]: thr = 0.51
+                if SE in [340] and se in [1,2,3]: thr = 0.5
+                if SE in [340] and se in [10,11,12,13]: thr = 0.45
+                if SE in [341] and se in [0,1,2,3]: thr = 0.5
+                if SE in [340] and se in [14]: thr = 0.47
+   
+                if SE in [153] and se in [7]: thr = 1.0
+                if SE in [146] and se in [1]: thr = 0.9
+                if SE in [162] and se in [3]: thr = 1.2
+                if SE in [204] and se in [3]: thr = 0.85
+                
+                if SE > 341 and SE < 358:
+                  mix = np.argsort(msmatrix)[:int(len(msmatrix)*0.05)]
+                  thr = np.median(msmatrix[mix]) * 1.05
+                  if False:
+                      plt.plot(msmatrix)
+                      plt.plot(np.ones(len(msmatrix))*thr)
+ 
+    
+                if SE in [354] and se in [4]: thr = 0.8
+                if SE in [354] and se in [9]: thr = 0.83
+                if SE in [357] and se in [0,1,2,4,6]: thr = 0.9
+    
+                if SE in [358] and se in [6,7]: thr = 0.85
+                if SE in [359] and se in [4, 6,7]: thr = 0.85
+                if SE in [361] and se in [1,2,3]: thr = 0.78
+                if SE in [363] and se in [6,7]: thr = 0.87
+                if SE in [364] and se in [0,1]: thr = 0.7
+                if SE in [364] and se in [6,7]: thr = 0.85
+                if SE in [365] and se in [0,1,2,3]: thr = 0.7
+                if SE in [365] and se in [7]: thr = 0.85
+                if SE in [366] and se in [0,1,2]: thr = 0.7
+                if SE in [366] and se in [7]: thr = 0.85
+                if SE in [367] and se in [1,2]: thr = 0.7
+                if SE in [367] and se in [6,7]: thr = 0.85
+                if SE in [370] and se in [0]: thr = 0.85
+                if SE in [370] and se in [1]: thr = 0.82
+                
+                if SE in [358] and se in [1]: thr = 0.87
+                if SE in [360] and se in [2]: thr = 0.75
                 
                 # if [SE, i] in [[222, 3], [223, 2], [189, 0]]:
                 #     msmatrix, thr = [], []
@@ -684,7 +753,7 @@ def downsampling(msssignal, wanted_size):
     return np.array(downsignal)
 
 #%% syn를 위한 상수 계산
-def behavior_synfix(signals=None, behavs=None, SE=None, se=None):
+def behavior_synfix(signals=None, behavs=None, SE=None, se=None, behavss=None):
     fixlist = [[1,1],[8,4],[220,4],[220,5],[220,6],[220,7]]
     if [SE, se] in fixlist:
         print('fix sync', SE, se)
@@ -758,7 +827,7 @@ def behavior_synfix(signals=None, behavs=None, SE=None, se=None):
         if True:
             plt.figure()
             plt.title('synfix ' + str(SE) + '_' + str(se))
-            plt.plot(np.mean(signalss[SE][se], axis=1))
+            plt.plot(np.mean(signals, axis=1))
             plt.plot(fix)
         behavs = fix
         
@@ -814,21 +883,25 @@ def visualizaiton_save(runlist, signalss=None, movement_syn=None, behavss=None, 
 import sys; sys.exit()
 #%%
 
+wantedlist = PD_ldopa
+# wantedlist  = [370]
 elist = []
-for run in elist:
+
+for run in wantedlist:
     try:
         runlist = [run]
         msMovementExtraction(runlist, skipsw=False)
         mssignal_save(list1=runlist, gfiltersw=True, skipsw=False, khuoffset=0)
     except:
         elist.append(run)
-        
+print()        
 print(elist)
+
+#%%
 
 signalss, behavss, signalss_raw, roi_del_ix_save = mssignal_save_merge()
 
-#%%
-MAXSE = 40
+#%
 from sklearn.linear_model import LinearRegression
 baseratio = 0.3
 signalss2 = msFunction.msarray([N,MAXSE])
@@ -895,10 +968,38 @@ for SE in range(N):
         if len(behav_tmp) > 0:
             mov_tmp = msFunction.downsampling(behav_tmp, signalss2[SE][se].shape[0])[0,:]
             signals=signalss_raw[SE][se]; behavs=mov_tmp
-            movement_syn[SE][se] = behavior_synfix(signals=signals, behavs=behavs, SE=SE, se=se)
+            movement_syn[SE][se] = behavior_synfix(signals=signals, behavs=behavs, SE=SE, se=se, behavss=behavss)
             if np.isnan(np.mean(movement_syn[SE][se])): movement_syn[SE][se] = []
 
-#%%
+
+visualizaiton_save(runlist = wantedlist, signalss=signalss2, movement_syn=movement_syn, behavss=behavss)
+
+#%% corr matrix
+
+inter_corr = np.zeros((N, MAXSE)) * np.nan
+for SE in tqdm(range(N)):
+    for se in range(len(signalss_raw[SE])):
+        xdata = np.array(signalss2[SE][se])
+        roiNum = xdata.shape[1]
+        rmatrix = np.zeros((roiNum,roiNum)) * np.nan
+        for ROI in range(roiNum):
+            for ROI2 in range(ROI+1, roiNum):
+                rmatrix[ROI,ROI2] = scipy.stats.pearsonr(xdata[:,ROI], xdata[:,ROI2])[0]
+        inter_corr[SE,se] = np.nanmean(rmatrix)
+            
+signalss_df = msFunction.msarray([N, MAXSE])
+for SE in tqdm(range(N)):
+    for se in range(len(signalss_raw[SE])):
+        if len(signalss_raw[SE][se]) > 0:
+            tmp = signalss_raw[SE][se]
+            mssave = np.zeros(tmp.shape) * np.nan
+            roiNum = tmp.shape[1]
+            for ROI in range(roiNum):
+                vix = np.argsort(tmp[:,ROI])[:int(round(tmp.shape[0]*0.3))]
+                m = np.median(tmp[vix,ROI])
+                mssave[:,ROI] = (tmp[:,ROI] - m) / m
+            
+            signalss_df[SE][se] = mssave
 
 savepath = 'C:\\SynologyDrive\\2p_data\\' + 'mspickle.pickle'
 def dict_save(savepath):
@@ -913,6 +1014,8 @@ def dict_save(savepath):
             'signalss2' : signalss2,
             'signalss_raw' : signalss_raw,
             'roi_del_ix_save' : roi_del_ix_save,
+            'inter_corr' : inter_corr,
+            'signalss_df' : signalss_df,
             # 'nmr_value' : nmr_value
             }
     
@@ -923,7 +1026,6 @@ dict_save(savepath)
 
 #%%
 
-visualizaiton_save(runlist = [220], signalss=signalss2, movement_syn=movement_syn, behavss=behavss)
 #%%
 
 
